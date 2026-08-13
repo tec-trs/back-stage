@@ -3,6 +3,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
+import { Tabs, type TabItem } from '../../shared/components/Tabs';
 import {
   APP_TYPE_LABELS,
   APPLICATION_STATUS_LABELS,
@@ -22,6 +23,15 @@ const APP_TYPES = Object.keys(APP_TYPE_LABELS) as AppType[];
 const CRITICALITIES = Object.keys(CRITICALITY_LABELS) as Criticality[];
 const STATUSES = Object.keys(APPLICATION_STATUS_LABELS) as ApplicationStatus[];
 const ENVIRONMENTS = Object.keys(ENVIRONMENT_LABELS) as DeployEnvironment[];
+
+type TabKey = 'identification' | 'technology' | 'relationships' | 'governance';
+
+const TABS: TabItem[] = [
+  { key: 'identification', label: 'Identificacao' },
+  { key: 'technology', label: 'Tecnologia' },
+  { key: 'relationships', label: 'Implantacoes & Dependencias' },
+  { key: 'governance', label: 'Governanca' },
+];
 
 const inputClass =
   'rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
@@ -128,6 +138,7 @@ export function ApplicationFormDialog({
   const servers = useServers();
   const applications = useApplications();
 
+  const [activeTab, setActiveTab] = useState<TabKey>('identification');
   const [form, setForm] = useState<FormState>(emptyForm());
   const [deployments, setDeployments] = useState<DeploymentInput[]>([]);
   const [dependsOnIds, setDependsOnIds] = useState<string[]>([]);
@@ -135,6 +146,7 @@ export function ApplicationFormDialog({
 
   useEffect(() => {
     if (isOpen) {
+      setActiveTab('identification');
       setForm(application ? formFromApplication(application) : emptyForm());
       setDeployments(
         application?.deployments.map((deployment) => ({
@@ -190,6 +202,7 @@ export function ApplicationFormDialog({
 
     if (!isEditMode && !CODE_PATTERN.test(form.code)) {
       setCodeError('O codigo deve conter apenas letras minusculas, numeros, ponto, hifen e underscore');
+      setActiveTab('identification');
       return;
     }
     setCodeError(null);
@@ -242,305 +255,354 @@ export function ApplicationFormDialog({
       onClose={handleClose}
       size="lg"
     >
-      <form onSubmit={handleSubmit} className="flex max-h-[70vh] flex-col gap-5 overflow-y-auto pr-1">
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-1 text-sm font-medium text-slate-300">Identificacao</legend>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-400">Codigo *</span>
-            <input
-              required
-              disabled={isEditMode}
-              value={form.code}
-              onChange={(event) => setField('code', event.target.value)}
-              placeholder="billing-api"
-              className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-70`}
-            />
-            {codeError && <span className="text-xs text-red-400">{codeError}</span>}
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-400">Nome amigavel *</span>
-            <input
-              required
-              value={form.displayName}
-              onChange={(event) => setField('displayName', event.target.value)}
-              placeholder="Billing API"
-              className={inputClass}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-400">Descricao</span>
-            <textarea
-              value={form.description}
-              onChange={(event) => setField('description', event.target.value)}
-              rows={2}
-              className={inputClass}
-            />
-          </label>
-          <div className="grid grid-cols-3 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Tipo *</span>
-              <select
-                value={form.appType}
-                onChange={(event) => setField('appType', event.target.value as AppType)}
-                className={inputClass}
-              >
-                {APP_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {APP_TYPE_LABELS[type]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Criticidade</span>
-              <select
-                value={form.criticality}
-                onChange={(event) => setField('criticality', event.target.value as Criticality)}
-                className={inputClass}
-              >
-                {CRITICALITIES.map((criticality) => (
-                  <option key={criticality} value={criticality}>
-                    {CRITICALITY_LABELS[criticality]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Status</span>
-              <select
-                value={form.status}
-                onChange={(event) => setField('status', event.target.value as ApplicationStatus)}
-                className={inputClass}
-              >
-                {STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {APPLICATION_STATUS_LABELS[status]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-400">Categoria de negocio</span>
-            <input
-              value={form.businessCategory}
-              onChange={(event) => setField('businessCategory', event.target.value)}
-              className={inputClass}
-            />
-          </label>
-        </fieldset>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Tabs tabs={TABS} activeTab={activeTab} onChange={(key) => setActiveTab(key as TabKey)} />
 
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-1 text-sm font-medium text-slate-300">Tecnologia</legend>
-          <div className="grid grid-cols-3 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Linguagem</span>
-              <input
-                value={form.language}
-                onChange={(event) => setField('language', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Framework</span>
-              <input
-                value={form.framework}
-                onChange={(event) => setField('framework', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Versao atual</span>
-              <input
-                value={form.currentVersion}
-                onChange={(event) => setField('currentVersion', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Repositorio</span>
-              <input
-                value={form.repositoryUrl}
-                onChange={(event) => setField('repositoryUrl', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">CI/CD</span>
-              <input
-                value={form.cicdUrl}
-                onChange={(event) => setField('cicdUrl', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-          </div>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-400">Imagem/Registry</span>
-            <input
-              value={form.containerImage}
-              onChange={(event) => setField('containerImage', event.target.value)}
-              className={inputClass}
-            />
-          </label>
-        </fieldset>
-
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 text-sm font-medium text-slate-300">Implantacoes</legend>
-          <div className="flex flex-col gap-2 rounded-md border border-slate-800 p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-400">Servidores onde esta implantada</span>
-              <Button type="button" variant="secondary" size="sm" onClick={addDeployment}>
-                + Implantacao
-              </Button>
-            </div>
-            {deployments.length === 0 && (
-              <p className="text-xs text-slate-500">Nenhuma implantacao adicionada.</p>
-            )}
-            {deployments.map((deployment, index) => (
-              <div key={index} className="grid grid-cols-[2fr_1fr_1fr_auto] items-end gap-2">
-                <label className="flex flex-col gap-1 text-xs">
-                  <span className="text-slate-500">Servidor</span>
+        <div className="flex max-h-[55vh] flex-col gap-5 overflow-y-auto pr-1">
+          {activeTab === 'identification' && (
+            <fieldset className="flex flex-col gap-3">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-slate-400">Codigo *</span>
+                <input
+                  required
+                  disabled={isEditMode}
+                  value={form.code}
+                  onChange={(event) => setField('code', event.target.value)}
+                  placeholder="billing-api"
+                  className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-70`}
+                />
+                {codeError && <span className="text-xs text-red-400">{codeError}</span>}
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-slate-400">Nome amigavel *</span>
+                <input
+                  required
+                  value={form.displayName}
+                  onChange={(event) => setField('displayName', event.target.value)}
+                  placeholder="Billing API"
+                  className={inputClass}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-slate-400">Descricao</span>
+                <textarea
+                  value={form.description}
+                  onChange={(event) => setField('description', event.target.value)}
+                  rows={2}
+                  className={inputClass}
+                />
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Tipo *</span>
                   <select
-                    value={deployment.serverId}
-                    onChange={(event) => updateDeployment(index, { serverId: event.target.value })}
-                    className={`${inputClass} py-1.5 text-sm`}
+                    value={form.appType}
+                    onChange={(event) => setField('appType', event.target.value as AppType)}
+                    className={inputClass}
                   >
-                    <option value="">Selecione...</option>
-                    {(servers.data?.items ?? []).map((server) => (
-                      <option key={server.id} value={server.id}>
-                        {server.hostname}
+                    {APP_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {APP_TYPE_LABELS[type]}
                       </option>
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col gap-1 text-xs">
-                  <span className="text-slate-500">Ambiente</span>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Criticidade</span>
                   <select
-                    value={deployment.environment}
-                    onChange={(event) =>
-                      updateDeployment(index, { environment: event.target.value as DeployEnvironment })
-                    }
-                    className={`${inputClass} py-1.5 text-sm`}
+                    value={form.criticality}
+                    onChange={(event) => setField('criticality', event.target.value as Criticality)}
+                    className={inputClass}
                   >
-                    {ENVIRONMENTS.map((environment) => (
-                      <option key={environment} value={environment}>
-                        {ENVIRONMENT_LABELS[environment]}
+                    {CRITICALITIES.map((criticality) => (
+                      <option key={criticality} value={criticality}>
+                        {CRITICALITY_LABELS[criticality]}
                       </option>
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col gap-1 text-xs">
-                  <span className="text-slate-500">Versao</span>
-                  <input
-                    value={deployment.deployedVersion ?? ''}
-                    onChange={(event) =>
-                      updateDeployment(index, { deployedVersion: event.target.value })
-                    }
-                    className={`${inputClass} py-1.5 text-sm`}
-                  />
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Status</span>
+                  <select
+                    value={form.status}
+                    onChange={(event) => setField('status', event.target.value as ApplicationStatus)}
+                    className={inputClass}
+                  >
+                    {STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {APPLICATION_STATUS_LABELS[status]}
+                      </option>
+                    ))}
+                  </select>
                 </label>
-                <Button
-                  type="button"
-                  variant="ghost-danger"
-                  size="sm"
-                  onClick={() => removeDeployment(index)}
-                >
-                  Remover
-                </Button>
               </div>
-            ))}
-          </div>
-        </fieldset>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-slate-400">Categoria de negocio</span>
+                <input
+                  value={form.businessCategory}
+                  onChange={(event) => setField('businessCategory', event.target.value)}
+                  className={inputClass}
+                />
+              </label>
+            </fieldset>
+          )}
 
-        {availableApplications.length > 0 && (
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 text-sm font-medium text-slate-300">
-              Dependencias (aplicacoes das quais esta depende)
-            </legend>
-            <div className="flex max-h-32 flex-col gap-1 overflow-y-auto rounded-md border border-slate-800 p-3">
-              {availableApplications.map((item) => (
-                <label key={item.id} className="flex items-center gap-2 text-sm text-slate-200">
+          {activeTab === 'technology' && (
+            <fieldset className="flex flex-col gap-3">
+              <div className="grid grid-cols-3 gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Linguagem</span>
                   <input
-                    type="checkbox"
-                    checked={dependsOnIds.includes(item.id)}
-                    onChange={() => toggleDependency(item.id)}
-                    className="rounded border-slate-700 bg-slate-950"
+                    value={form.language}
+                    onChange={(event) => setField('language', event.target.value)}
+                    className={inputClass}
                   />
-                  {item.displayName} ({item.code})
                 </label>
-              ))}
-            </div>
-          </fieldset>
-        )}
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Framework</span>
+                  <input
+                    value={form.framework}
+                    onChange={(event) => setField('framework', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Versao atual</span>
+                  <input
+                    value={form.currentVersion}
+                    onChange={(event) => setField('currentVersion', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Repositorio</span>
+                  <input
+                    value={form.repositoryUrl}
+                    onChange={(event) => setField('repositoryUrl', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">CI/CD</span>
+                  <input
+                    value={form.cicdUrl}
+                    onChange={(event) => setField('cicdUrl', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Imagem/Registry</span>
+                  <input
+                    value={form.containerImage}
+                    onChange={(event) => setField('containerImage', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Classificacao de dados</span>
+                  <input
+                    value={form.dataClassification}
+                    onChange={(event) => setField('dataClassification', event.target.value)}
+                    placeholder="Confidencial..."
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Metodo de autenticacao</span>
+                  <input
+                    value={form.authMethod}
+                    onChange={(event) => setField('authMethod', event.target.value)}
+                    placeholder="OAuth2, SSO..."
+                    className={inputClass}
+                  />
+                </label>
+              </div>
+            </fieldset>
+          )}
 
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-1 text-sm font-medium text-slate-300">
-            Governanca / Documentacao
-          </legend>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Time responsavel</span>
-              <input
-                value={form.ownerTeam}
-                onChange={(event) => setField('ownerTeam', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Centro de custo</span>
-              <input
-                value={form.costCenter}
-                onChange={(event) => setField('costCenter', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Documentacao</span>
-              <input
-                value={form.docsUrl}
-                onChange={(event) => setField('docsUrl', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Especificacao da API</span>
-              <input
-                value={form.apiSpecUrl}
-                onChange={(event) => setField('apiSpecUrl', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Monitoramento</span>
-              <input
-                value={form.monitoringUrl}
-                onChange={(event) => setField('monitoringUrl', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">SLA</span>
-              <input
-                value={form.sla}
-                onChange={(event) => setField('sla', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Custo mensal estimado (R$)</span>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={form.monthlyCostEstimate}
-                onChange={(event) => setField('monthlyCostEstimate', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-          </div>
-        </fieldset>
+          {activeTab === 'relationships' && (
+            <div className="flex flex-col gap-5">
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-1 text-sm font-medium text-slate-300">Implantacoes</legend>
+                <div className="flex flex-col gap-2 rounded-md border border-slate-800 p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-400">Servidores onde esta implantada</span>
+                    <Button type="button" variant="secondary" size="sm" onClick={addDeployment}>
+                      + Implantacao
+                    </Button>
+                  </div>
+                  {deployments.length === 0 && (
+                    <p className="text-xs text-slate-500">Nenhuma implantacao adicionada.</p>
+                  )}
+                  {deployments.map((deployment, index) => (
+                    <div key={index} className="grid grid-cols-[2fr_1fr_1fr_auto] items-end gap-2">
+                      <label className="flex flex-col gap-1 text-xs">
+                        <span className="text-slate-500">Servidor</span>
+                        <select
+                          value={deployment.serverId}
+                          onChange={(event) =>
+                            updateDeployment(index, { serverId: event.target.value })
+                          }
+                          className={`${inputClass} py-1.5 text-sm`}
+                        >
+                          <option value="">Selecione...</option>
+                          {(servers.data?.items ?? []).map((server) => (
+                            <option key={server.id} value={server.id}>
+                              {server.hostname}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs">
+                        <span className="text-slate-500">Ambiente</span>
+                        <select
+                          value={deployment.environment}
+                          onChange={(event) =>
+                            updateDeployment(index, {
+                              environment: event.target.value as DeployEnvironment,
+                            })
+                          }
+                          className={`${inputClass} py-1.5 text-sm`}
+                        >
+                          {ENVIRONMENTS.map((environment) => (
+                            <option key={environment} value={environment}>
+                              {ENVIRONMENT_LABELS[environment]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs">
+                        <span className="text-slate-500">Versao</span>
+                        <input
+                          value={deployment.deployedVersion ?? ''}
+                          onChange={(event) =>
+                            updateDeployment(index, { deployedVersion: event.target.value })
+                          }
+                          className={`${inputClass} py-1.5 text-sm`}
+                        />
+                      </label>
+                      <Button
+                        type="button"
+                        variant="ghost-danger"
+                        size="sm"
+                        onClick={() => removeDeployment(index)}
+                      >
+                        Remover
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </fieldset>
+
+              {availableApplications.length > 0 && (
+                <fieldset className="flex flex-col gap-2">
+                  <legend className="mb-1 text-sm font-medium text-slate-300">
+                    Dependencias (aplicacoes das quais esta depende)
+                  </legend>
+                  <div className="flex max-h-32 flex-col gap-1 overflow-y-auto rounded-md border border-slate-800 p-3">
+                    {availableApplications.map((item) => (
+                      <label key={item.id} className="flex items-center gap-2 text-sm text-slate-200">
+                        <input
+                          type="checkbox"
+                          checked={dependsOnIds.includes(item.id)}
+                          onChange={() => toggleDependency(item.id)}
+                          className="rounded border-slate-700 bg-slate-950"
+                        />
+                        {item.displayName} ({item.code})
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'governance' && (
+            <fieldset className="flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Time responsavel</span>
+                  <input
+                    value={form.ownerTeam}
+                    onChange={(event) => setField('ownerTeam', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Centro de custo</span>
+                  <input
+                    value={form.costCenter}
+                    onChange={(event) => setField('costCenter', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Documentacao</span>
+                  <input
+                    value={form.docsUrl}
+                    onChange={(event) => setField('docsUrl', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Especificacao da API</span>
+                  <input
+                    value={form.apiSpecUrl}
+                    onChange={(event) => setField('apiSpecUrl', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Runbook de incidentes</span>
+                  <input
+                    value={form.runbookUrl}
+                    onChange={(event) => setField('runbookUrl', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Monitoramento</span>
+                  <input
+                    value={form.monitoringUrl}
+                    onChange={(event) => setField('monitoringUrl', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Health-check endpoint</span>
+                  <input
+                    value={form.healthCheckUrl}
+                    onChange={(event) => setField('healthCheckUrl', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">SLA</span>
+                  <input
+                    value={form.sla}
+                    onChange={(event) => setField('sla', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Custo mensal estimado (R$)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.monthlyCostEstimate}
+                    onChange={(event) => setField('monthlyCostEstimate', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+              </div>
+            </fieldset>
+          )}
+        </div>
 
         {mutation.isError && (
           <ErrorMessage

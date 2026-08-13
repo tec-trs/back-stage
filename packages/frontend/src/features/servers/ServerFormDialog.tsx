@@ -3,6 +3,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
+import { Tabs, type TabItem } from '../../shared/components/Tabs';
 import {
   DISK_PURPOSE_LABELS,
   DISK_TYPE_LABELS,
@@ -32,6 +33,15 @@ const STATUSES = Object.keys(SERVER_STATUS_LABELS) as ServerStatus[];
 const ENVIRONMENTS = Object.keys(ENVIRONMENT_LABELS) as ServerEnvironment[];
 const DISK_TYPES = Object.keys(DISK_TYPE_LABELS) as DiskType[];
 const DISK_PURPOSES = Object.keys(DISK_PURPOSE_LABELS) as DiskPurpose[];
+
+type TabKey = 'identification' | 'hardware' | 'network' | 'management';
+
+const TABS: TabItem[] = [
+  { key: 'identification', label: 'Identificacao' },
+  { key: 'hardware', label: 'Hardware & SO' },
+  { key: 'network', label: 'Redes & Acesso' },
+  { key: 'management', label: 'Gestao' },
+];
 
 const inputClass =
   'rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
@@ -151,12 +161,14 @@ export function ServerFormDialog({
   const updateServer = useUpdateServer();
   const mutation = isEditMode ? updateServer : createServer;
 
+  const [activeTab, setActiveTab] = useState<TabKey>('identification');
   const [form, setForm] = useState<FormState>(emptyForm());
   const [disks, setDisks] = useState<ServerDiskInput[]>([]);
   const [hostnameError, setHostnameError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
+      setActiveTab('identification');
       setForm(server ? formFromServer(server) : emptyForm());
       setDisks(
         server?.disks.map((disk) => ({
@@ -201,6 +213,7 @@ export function ServerFormDialog({
 
     if (!HOSTNAME_PATTERN.test(form.hostname)) {
       setHostnameError('O hostname deve conter apenas letras minusculas, numeros, ponto e hifen');
+      setActiveTab('identification');
       return;
     }
     setHostnameError(null);
@@ -251,387 +264,385 @@ export function ServerFormDialog({
       onClose={handleClose}
       size="lg"
     >
-      <form onSubmit={handleSubmit} className="flex max-h-[70vh] flex-col gap-5 overflow-y-auto pr-1">
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-1 text-sm font-medium text-slate-300">Identificacao</legend>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-400">Hostname *</span>
-            <input
-              required
-              disabled={isEditMode}
-              value={form.hostname}
-              onChange={(event) => setField('hostname', event.target.value)}
-              placeholder="web-01.prod"
-              className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-70`}
-            />
-            {hostnameError && <span className="text-xs text-red-400">{hostnameError}</span>}
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-400">Nome amigavel</span>
-            <input
-              value={form.displayName}
-              onChange={(event) => setField('displayName', event.target.value)}
-              className={inputClass}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-400">Descricao</span>
-            <textarea
-              value={form.description}
-              onChange={(event) => setField('description', event.target.value)}
-              rows={2}
-              className={inputClass}
-            />
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Tipo *</span>
-              <select
-                value={form.serverType}
-                onChange={(event) => setField('serverType', event.target.value as ServerType)}
-                className={inputClass}
-              >
-                {SERVER_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {SERVER_TYPE_LABELS[type]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Provedor *</span>
-              <select
-                value={form.provider}
-                onChange={(event) => setField('provider', event.target.value as ServerProvider)}
-                className={inputClass}
-              >
-                {PROVIDERS.map((provider) => (
-                  <option key={provider} value={provider}>
-                    {PROVIDER_LABELS[provider]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </fieldset>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Tabs tabs={TABS} activeTab={activeTab} onChange={(key) => setActiveTab(key as TabKey)} />
 
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-1 text-sm font-medium text-slate-300">Hardware / Recursos</legend>
-          <div className="grid grid-cols-3 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">CPU (nucleos)</span>
-              <input
-                type="number"
-                min={1}
-                value={form.cpuCores}
-                onChange={(event) => setField('cpuCores', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">RAM (GB)</span>
-              <input
-                type="number"
-                min={1}
-                value={form.ramGb}
-                onChange={(event) => setField('ramGb', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Hypervisor</span>
-              <input
-                value={form.hypervisor}
-                onChange={(event) => setField('hypervisor', event.target.value)}
-                placeholder="VMware, KVM..."
-                className={inputClass}
-              />
-            </label>
-          </div>
-
-          <div className="flex flex-col gap-2 rounded-md border border-slate-800 p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-400">Discos</span>
-              <Button type="button" variant="secondary" size="sm" onClick={addDisk}>
-                + Disco
-              </Button>
-            </div>
-            {disks.length === 0 && (
-              <p className="text-xs text-slate-500">Nenhum disco adicionado.</p>
-            )}
-            {disks.map((disk, index) => (
-              <div key={index} className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] items-end gap-2">
-                <label className="flex flex-col gap-1 text-xs">
-                  <span className="text-slate-500">Mount point</span>
-                  <input
-                    value={disk.mountPoint}
-                    onChange={(event) => updateDisk(index, { mountPoint: event.target.value })}
-                    placeholder="/data"
-                    className={`${inputClass} py-1.5 text-sm`}
-                  />
+        <div className="flex max-h-[55vh] flex-col gap-5 overflow-y-auto pr-1">
+          {activeTab === 'identification' && (
+            <fieldset className="flex flex-col gap-3">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-slate-400">Hostname *</span>
+                <input
+                  required
+                  disabled={isEditMode}
+                  value={form.hostname}
+                  onChange={(event) => setField('hostname', event.target.value)}
+                  placeholder="web-01.prod"
+                  className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-70`}
+                />
+                {hostnameError && <span className="text-xs text-red-400">{hostnameError}</span>}
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-slate-400">Nome amigavel</span>
+                <input
+                  value={form.displayName}
+                  onChange={(event) => setField('displayName', event.target.value)}
+                  className={inputClass}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-slate-400">Descricao</span>
+                <textarea
+                  value={form.description}
+                  onChange={(event) => setField('description', event.target.value)}
+                  rows={2}
+                  className={inputClass}
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Tipo *</span>
+                  <select
+                    value={form.serverType}
+                    onChange={(event) => setField('serverType', event.target.value as ServerType)}
+                    className={inputClass}
+                  >
+                    {SERVER_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {SERVER_TYPE_LABELS[type]}
+                      </option>
+                    ))}
+                  </select>
                 </label>
-                <label className="flex flex-col gap-1 text-xs">
-                  <span className="text-slate-500">GB</span>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Provedor *</span>
+                  <select
+                    value={form.provider}
+                    onChange={(event) => setField('provider', event.target.value as ServerProvider)}
+                    className={inputClass}
+                  >
+                    {PROVIDERS.map((provider) => (
+                      <option key={provider} value={provider}>
+                        {PROVIDER_LABELS[provider]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Status *</span>
+                  <select
+                    value={form.status}
+                    onChange={(event) => setField('status', event.target.value as ServerStatus)}
+                    className={inputClass}
+                  >
+                    {STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {SERVER_STATUS_LABELS[status]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Ambiente *</span>
+                  <select
+                    value={form.environment}
+                    onChange={(event) =>
+                      setField('environment', event.target.value as ServerEnvironment)
+                    }
+                    className={inputClass}
+                  >
+                    {ENVIRONMENTS.map((environment) => (
+                      <option key={environment} value={environment}>
+                        {ENVIRONMENT_LABELS[environment]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </fieldset>
+          )}
+
+          {activeTab === 'hardware' && (
+            <fieldset className="flex flex-col gap-3">
+              <div className="grid grid-cols-3 gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">CPU (nucleos)</span>
                   <input
                     type="number"
                     min={1}
-                    value={disk.capacityGb}
-                    onChange={(event) =>
-                      updateDisk(index, { capacityGb: Number(event.target.value) })
-                    }
-                    className={`${inputClass} py-1.5 text-sm`}
+                    value={form.cpuCores}
+                    onChange={(event) => setField('cpuCores', event.target.value)}
+                    className={inputClass}
                   />
                 </label>
-                <label className="flex flex-col gap-1 text-xs">
-                  <span className="text-slate-500">Tipo</span>
-                  <select
-                    value={disk.diskType}
-                    onChange={(event) =>
-                      updateDisk(index, { diskType: event.target.value as DiskType })
-                    }
-                    className={`${inputClass} py-1.5 text-sm`}
-                  >
-                    {DISK_TYPES.map((type) => (
-                      <option key={type} value={type}>
-                        {DISK_TYPE_LABELS[type]}
-                      </option>
-                    ))}
-                  </select>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">RAM (GB)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={form.ramGb}
+                    onChange={(event) => setField('ramGb', event.target.value)}
+                    className={inputClass}
+                  />
                 </label>
-                <label className="flex flex-col gap-1 text-xs">
-                  <span className="text-slate-500">Uso</span>
-                  <select
-                    value={disk.purpose}
-                    onChange={(event) =>
-                      updateDisk(index, { purpose: event.target.value as DiskPurpose })
-                    }
-                    className={`${inputClass} py-1.5 text-sm`}
-                  >
-                    {DISK_PURPOSES.map((purpose) => (
-                      <option key={purpose} value={purpose}>
-                        {DISK_PURPOSE_LABELS[purpose]}
-                      </option>
-                    ))}
-                  </select>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Hypervisor</span>
+                  <input
+                    value={form.hypervisor}
+                    onChange={(event) => setField('hypervisor', event.target.value)}
+                    placeholder="VMware, KVM..."
+                    className={inputClass}
+                  />
                 </label>
-                <Button
-                  type="button"
-                  variant="ghost-danger"
-                  size="sm"
-                  onClick={() => removeDisk(index)}
-                >
-                  Remover
-                </Button>
               </div>
-            ))}
-          </div>
-        </fieldset>
 
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-1 text-sm font-medium text-slate-300">Sistema Operacional</legend>
-          <div className="grid grid-cols-3 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">SO</span>
-              <input
-                value={form.osName}
-                onChange={(event) => setField('osName', event.target.value)}
-                placeholder="Ubuntu"
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Versao</span>
-              <input
-                value={form.osVersion}
-                onChange={(event) => setField('osVersion', event.target.value)}
-                placeholder="22.04"
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Arquitetura</span>
-              <input
-                value={form.osArchitecture}
-                onChange={(event) => setField('osArchitecture', event.target.value)}
-                placeholder="x86_64"
-                className={inputClass}
-              />
-            </label>
-          </div>
-        </fieldset>
+              <div className="grid grid-cols-3 gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">SO</span>
+                  <input
+                    value={form.osName}
+                    onChange={(event) => setField('osName', event.target.value)}
+                    placeholder="Ubuntu"
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Versao</span>
+                  <input
+                    value={form.osVersion}
+                    onChange={(event) => setField('osVersion', event.target.value)}
+                    placeholder="22.04"
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Arquitetura</span>
+                  <input
+                    value={form.osArchitecture}
+                    onChange={(event) => setField('osArchitecture', event.target.value)}
+                    placeholder="x86_64"
+                    className={inputClass}
+                  />
+                </label>
+              </div>
 
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-1 text-sm font-medium text-slate-300">Redes</legend>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">IPs privados (separados por virgula)</span>
-              <input
-                value={form.privateIps}
-                onChange={(event) => setField('privateIps', event.target.value)}
-                placeholder="10.0.0.5, 10.0.0.6"
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">IP publico</span>
-              <input
-                value={form.publicIp}
-                onChange={(event) => setField('publicIp', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">VLAN/Subnet</span>
-              <input
-                value={form.vlanSubnet}
-                onChange={(event) => setField('vlanSubnet', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Gateway</span>
-              <input
-                value={form.gateway}
-                onChange={(event) => setField('gateway', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="col-span-2 flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Servidores DNS (separados por virgula)</span>
-              <input
-                value={form.dnsServers}
-                onChange={(event) => setField('dnsServers', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-          </div>
-        </fieldset>
-
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-1 text-sm font-medium text-slate-300">Acesso / Seguranca</legend>
-          <div className="grid grid-cols-3 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Metodo de acesso</span>
-              <input
-                value={form.accessMethod}
-                onChange={(event) => setField('accessMethod', event.target.value)}
-                placeholder="SSH, RDP..."
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Security Group</span>
-              <input
-                value={form.securityGroup}
-                onChange={(event) => setField('securityGroup', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Classificacao de dados</span>
-              <input
-                value={form.dataClassification}
-                onChange={(event) => setField('dataClassification', event.target.value)}
-                placeholder="Confidencial..."
-                className={inputClass}
-              />
-            </label>
-          </div>
-        </fieldset>
-
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-1 text-sm font-medium text-slate-300">Ciclo de Vida</legend>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Status *</span>
-              <select
-                value={form.status}
-                onChange={(event) => setField('status', event.target.value as ServerStatus)}
-                className={inputClass}
-              >
-                {STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {SERVER_STATUS_LABELS[status]}
-                  </option>
+              <div className="flex flex-col gap-2 rounded-md border border-slate-800 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-400">Discos</span>
+                  <Button type="button" variant="secondary" size="sm" onClick={addDisk}>
+                    + Disco
+                  </Button>
+                </div>
+                {disks.length === 0 && (
+                  <p className="text-xs text-slate-500">Nenhum disco adicionado.</p>
+                )}
+                {disks.map((disk, index) => (
+                  <div key={index} className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] items-end gap-2">
+                    <label className="flex flex-col gap-1 text-xs">
+                      <span className="text-slate-500">Mount point</span>
+                      <input
+                        value={disk.mountPoint}
+                        onChange={(event) => updateDisk(index, { mountPoint: event.target.value })}
+                        placeholder="/data"
+                        className={`${inputClass} py-1.5 text-sm`}
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1 text-xs">
+                      <span className="text-slate-500">GB</span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={disk.capacityGb}
+                        onChange={(event) =>
+                          updateDisk(index, { capacityGb: Number(event.target.value) })
+                        }
+                        className={`${inputClass} py-1.5 text-sm`}
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1 text-xs">
+                      <span className="text-slate-500">Tipo</span>
+                      <select
+                        value={disk.diskType}
+                        onChange={(event) =>
+                          updateDisk(index, { diskType: event.target.value as DiskType })
+                        }
+                        className={`${inputClass} py-1.5 text-sm`}
+                      >
+                        {DISK_TYPES.map((type) => (
+                          <option key={type} value={type}>
+                            {DISK_TYPE_LABELS[type]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flex flex-col gap-1 text-xs">
+                      <span className="text-slate-500">Uso</span>
+                      <select
+                        value={disk.purpose}
+                        onChange={(event) =>
+                          updateDisk(index, { purpose: event.target.value as DiskPurpose })
+                        }
+                        className={`${inputClass} py-1.5 text-sm`}
+                      >
+                        {DISK_PURPOSES.map((purpose) => (
+                          <option key={purpose} value={purpose}>
+                            {DISK_PURPOSE_LABELS[purpose]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <Button
+                      type="button"
+                      variant="ghost-danger"
+                      size="sm"
+                      onClick={() => removeDisk(index)}
+                    >
+                      Remover
+                    </Button>
+                  </div>
                 ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Ambiente *</span>
-              <select
-                value={form.environment}
-                onChange={(event) => setField('environment', event.target.value as ServerEnvironment)}
-                className={inputClass}
-              >
-                {ENVIRONMENTS.map((environment) => (
-                  <option key={environment} value={environment}>
-                    {ENVIRONMENT_LABELS[environment]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </fieldset>
+              </div>
+            </fieldset>
+          )}
 
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-1 text-sm font-medium text-slate-300">
-            Responsabilidade / Backup / Custos
-          </legend>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Time responsavel</span>
-              <input
-                value={form.ownerTeam}
-                onChange={(event) => setField('ownerTeam', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Centro de custo</span>
-              <input
-                value={form.costCenter}
-                onChange={(event) => setField('costCenter', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Politica de backup</span>
-              <input
-                value={form.backupPolicy}
-                onChange={(event) => setField('backupPolicy', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Custo mensal estimado (R$)</span>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={form.monthlyCostEstimate}
-                onChange={(event) => setField('monthlyCostEstimate', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">URL de monitoramento</span>
-              <input
-                value={form.monitoringUrl}
-                onChange={(event) => setField('monitoringUrl', event.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="flex items-center gap-2 self-end pb-2 text-sm text-slate-200">
-              <input
-                type="checkbox"
-                checked={form.hasBackup}
-                onChange={(event) => setField('hasBackup', event.target.checked)}
-                className="rounded border-slate-700 bg-slate-950"
-              />
-              Possui backup
-            </label>
-          </div>
-        </fieldset>
+          {activeTab === 'network' && (
+            <fieldset className="flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">IPs privados (separados por virgula)</span>
+                  <input
+                    value={form.privateIps}
+                    onChange={(event) => setField('privateIps', event.target.value)}
+                    placeholder="10.0.0.5, 10.0.0.6"
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">IP publico</span>
+                  <input
+                    value={form.publicIp}
+                    onChange={(event) => setField('publicIp', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">VLAN/Subnet</span>
+                  <input
+                    value={form.vlanSubnet}
+                    onChange={(event) => setField('vlanSubnet', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Gateway</span>
+                  <input
+                    value={form.gateway}
+                    onChange={(event) => setField('gateway', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="col-span-2 flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Servidores DNS (separados por virgula)</span>
+                  <input
+                    value={form.dnsServers}
+                    onChange={(event) => setField('dnsServers', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Metodo de acesso</span>
+                  <input
+                    value={form.accessMethod}
+                    onChange={(event) => setField('accessMethod', event.target.value)}
+                    placeholder="SSH, RDP..."
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Security Group</span>
+                  <input
+                    value={form.securityGroup}
+                    onChange={(event) => setField('securityGroup', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Classificacao de dados</span>
+                  <input
+                    value={form.dataClassification}
+                    onChange={(event) => setField('dataClassification', event.target.value)}
+                    placeholder="Confidencial..."
+                    className={inputClass}
+                  />
+                </label>
+              </div>
+            </fieldset>
+          )}
+
+          {activeTab === 'management' && (
+            <fieldset className="flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Time responsavel</span>
+                  <input
+                    value={form.ownerTeam}
+                    onChange={(event) => setField('ownerTeam', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Centro de custo</span>
+                  <input
+                    value={form.costCenter}
+                    onChange={(event) => setField('costCenter', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Politica de backup</span>
+                  <input
+                    value={form.backupPolicy}
+                    onChange={(event) => setField('backupPolicy', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Custo mensal estimado (R$)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.monthlyCostEstimate}
+                    onChange={(event) => setField('monthlyCostEstimate', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">URL de monitoramento</span>
+                  <input
+                    value={form.monitoringUrl}
+                    onChange={(event) => setField('monitoringUrl', event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex items-center gap-2 self-end pb-2 text-sm text-slate-200">
+                  <input
+                    type="checkbox"
+                    checked={form.hasBackup}
+                    onChange={(event) => setField('hasBackup', event.target.checked)}
+                    className="rounded border-slate-700 bg-slate-950"
+                  />
+                  Possui backup
+                </label>
+              </div>
+            </fieldset>
+          )}
+        </div>
 
         {mutation.isError && (
           <ErrorMessage

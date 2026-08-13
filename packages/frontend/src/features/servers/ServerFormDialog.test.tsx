@@ -105,6 +105,7 @@ describe('ServerFormDialog', () => {
     fireEvent.change(screen.getByPlaceholderText('web-01.prod'), {
       target: { value: 'web-01.prod' },
     });
+    fireEvent.click(screen.getByRole('tab', { name: 'Hardware & SO' }));
     fireEvent.click(screen.getByRole('button', { name: '+ Disco' }));
     fireEvent.change(screen.getByPlaceholderText('/data'), { target: { value: '/data' } });
     fireEvent.click(screen.getByRole('button', { name: 'Criar servidor' }));
@@ -122,5 +123,18 @@ describe('ServerFormDialog', () => {
         }),
       }),
     );
+  });
+
+  it('alterna entre abas mantendo os dados preenchidos', () => {
+    renderDialog();
+
+    fireEvent.change(screen.getByPlaceholderText('web-01.prod'), {
+      target: { value: 'web-01.prod' },
+    });
+    fireEvent.click(screen.getByRole('tab', { name: 'Hardware & SO' }));
+    expect(screen.queryByPlaceholderText('web-01.prod')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Identificacao' }));
+    expect(screen.getByPlaceholderText('web-01.prod')).toHaveValue('web-01.prod');
   });
 });
