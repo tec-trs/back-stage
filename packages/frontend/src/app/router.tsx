@@ -26,6 +26,7 @@ const AuditPage = lazy(() => import('../pages/AuditPage').then((m) => ({ default
 const SettingsPage = lazy(() =>
   import('../pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 );
+const UsersPage = lazy(() => import('../pages/UsersPage').then((m) => ({ default: m.UsersPage })));
 
 function withSuspense(element: ReactNode) {
   return <Suspense fallback={<Spinner />}>{element}</Suspense>;
@@ -48,6 +49,7 @@ export const router = createBrowserRouter([
           { path: '/infrastructure', element: withSuspense(<InfrastructurePage />) },
           { path: '/governance', element: withSuspense(<GovernancePage />) },
           { path: '/audit', element: withSuspense(<AuditPage />) },
+          { path: '/users', element: withSuspense(<UsersPage />) },
           { path: '/settings', element: withSuspense(<SettingsPage />) },
         ],
       },

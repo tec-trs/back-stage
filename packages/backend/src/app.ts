@@ -15,6 +15,7 @@ import { registerGovernanceModule } from './modules/governance/governance.module
 import { registerHealthModule } from './modules/health/health.module.js';
 import { registerSearchModule } from './modules/search/search.module.js';
 import { registerServiceCatalogModule } from './modules/service-catalog/service-catalog.module.js';
+import { registerUsersModule } from './modules/users/users.module.js';
 import { metricsRegistry } from './observability/metrics.js';
 import { errorHandlerMiddleware } from './shared/http/error-handler.middleware.js';
 import { metricsMiddleware } from './shared/http/metrics.middleware.js';
@@ -71,6 +72,7 @@ export function createApp(): Express {
   app.use('/api', registerSearchModule());
   app.use('/api/catalog-entities', registerCatalogModule());
   app.use('/api/audit-logs', registerAuditModule());
+  app.use('/api/users', registerUsersModule());
   app.use(registerDeploymentsModule());
 
   app.use(notFoundMiddleware);

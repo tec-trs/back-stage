@@ -35,7 +35,7 @@ describe('CreateServiceDialog', () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.queryByText('Novo Service')).not.toBeInTheDocument();
+    expect(screen.queryByText('Novo Servico')).not.toBeInTheDocument();
   });
 
   it('valida o formato do nome antes de enviar', () => {
@@ -44,7 +44,7 @@ describe('CreateServiceDialog', () => {
     fireEvent.change(screen.getByPlaceholderText('billing-api'), {
       target: { value: 'Nome Invalido' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Criar service' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar servico' }));
 
     expect(
       screen.getByText('O nome deve conter apenas letras minusculas, numeros e hifen'),
@@ -52,7 +52,7 @@ describe('CreateServiceDialog', () => {
     expect(apiRequest).not.toHaveBeenCalled();
   });
 
-  it('cria o service e fecha o dialogo ao submeter com sucesso', async () => {
+  it('cria o servico e fecha o dialogo ao submeter com sucesso', async () => {
     vi.mocked(apiRequest).mockResolvedValueOnce({
       id: 'svc-1',
       type: 'service',
@@ -73,7 +73,7 @@ describe('CreateServiceDialog', () => {
     fireEvent.change(screen.getByPlaceholderText('billing-api'), {
       target: { value: 'billing-api' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Criar service' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar servico' }));
 
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled();
@@ -92,7 +92,7 @@ describe('CreateServiceDialog', () => {
     fireEvent.change(screen.getByPlaceholderText('billing-api'), {
       target: { value: 'billing-api' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Criar service' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar servico' }));
 
     expect(await screen.findByText('Service ja existe')).toBeInTheDocument();
   });

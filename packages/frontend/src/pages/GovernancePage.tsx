@@ -30,8 +30,8 @@ export function GovernancePage() {
   return (
     <div>
       <PageHeader
-        title="Governance"
-        description="Compliance dashboard e violacoes de policy ativas"
+        title="Governanca"
+        description="Painel de conformidade e violacoes de politicas ativas"
       />
 
       {dashboard.isLoading && <Spinner />}
@@ -40,14 +40,14 @@ export function GovernancePage() {
           message={
             dashboard.error instanceof Error
               ? dashboard.error.message
-              : 'Erro ao carregar dashboard'
+              : 'Erro ao carregar painel'
           }
         />
       )}
 
       {dashboard.data && (
         <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <StatCard label="Policies ativas" value={dashboard.data.activePolicies} />
+          <StatCard label="Politicas ativas" value={dashboard.data.activePolicies} />
           <StatCard label="Avaliacoes" value={dashboard.data.totalEvaluations} />
           <StatCard label="Falhas" value={dashboard.data.failCount} tone="danger" />
           <StatCard
@@ -79,7 +79,7 @@ export function GovernancePage() {
                 <p className="text-slate-100">{violation.policyName}</p>
                 <p className="text-slate-500">{violation.entityName}</p>
               </div>
-              <Badge tone="danger">fail</Badge>
+              <Badge tone="danger">falha</Badge>
             </li>
           ))}
         </ul>

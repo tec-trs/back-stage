@@ -25,7 +25,7 @@ describe('SettingsPage', () => {
 
     expect(screen.getByText('admin@back-stage.dev')).toBeInTheDocument();
     expect(screen.getByText('Admin')).toBeInTheDocument();
-    expect(screen.getByText('admin')).toBeInTheDocument();
-    expect(screen.getByText('maintainer')).toBeInTheDocument();
+    expect(screen.getByText('Administrador')).toBeInTheDocument();
+    expect(screen.getByText('Mantenedor')).toBeInTheDocument();
   });
 });

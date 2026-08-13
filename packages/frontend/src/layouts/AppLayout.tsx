@@ -3,13 +3,14 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../features/auth/auth.store';
 import { useAppStore } from '../store/app.store';
 
-const NAV_ITEMS: { to: string; label: string }[] = [
-  { to: '/', label: 'Dashboard' },
-  { to: '/catalog', label: 'Catalog' },
-  { to: '/infrastructure', label: 'Infrastructure' },
-  { to: '/governance', label: 'Governance' },
-  { to: '/audit', label: 'Audit' },
-  { to: '/settings', label: 'Settings' },
+const NAV_ITEMS: { to: string; label: string; adminOnly?: boolean }[] = [
+  { to: '/', label: 'Painel' },
+  { to: '/catalog', label: 'Catalogo' },
+  { to: '/infrastructure', label: 'Infraestrutura' },
+  { to: '/governance', label: 'Governanca' },
+  { to: '/audit', label: 'Auditoria' },
+  { to: '/users', label: 'Usuarios', adminOnly: true },
+  { to: '/settings', label: 'Configuracoes' },
 ];
 
 export function AppLayout() {
@@ -17,6 +18,8 @@ export function AppLayout() {
   const logout = useAuthStore((state) => state.logout);
   const isSidebarOpen = useAppStore((state) => state.isSidebarOpen);
   const toggleSidebar = useAppStore((state) => state.toggleSidebar);
+  const isAdmin = user?.roles.includes('admin') ?? false;
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100">
@@ -24,7 +27,7 @@ export function AppLayout() {
         <aside className="w-60 shrink-0 border-r border-slate-800 p-4">
           <p className="mb-6 text-lg font-semibold">Platform Engineering Center</p>
           <nav className="flex flex-col gap-1">
-            {NAV_ITEMS.map((item) => (
+            {visibleNavItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

@@ -8,6 +8,7 @@ import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Spinner } from '../shared/components/Spinner';
+import { translateLifecycle } from '../shared/constants/labels';
 
 const LIFECYCLE_TONE = {
   production: 'success',
@@ -22,15 +23,15 @@ export function CatalogPage() {
   return (
     <div>
       <PageHeader
-        title="Service Catalog"
-        description="Services registrados na plataforma"
+        title="Catalogo de Servicos"
+        description="Servicos registrados na plataforma"
         actions={
           <button
             type="button"
             onClick={() => setIsCreateDialogOpen(true)}
             className="rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-white"
           >
-            + Novo Service
+            + Novo Servico
           </button>
         }
       />
@@ -43,13 +44,13 @@ export function CatalogPage() {
       {isLoading && <Spinner />}
       {isError && (
         <ErrorMessage
-          message={error instanceof Error ? error.message : 'Erro ao carregar services'}
+          message={error instanceof Error ? error.message : 'Erro ao carregar servicos'}
         />
       )}
       {data && data.items.length === 0 && (
         <EmptyState
-          title="Nenhum service encontrado"
-          description="Cadastre um service via API para comecar."
+          title="Nenhum servico encontrado"
+          description="Cadastre um servico via API para comecar."
         />
       )}
 
@@ -60,7 +61,7 @@ export function CatalogPage() {
               <tr>
                 <th className="px-4 py-2 font-medium">Nome</th>
                 <th className="px-4 py-2 font-medium">Tipo</th>
-                <th className="px-4 py-2 font-medium">Lifecycle</th>
+                <th className="px-4 py-2 font-medium">Ciclo de vida</th>
                 <th className="px-4 py-2 font-medium">Namespace</th>
               </tr>
             </thead>
@@ -80,7 +81,7 @@ export function CatalogPage() {
                         'default'
                       }
                     >
-                      {service.lifecycle}
+                      {translateLifecycle(service.lifecycle)}
                     </Badge>
                   </td>
                   <td className="px-4 py-2 text-slate-400">{service.namespace}</td>

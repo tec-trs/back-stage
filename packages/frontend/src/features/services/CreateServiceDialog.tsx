@@ -2,6 +2,7 @@ import { type FormEvent, useState } from 'react';
 
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
+import { translateLifecycle } from '../../shared/constants/labels';
 
 import { useCreateService } from './use-create-service';
 
@@ -67,7 +68,7 @@ export function CreateServiceDialog({ isOpen, onClose }: CreateServiceDialogProp
   }
 
   return (
-    <Modal title="Novo Service" isOpen={isOpen} onClose={handleClose}>
+    <Modal title="Novo Servico" isOpen={isOpen} onClose={handleClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-slate-400">Nome (kebab-case) *</span>
@@ -114,7 +115,7 @@ export function CreateServiceDialog({ isOpen, onClose }: CreateServiceDialogProp
         </div>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-400">Lifecycle</span>
+          <span className="text-slate-400">Ciclo de vida</span>
           <select
             value={lifecycle}
             onChange={(event) =>
@@ -122,9 +123,9 @@ export function CreateServiceDialog({ isOpen, onClose }: CreateServiceDialogProp
             }
             className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-slate-500"
           >
-            <option value="experimental">experimental</option>
-            <option value="production">production</option>
-            <option value="deprecated">deprecated</option>
+            <option value="experimental">{translateLifecycle('experimental')}</option>
+            <option value="production">{translateLifecycle('production')}</option>
+            <option value="deprecated">{translateLifecycle('deprecated')}</option>
           </select>
         </label>
 
@@ -154,7 +155,7 @@ export function CreateServiceDialog({ isOpen, onClose }: CreateServiceDialogProp
             message={
               createService.error instanceof Error
                 ? createService.error.message
-                : 'Erro ao criar o service'
+                : 'Erro ao criar o servico'
             }
           />
         )}
@@ -172,7 +173,7 @@ export function CreateServiceDialog({ isOpen, onClose }: CreateServiceDialogProp
             disabled={createService.isPending}
             className="rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-white disabled:opacity-60"
           >
-            {createService.isPending ? 'Criando...' : 'Criar service'}
+            {createService.isPending ? 'Criando...' : 'Criar servico'}
           </button>
         </div>
       </form>

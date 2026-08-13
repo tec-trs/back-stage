@@ -1,0 +1,128 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { apiRequest } from '../../shared/api/http-client';
+
+import { UserFormDialog } from './UserFormDialog';
+
+vi.mock('../../shared/api/http-client', () => ({
+  apiRequest: vi.fn(),
+}));
+
+function renderDialog(props: Partial<Parameters<typeof UserFormDialog>[0]> = {}) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const onClose = vi.fn();
+  return {
+    onClose,
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <UserFormDialog isOpen onClose={onClose} user={null} {...props} />
+      </QueryClientProvider>,
+    ),
+  };
+}
+
+describe('UserFormDialog', () => {
+  afterEach(() => {
+    vi.mocked(apiRequest).mockReset();
+  });
+
+  it('exibe o titulo "Novo Usuario" e o campo de senha no modo criacao', () => {
+    renderDialog();
+
+    expect(screen.getByText('Novo Usuario')).toBeInTheDocument();
+    expect(screen.getByText('Senha (minimo 8 caracteres) *')).toBeInTheDocument();
+  });
+
+  it('exibe o titulo "Editar Usuario" e oculta a senha no modo edicao', () => {
+    renderDialog({
+      user: {
+        id: 'user-1',
+        email: 'jane.doe@back-stage.dev',
+        fullName: 'Jane Doe',
+        avatarUrl: null,
+        isActive: true,
+        roles: ['viewer'],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+    });
+
+    expect(screen.getByText('Editar Usuario')).toBeInTheDocument();
+    expect(screen.queryByText('Senha (minimo 8 caracteres) *')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('Jane Doe')).toBeInTheDocument();
+  });
+
+  it('exige pelo menos um perfil selecionado', () => {
+    renderDialog();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Visualizador' }));
+    fireEvent.change(screen.getByPlaceholderText('Maria Souza'), {
+      target: { value: 'Jane Doe' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('maria.souza@back-stage.dev'), {
+      target: { value: 'jane.doe@back-stage.dev' },
+    });
+    fireEvent.change(screen.getByLabelText('Senha (minimo 8 caracteres) *'), {
+      target: { value: 'SenhaForte123!' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar usuario' }));
+
+    expect(screen.getByText('Selecione pelo menos um perfil')).toBeInTheDocument();
+    expect(apiRequest).not.toHaveBeenCalled();
+  });
+
+  it('cria um usuario e fecha o dialogo ao submeter com sucesso', async () => {
+    vi.mocked(apiRequest).mockResolvedValueOnce({
+      id: 'user-1',
+      email: 'jane.doe@back-stage.dev',
+      fullName: 'Jane Doe',
+      avatarUrl: null,
+      isActive: true,
+      roles: ['viewer'],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    const { onClose } = renderDialog();
+
+    fireEvent.change(screen.getByPlaceholderText('Maria Souza'), {
+      target: { value: 'Jane Doe' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('maria.souza@back-stage.dev'), {
+      target: { value: 'jane.doe@back-stage.dev' },
+    });
+    fireEvent.change(screen.getByLabelText('Senha (minimo 8 caracteres) *'), {
+      target: { value: 'SenhaForte123!' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar usuario' }));
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+    expect(apiRequest).toHaveBeenCalledWith('/api/users', {
+      method: 'POST',
+      body: expect.objectContaining({ email: 'jane.doe@back-stage.dev', roles: ['viewer'] }),
+    });
+  });
+
+  it('exibe uma mensagem de erro quando a API rejeita a criacao', async () => {
+    vi.mocked(apiRequest).mockRejectedValueOnce(new Error('Usuario ja existe'));
+
+    renderDialog();
+
+    fireEvent.change(screen.getByPlaceholderText('Maria Souza'), {
+      target: { value: 'Jane Doe' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('maria.souza@back-stage.dev'), {
+      target: { value: 'jane.doe@back-stage.dev' },
+    });
+    fireEvent.change(screen.getByLabelText('Senha (minimo 8 caracteres) *'), {
+      target: { value: 'SenhaForte123!' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar usuario' }));
+
+    expect(await screen.findByText('Usuario ja existe')).toBeInTheDocument();
+  });
+});

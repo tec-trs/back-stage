@@ -11,7 +11,7 @@ export function InfrastructurePage() {
   return (
     <div>
       <PageHeader
-        title="Infrastructure Catalog"
+        title="Catalogo de Infraestrutura"
         description="Recursos de infraestrutura registrados (bancos, filas, clusters)"
       />
 

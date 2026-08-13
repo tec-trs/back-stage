@@ -10,7 +10,7 @@ export function AuditPage() {
   return (
     <div>
       <PageHeader
-        title="Audit Trail"
+        title="Trilha de Auditoria"
         description="Historico de eventos e alteracoes na plataforma"
       />
 

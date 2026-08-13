@@ -10,6 +10,7 @@ import { Badge } from '../shared/components/Badge';
 import { DependencyGraph } from '../shared/components/DependencyGraph';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Spinner } from '../shared/components/Spinner';
+import { translateLifecycle } from '../shared/constants/labels';
 
 export function ServiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -44,7 +45,7 @@ export function ServiceDetailPage() {
         <div className="mt-4">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold text-slate-100">{data.title ?? data.name}</h1>
-            <Badge>{data.lifecycle}</Badge>
+            <Badge>{translateLifecycle(data.lifecycle)}</Badge>
           </div>
           <p className="mt-2 text-slate-400">{data.description ?? 'Sem descricao.'}</p>
 

@@ -23,7 +23,7 @@ function renderCatalogPage() {
 }
 
 describe('CatalogPage', () => {
-  it('exibe um estado vazio quando nao ha services', async () => {
+  it('exibe um estado vazio quando nao ha servicos', async () => {
     vi.mocked(apiRequest).mockResolvedValueOnce({
       items: [],
       pagination: { page: 1, pageSize: 20, total: 0 },
@@ -31,10 +31,10 @@ describe('CatalogPage', () => {
 
     renderCatalogPage();
 
-    expect(await screen.findByText('Nenhum service encontrado')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhum servico encontrado')).toBeInTheDocument();
   });
 
-  it('lista os services retornados pela API', async () => {
+  it('lista os servicos retornados pela API', async () => {
     vi.mocked(apiRequest).mockResolvedValueOnce({
       items: [
         {
@@ -58,10 +58,10 @@ describe('CatalogPage', () => {
     renderCatalogPage();
 
     expect(await screen.findByText('Backend API')).toBeInTheDocument();
-    expect(screen.getByText('production')).toBeInTheDocument();
+    expect(screen.getByText('Producao')).toBeInTheDocument();
   });
 
-  it('abre o dialogo de criacao ao clicar em "+ Novo Service"', async () => {
+  it('abre o dialogo de criacao ao clicar em "+ Novo Servico"', async () => {
     vi.mocked(apiRequest).mockResolvedValueOnce({
       items: [],
       pagination: { page: 1, pageSize: 20, total: 0 },
@@ -69,8 +69,8 @@ describe('CatalogPage', () => {
 
     renderCatalogPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: '+ Novo Service' }));
+    fireEvent.click(await screen.findByRole('button', { name: '+ Novo Servico' }));
 
-    expect(screen.getByText('Novo Service')).toBeInTheDocument();
+    expect(screen.getByText('Novo Servico')).toBeInTheDocument();
   });
 });

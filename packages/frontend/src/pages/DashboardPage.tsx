@@ -36,20 +36,20 @@ export function DashboardPage() {
   return (
     <div>
       <PageHeader
-        title="Dashboard"
+        title="Painel"
         description="Visao geral da plataforma"
         actions={
           health.data && (
             <Badge tone={health.data.status === 'ok' ? 'success' : 'warning'}>
-              backend {health.data.status}
+              backend {health.data.status === 'ok' ? 'operacional' : health.data.status}
             </Badge>
           )
         }
       />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        <StatCard label="Services" value={services.data?.pagination.total ?? '-'} />
-        <StatCard label="Policies ativas" value={governance.data?.activePolicies ?? '-'} />
+        <StatCard label="Servicos" value={services.data?.pagination.total ?? '-'} />
+        <StatCard label="Politicas ativas" value={governance.data?.activePolicies ?? '-'} />
         <StatCard
           label="Violacoes"
           value={governance.data?.failCount ?? '-'}
