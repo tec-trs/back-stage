@@ -43,10 +43,10 @@ describe('UserFormDialog', () => {
     vi.mocked(apiRequest).mockReset();
   });
 
-  it('exibe o titulo "Novo Usuario" e o campo de senha no modo criacao', () => {
+  it('exibe o titulo "Incluir Usuario" e o campo de senha no modo criacao', () => {
     renderDialog();
 
-    expect(screen.getByText('Novo Usuario')).toBeInTheDocument();
+    expect(screen.getByText('Incluir Usuario')).toBeInTheDocument();
     expect(screen.getByText('Senha (minimo 8 caracteres) *')).toBeInTheDocument();
   });
 

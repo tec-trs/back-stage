@@ -180,7 +180,7 @@ describe('UsersPage', () => {
     });
   });
 
-  it('abre o dialogo de criacao ao clicar em "+ Novo Usuario"', async () => {
+  it('abre o dialogo de criacao ao clicar em "Incluir Usuario"', async () => {
     useAuthStore.setState({ accessToken: 'token', user: ADMIN_USER });
     vi.mocked(apiRequest).mockResolvedValueOnce({
       items: [],
@@ -189,10 +189,10 @@ describe('UsersPage', () => {
 
     renderUsersPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: '+ Novo Usuario' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Incluir Usuario' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Novo Usuario')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Incluir Usuario' })).toBeInTheDocument();
     });
   });
 });

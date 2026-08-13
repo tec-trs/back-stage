@@ -10,6 +10,7 @@ import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
 import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
+import { PencilIcon, PlusIcon, PowerIcon, TrashIcon } from '../shared/components/icons';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Spinner } from '../shared/components/Spinner';
 import { translateRole } from '../shared/constants/labels';
@@ -75,40 +76,67 @@ export function UsersPage() {
     }
   }
 
+  const editTitle = selectedUser
+    ? `Editar ${selectedUser.fullName}`
+    : 'Selecione um usuario na lista para editar';
+
+  const toggleActiveTitle = isSelfSelected
+    ? 'Voce nao pode inativar sua propria conta'
+    : selectedUser
+      ? selectedUser.isActive
+        ? `Inativar ${selectedUser.fullName}`
+        : `Ativar ${selectedUser.fullName}`
+      : 'Selecione um usuario na lista para ativar ou inativar';
+
+  const deleteTitle = isSelfSelected
+    ? 'Voce nao pode eliminar sua propria conta'
+    : selectedUser
+      ? `Eliminar ${selectedUser.fullName}`
+      : 'Selecione um usuario na lista para eliminar';
+
   return (
     <div>
-      <PageHeader
-        title="Usuarios"
-        description="Gestao de acesso a aplicacao"
-        actions={<Button onClick={openCreateDialog}>+ Novo Usuario</Button>}
-      />
+      <PageHeader title="Usuarios" description="Gestao de acesso a aplicacao" />
 
       <UserFormDialog isOpen={isFormOpen} onClose={closeDialog} user={editingUser} />
 
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
         <Button
           size="sm"
+          icon={<PlusIcon />}
+          onClick={openCreateDialog}
+          title="Incluir um novo usuario"
+        >
+          Incluir Usuario
+        </Button>
+        <div className="mx-1 h-6 w-px bg-slate-800" />
+        <Button
+          size="sm"
           variant="secondary"
+          icon={<PencilIcon />}
           disabled={!selectedUser}
           onClick={handleEditSelected}
+          title={editTitle}
         >
           Editar
         </Button>
         <Button
           size="sm"
           variant="secondary"
+          icon={<PowerIcon />}
           disabled={!selectedUser || isSelfSelected || setUserActive.isPending}
           onClick={handleToggleActiveSelected}
-          title={isSelfSelected ? 'Voce nao pode inativar sua propria conta' : undefined}
+          title={toggleActiveTitle}
         >
           {selectedUser && !selectedUser.isActive ? 'Ativar' : 'Inativar'}
         </Button>
         <Button
           size="sm"
           variant="danger"
+          icon={<TrashIcon />}
           disabled={!selectedUser || isSelfSelected || deleteUser.isPending}
           onClick={handleDeleteSelected}
-          title={isSelfSelected ? 'Voce nao pode eliminar sua propria conta' : undefined}
+          title={deleteTitle}
         >
           Eliminar
         </Button>

@@ -1,4 +1,4 @@
-import { forwardRef, type ButtonHTMLAttributes } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'ghost-danger';
 export type ButtonSize = 'sm' | 'md';
@@ -6,11 +6,12 @@ export type ButtonSize = 'sm' | 'md';
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  icon?: ReactNode;
 }
 
 const BASE_CLASSES =
   'inline-flex items-center justify-center gap-1.5 rounded-lg font-medium ' +
-  'transition-all duration-150 ease-out ' +
+  'transition-all duration-150 ease-out [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0 ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ' +
   'disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]';
 
@@ -36,14 +37,20 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = 'primary', size = 'md', className = '', type = 'button', ...props }, ref) => {
+  (
+    { variant = 'primary', size = 'md', className = '', type = 'button', icon, children, ...props },
+    ref,
+  ) => {
     return (
       <button
         ref={ref}
         type={type}
         className={`${BASE_CLASSES} ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`.trim()}
         {...props}
-      />
+      >
+        {icon}
+        {children}
+      </button>
     );
   },
 );

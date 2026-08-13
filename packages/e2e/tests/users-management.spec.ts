@@ -23,15 +23,15 @@ test('admin cria, edita e inativa um usuario pela tela de Usuarios', async ({ pa
   await expect(page.getByRole('heading', { name: 'Usuarios' })).toBeVisible();
 
   // Criar usuario
-  await page.getByRole('button', { name: '+ Novo Usuario' }).click();
-  await expect(page.getByRole('heading', { name: 'Novo Usuario' })).toBeVisible();
+  await page.getByRole('button', { name: 'Incluir Usuario' }).click();
+  await expect(page.getByRole('heading', { name: 'Incluir Usuario' })).toBeVisible();
   await page.getByPlaceholder('maria.souza', { exact: true }).fill(uniqueCode);
   await page.getByPlaceholder('Maria Souza').fill('QA Tester');
   await page.getByPlaceholder('maria.souza@back-stage.dev').fill(uniqueEmail);
   await page.getByLabel('Senha (minimo 8 caracteres) *').fill('SenhaForte123!');
   await page.getByRole('button', { name: 'Criar usuario' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Novo Usuario' })).not.toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Incluir Usuario' })).not.toBeVisible();
   const row = page.locator('tr', { hasText: uniqueEmail });
   await expect(row).toBeVisible();
   await expect(row.getByText('Visualizador')).toBeVisible();
@@ -77,13 +77,13 @@ test('admin redefine a senha de um usuario e o novo login funciona', async ({ pa
   await login(page);
   await page.getByRole('link', { name: 'Usuarios' }).click();
 
-  await page.getByRole('button', { name: '+ Novo Usuario' }).click();
+  await page.getByRole('button', { name: 'Incluir Usuario' }).click();
   await page.getByPlaceholder('maria.souza', { exact: true }).fill(uniqueCode);
   await page.getByPlaceholder('Maria Souza').fill('QA Password Tester');
   await page.getByPlaceholder('maria.souza@back-stage.dev').fill(uniqueEmail);
   await page.getByLabel('Senha (minimo 8 caracteres) *').fill('SenhaOriginal123!');
   await page.getByRole('button', { name: 'Criar usuario' }).click();
-  await expect(page.getByRole('heading', { name: 'Novo Usuario' })).not.toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Incluir Usuario' })).not.toBeVisible();
 
   await selectRow(page, uniqueEmail);
   await page.getByRole('button', { name: 'Editar' }).click();
@@ -107,13 +107,13 @@ test('admin elimina um usuario e ele desaparece da lista', async ({ page }) => {
   await login(page);
   await page.getByRole('link', { name: 'Usuarios' }).click();
 
-  await page.getByRole('button', { name: '+ Novo Usuario' }).click();
+  await page.getByRole('button', { name: 'Incluir Usuario' }).click();
   await page.getByPlaceholder('maria.souza', { exact: true }).fill(uniqueCode);
   await page.getByPlaceholder('Maria Souza').fill('QA Delete Tester');
   await page.getByPlaceholder('maria.souza@back-stage.dev').fill(uniqueEmail);
   await page.getByLabel('Senha (minimo 8 caracteres) *').fill('SenhaForte123!');
   await page.getByRole('button', { name: 'Criar usuario' }).click();
-  await expect(page.getByRole('heading', { name: 'Novo Usuario' })).not.toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Incluir Usuario' })).not.toBeVisible();
 
   await expect(page.locator('tr', { hasText: uniqueEmail })).toBeVisible();
   await selectRow(page, uniqueEmail);

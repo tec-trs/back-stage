@@ -97,7 +97,7 @@ export function UserFormDialog({
 
   return (
     <Modal
-      title={isEditMode ? 'Editar Usuario' : 'Novo Usuario'}
+      title={isEditMode ? 'Editar Usuario' : 'Incluir Usuario'}
       isOpen={isOpen}
       onClose={handleClose}
     >
