@@ -93,6 +93,65 @@ describe('UsersPage', () => {
 
     const deactivateButton = await screen.findByRole('button', { name: 'Inativar' });
     expect(deactivateButton).toBeDisabled();
+    const deleteButton = screen.getByRole('button', { name: 'Eliminar' });
+    expect(deleteButton).toBeDisabled();
+  });
+
+  it('elimina um usuario apos confirmacao', async () => {
+    useAuthStore.setState({ accessToken: 'token', user: ADMIN_USER });
+    vi.mocked(apiRequest).mockResolvedValueOnce({
+      items: [
+        {
+          id: 'user-1',
+          email: 'jane.doe@back-stage.dev',
+          fullName: 'Jane Doe',
+          avatarUrl: null,
+          isActive: true,
+          roles: ['viewer'],
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      pagination: { page: 1, pageSize: 20, total: 1 },
+    });
+    vi.mocked(apiRequest).mockResolvedValueOnce(undefined);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    renderUsersPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Eliminar' }));
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith('/api/users/user-1', { method: 'DELETE' });
+    });
+    confirmSpy.mockRestore();
+  });
+
+  it('nao elimina o usuario quando a confirmacao e cancelada', async () => {
+    useAuthStore.setState({ accessToken: 'token', user: ADMIN_USER });
+    vi.mocked(apiRequest).mockResolvedValueOnce({
+      items: [
+        {
+          id: 'user-1',
+          email: 'jane.doe@back-stage.dev',
+          fullName: 'Jane Doe',
+          avatarUrl: null,
+          isActive: true,
+          roles: ['viewer'],
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      pagination: { page: 1, pageSize: 20, total: 1 },
+    });
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    renderUsersPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Eliminar' }));
+
+    expect(apiRequest).toHaveBeenCalledTimes(1);
+    confirmSpy.mockRestore();
   });
 
   it('abre o dialogo de criacao ao clicar em "+ Novo Usuario"', async () => {

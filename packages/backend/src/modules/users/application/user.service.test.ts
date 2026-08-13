@@ -32,6 +32,7 @@ function buildRepositoryMock(overrides: Partial<IUserRepository> = {}): IUserRep
     create: vi.fn(),
     update: vi.fn(),
     setActive: vi.fn(),
+    softDelete: vi.fn(),
     ...overrides,
   };
 }
@@ -115,6 +116,70 @@ describe('UserService', () => {
       '11111111-1111-1111-1111-111111111111',
       false,
     );
+  });
+
+  it('faz hash da nova senha ao atualizar um usuario com senha informada', async () => {
+    const repository = buildRepositoryMock({
+      findById: vi.fn().mockResolvedValue(buildUser()),
+      findByEmail: vi.fn().mockResolvedValue(undefined),
+      update: vi.fn().mockResolvedValue(buildUser()),
+    });
+    const service = new UserService(repository);
+
+    await service.update(
+      '11111111-1111-1111-1111-111111111111',
+      { password: 'NovaSenhaForte123!' },
+      {},
+    );
+
+    expect(repository.update).toHaveBeenCalledWith(
+      '11111111-1111-1111-1111-111111111111',
+      expect.objectContaining({
+        passwordHash: expect.stringMatching(/^\$2[aby]\$/),
+      }),
+    );
+  });
+
+  it('nao altera a senha quando nenhuma senha e informada na atualizacao', async () => {
+    const repository = buildRepositoryMock({
+      findById: vi.fn().mockResolvedValue(buildUser()),
+      update: vi.fn().mockResolvedValue(buildUser()),
+    });
+    const service = new UserService(repository);
+
+    await service.update('11111111-1111-1111-1111-111111111111', { fullName: 'Jane D.' }, {});
+
+    expect(repository.update).toHaveBeenCalledWith(
+      '11111111-1111-1111-1111-111111111111',
+      expect.objectContaining({ passwordHash: undefined }),
+    );
+  });
+
+  it('lanca ValidationError ao tentar eliminar a propria conta', async () => {
+    const repository = buildRepositoryMock({
+      findById: vi.fn().mockResolvedValue(buildUser()),
+    });
+    const service = new UserService(repository);
+
+    await expect(
+      service.delete('11111111-1111-1111-1111-111111111111', {
+        actorUserId: '11111111-1111-1111-1111-111111111111',
+      }),
+    ).rejects.toThrow('Voce nao pode eliminar sua propria conta');
+  });
+
+  it('elimina um usuario diferente do ator autenticado', async () => {
+    const repository = buildRepositoryMock({
+      findById: vi.fn().mockResolvedValue(buildUser()),
+      softDelete: vi.fn().mockResolvedValue(true),
+    });
+    const service = new UserService(repository);
+
+    await service.delete('11111111-1111-1111-1111-111111111111', {
+      actorUserId: '22222222-2222-2222-2222-222222222222',
+    });
+
+    expect(repository.softDelete).toHaveBeenCalledWith('11111111-1111-1111-1111-111111111111');
   });
 
   it('lista usuarios delegando paginacao e filtros ao repositorio', async () => {

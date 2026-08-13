@@ -37,6 +37,7 @@ export interface UpdateUserInput {
   email?: string;
   fullName?: string;
   roles?: string[];
+  passwordHash?: string;
 }
 
 export interface IUserRepository {
@@ -46,6 +47,7 @@ export interface IUserRepository {
   create(input: CreateUserInput): Promise<User>;
   update(id: string, input: UpdateUserInput): Promise<User | undefined>;
   setActive(id: string, isActive: boolean): Promise<User | undefined>;
+  softDelete(id: string): Promise<boolean>;
 }
 
 export class UserRepository implements IUserRepository {
@@ -120,6 +122,7 @@ export class UserRepository implements IUserRepository {
     if (input.email !== undefined) patch.email = input.email;
     if (input.fullName !== undefined) patch.full_name = input.fullName;
     if (input.roles !== undefined) patch.roles = input.roles;
+    if (input.passwordHash !== undefined) patch.password_hash = input.passwordHash;
 
     if (Object.keys(patch).length === 0) {
       return this.findById(id);
@@ -142,5 +145,13 @@ export class UserRepository implements IUserRepository {
       .returning(SAFE_COLUMNS)) as UserRow[];
 
     return rows[0] ? new User(rows[0]) : undefined;
+  }
+
+  public async softDelete(id: string): Promise<boolean> {
+    const affected = (await this.db(TABLE_NAME)
+      .whereNull('deleted_at')
+      .where('id', id)
+      .update({ deleted_at: this.db.fn.now() })) as unknown as number;
+    return affected > 0;
   }
 }

@@ -72,4 +72,13 @@ export class UserController {
     });
     response.status(200).json(user.toJSON());
   };
+
+  public remove = async (request: Request, response: Response): Promise<void> => {
+    await this.userService.delete(request.params.id, {
+      actorUserId: request.user?.id,
+      ipAddress: request.ip,
+      userAgent: request.header('user-agent'),
+    });
+    response.status(204).send();
+  };
 }

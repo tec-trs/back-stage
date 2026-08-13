@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { useAuthStore } from '../features/auth/auth.store';
+import { useDeleteUser } from '../features/users/use-delete-user';
 import { useSetUserActive } from '../features/users/use-set-user-active';
 import { useUsers } from '../features/users/use-users';
 import type { UserSummary } from '../features/users/use-users';
@@ -16,6 +17,7 @@ export function UsersPage() {
   const currentUser = useAuthStore((state) => state.user);
   const { data, isLoading, isError, error } = useUsers();
   const setUserActive = useSetUserActive();
+  const deleteUser = useDeleteUser();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserSummary | null>(null);
@@ -44,6 +46,15 @@ export function UsersPage() {
     setEditingUser(null);
   }
 
+  function handleDelete(user: UserSummary): void {
+    const confirmed = window.confirm(
+      `Tem certeza que deseja eliminar o usuario "${user.fullName}"? Esta acao nao pode ser desfeita.`,
+    );
+    if (confirmed) {
+      deleteUser.mutate(user.id);
+    }
+  }
+
   return (
     <div>
       <PageHeader
@@ -66,6 +77,15 @@ export function UsersPage() {
       {isError && (
         <ErrorMessage
           message={error instanceof Error ? error.message : 'Erro ao carregar usuarios'}
+        />
+      )}
+      {deleteUser.isError && (
+        <ErrorMessage
+          message={
+            deleteUser.error instanceof Error
+              ? deleteUser.error.message
+              : 'Erro ao eliminar usuario'
+          }
         />
       )}
       {data && data.items.length === 0 && (
@@ -124,6 +144,19 @@ export function UsersPage() {
                         }
                       >
                         {user.isActive ? 'Inativar' : 'Ativar'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={user.id === currentUser.id || deleteUser.isPending}
+                        onClick={() => handleDelete(user)}
+                        className="text-red-400 hover:underline disabled:cursor-not-allowed disabled:text-slate-600 disabled:hover:no-underline"
+                        title={
+                          user.id === currentUser.id
+                            ? 'Voce nao pode eliminar sua propria conta'
+                            : undefined
+                        }
+                      >
+                        Eliminar
                       </button>
                     </div>
                   </td>

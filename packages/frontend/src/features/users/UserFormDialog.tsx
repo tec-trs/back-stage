@@ -62,7 +62,13 @@ export function UserFormDialog({ isOpen, onClose, user }: UserFormDialogProps) {
 
     if (isEditMode && user) {
       updateUser.mutate(
-        { id: user.id, email, fullName, roles },
+        {
+          id: user.id,
+          email,
+          fullName,
+          roles,
+          password: password.trim() === '' ? undefined : password,
+        },
         { onSuccess: handleClose },
       );
       return;
@@ -104,19 +110,22 @@ export function UserFormDialog({ isOpen, onClose, user }: UserFormDialogProps) {
           />
         </label>
 
-        {!isEditMode && (
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-400">Senha (minimo 8 caracteres) *</span>
-            <input
-              type="password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-slate-500"
-            />
-          </label>
-        )}
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-slate-400">
+            {isEditMode
+              ? 'Nova senha (minimo 8 caracteres)'
+              : 'Senha (minimo 8 caracteres) *'}
+          </span>
+          <input
+            type="password"
+            required={!isEditMode}
+            minLength={8}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder={isEditMode ? 'Deixe em branco para nao alterar' : undefined}
+            className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-slate-500"
+          />
+        </label>
 
         <fieldset className="flex flex-col gap-1 text-sm">
           <legend className="mb-1 text-slate-400">Perfis de acesso *</legend>

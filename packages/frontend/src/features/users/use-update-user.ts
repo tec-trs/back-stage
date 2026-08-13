@@ -9,6 +9,7 @@ export interface UpdateUserInput {
   email?: string;
   fullName?: string;
   roles?: UserRole[];
+  password?: string;
 }
 
 export function useUpdateUser(): UseMutationResult<UserSummary, Error, UpdateUserInput> {

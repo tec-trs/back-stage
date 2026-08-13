@@ -35,7 +35,7 @@ describe('UserFormDialog', () => {
     expect(screen.getByText('Senha (minimo 8 caracteres) *')).toBeInTheDocument();
   });
 
-  it('exibe o titulo "Editar Usuario" e oculta a senha no modo edicao', () => {
+  it('exibe o titulo "Editar Usuario" e um campo de senha opcional no modo edicao', () => {
     renderDialog({
       user: {
         id: 'user-1',
@@ -50,8 +50,45 @@ describe('UserFormDialog', () => {
     });
 
     expect(screen.getByText('Editar Usuario')).toBeInTheDocument();
-    expect(screen.queryByText('Senha (minimo 8 caracteres) *')).not.toBeInTheDocument();
+    const passwordInput = screen.getByLabelText('Nova senha (minimo 8 caracteres)');
+    expect(passwordInput).not.toBeRequired();
     expect(screen.getByDisplayValue('Jane Doe')).toBeInTheDocument();
+  });
+
+  it('envia a senha somente quando preenchida ao editar um usuario', async () => {
+    vi.mocked(apiRequest).mockResolvedValueOnce({
+      id: 'user-1',
+      email: 'jane.doe@back-stage.dev',
+      fullName: 'Jane Doe',
+      avatarUrl: null,
+      isActive: true,
+      roles: ['viewer'],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    const { onClose } = renderDialog({
+      user: {
+        id: 'user-1',
+        email: 'jane.doe@back-stage.dev',
+        fullName: 'Jane Doe',
+        avatarUrl: null,
+        isActive: true,
+        roles: ['viewer'],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar alteracoes' }));
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+    expect(apiRequest).toHaveBeenCalledWith('/api/users/user-1', {
+      method: 'PUT',
+      body: expect.objectContaining({ password: undefined }),
+    });
   });
 
   it('exige pelo menos um perfil selecionado', () => {

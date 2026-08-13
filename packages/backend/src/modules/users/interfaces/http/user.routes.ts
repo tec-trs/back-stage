@@ -111,5 +111,21 @@ export function createUserRouter(controller: UserController): Router {
     asyncHandler(controller.activate),
   );
 
+  /**
+   * @openapi
+   * /users/{id}:
+   *   delete:
+   *     summary: Remove (soft delete) um usuario
+   *     tags: [Users]
+   *     security: [{ bearerAuth: [] }]
+   *     responses:
+   *       204: { description: Usuario removido }
+   */
+  router.delete(
+    '/:id',
+    validateMiddleware({ params: userIdParamsSchema }),
+    asyncHandler(controller.remove),
+  );
+
   return router;
 }

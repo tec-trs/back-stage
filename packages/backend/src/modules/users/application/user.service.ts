@@ -6,7 +6,6 @@ import type { User } from '../domain/user.entity.js';
 import type {
   IUserRepository,
   Pagination,
-  UpdateUserInput,
   UserFilters,
 } from '../infrastructure/user.repository.js';
 
@@ -26,6 +25,13 @@ export interface CreateUserServiceInput {
   fullName: string;
   password: string;
   roles: string[];
+}
+
+export interface UpdateUserServiceInput {
+  email?: string;
+  fullName?: string;
+  roles?: string[];
+  password?: string;
 }
 
 export class UserService {
@@ -71,7 +77,11 @@ export class UserService {
     return user;
   }
 
-  public async update(id: string, input: UpdateUserInput, audit: AuditContext): Promise<User> {
+  public async update(
+    id: string,
+    input: UpdateUserServiceInput,
+    audit: AuditContext,
+  ): Promise<User> {
     await this.getById(id);
 
     if (input.email !== undefined) {
@@ -81,7 +91,15 @@ export class UserService {
       }
     }
 
-    const updated = await this.userRepository.update(id, input);
+    const passwordHash =
+      input.password !== undefined ? await hashPassword(input.password) : undefined;
+
+    const updated = await this.userRepository.update(id, {
+      email: input.email,
+      fullName: input.fullName,
+      roles: input.roles,
+      passwordHash,
+    });
     if (!updated) {
       throw new NotFoundError('Usuario', id);
     }
@@ -93,10 +111,32 @@ export class UserService {
       resourceId: id,
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
-      metadata: { changes: input },
+      metadata: { changes: { email: input.email, fullName: input.fullName, roles: input.roles } },
     });
 
     return updated;
+  }
+
+  public async delete(id: string, audit: AuditContext): Promise<void> {
+    await this.getById(id);
+
+    if (audit.actorUserId === id) {
+      throw new ValidationError('Voce nao pode eliminar sua propria conta');
+    }
+
+    const deleted = await this.userRepository.softDelete(id);
+    if (!deleted) {
+      throw new NotFoundError('Usuario', id);
+    }
+
+    await auditLogger.record({
+      actorUserId: audit.actorUserId,
+      action: 'user.deleted',
+      resourceType: 'user',
+      resourceId: id,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    });
   }
 
   public async setActive(id: string, isActive: boolean, audit: AuditContext): Promise<User> {

@@ -13,6 +13,7 @@ export const updateUserBodySchema = z.object({
   email: z.string().email().max(255).optional(),
   fullName: z.string().min(1).max(255).optional(),
   roles: z.array(roleEnum).min(1).optional(),
+  password: z.string().min(8).max(255).optional(),
 });
 
 export const userIdParamsSchema = z.object({
