@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 async function login(page: Page): Promise<void> {
   await page.goto('/login');
   await page.getByLabel('Codigo de usuario').fill('admin');
-  await page.getByLabel('Senha').fill('ChangeMe123!');
+  await page.getByLabel('Senha').fill('Tectrs123');
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL('http://localhost:5173/');
 }

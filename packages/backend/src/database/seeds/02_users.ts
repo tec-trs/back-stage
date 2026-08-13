@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 
 import { hashPassword } from '../../shared/auth/password.js';
 
-const DEV_ADMIN_PASSWORD = 'ChangeMe123!';
+const DEV_ADMIN_PASSWORD = 'Tectrs123';
 
 export async function seed(knex: Knex): Promise<void> {
   await knex('users').where({ code: 'admin' }).del();

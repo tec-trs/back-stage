@@ -38,7 +38,7 @@ npm run dev:frontend
 - Backend: http://localhost:4000/api/health
 - Swagger/OpenAPI: http://localhost:4000/api/docs
 - Metricas Prometheus: http://localhost:4000/metrics
-- Frontend: http://localhost:5173 (login: `admin@back-stage.dev` / `ChangeMe123!`)
+- Frontend: http://localhost:5173 (login: codigo de usuario `admin` / senha `Tectrs123`)
 
 ## Scripts principais
 
