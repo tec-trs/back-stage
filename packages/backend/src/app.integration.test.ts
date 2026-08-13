@@ -1,8 +1,13 @@
 import request from 'supertest';
 
 import { createApp } from './app.js';
+import { closeDatabaseConnection } from './database/connection.js';
 
 const app = createApp();
+
+afterAll(async () => {
+  await closeDatabaseConnection();
+});
 
 describe('App HTTP layer (integration)', () => {
   it('GET /api/health responde 200 mesmo com o banco indisponivel', async () => {
