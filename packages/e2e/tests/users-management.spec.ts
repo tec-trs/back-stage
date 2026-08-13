@@ -1,11 +1,17 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-async function login(page: import('@playwright/test').Page): Promise<void> {
+async function login(page: Page): Promise<void> {
   await page.goto('/login');
   await page.getByLabel('Codigo de usuario').fill('admin');
   await page.getByLabel('Senha').fill('ChangeMe123!');
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL('http://localhost:5173/');
+}
+
+async function selectRow(page: Page, hasText: string) {
+  const row = page.locator('tr', { hasText });
+  await row.getByRole('radio').click();
+  return row;
 }
 
 test('admin cria, edita e inativa um usuario pela tela de Usuarios', async ({ page }) => {
@@ -31,22 +37,27 @@ test('admin cria, edita e inativa um usuario pela tela de Usuarios', async ({ pa
   await expect(row.getByText('Visualizador')).toBeVisible();
   await expect(row.getByText('Ativo')).toBeVisible();
 
-  // Editar usuario
-  await row.getByRole('button', { name: 'Editar' }).click();
+  // Selecionar e editar usuario (codigo deve estar bloqueado)
+  await selectRow(page, uniqueEmail);
+  await page.getByRole('button', { name: 'Editar' }).click();
   await expect(page.getByRole('heading', { name: 'Editar Usuario' })).toBeVisible();
+  const codeInput = page.getByLabel('Codigo de usuario *');
+  await expect(codeInput).toBeDisabled();
+  await expect(codeInput).toHaveValue(uniqueCode);
   await page.getByPlaceholder('Maria Souza').fill('QA Tester Editado');
   await page.getByRole('button', { name: 'Salvar alteracoes' }).click();
   await expect(page.getByRole('heading', { name: 'Editar Usuario' })).not.toBeVisible();
   await expect(page.locator('tr', { hasText: uniqueEmail })).toContainText('QA Tester Editado');
 
-  // Inativar usuario
+  // Inativar usuario selecionado
+  await selectRow(page, uniqueEmail);
+  await page.getByRole('button', { name: 'Inativar' }).click();
   const updatedRow = page.locator('tr', { hasText: uniqueEmail });
-  await updatedRow.getByRole('button', { name: 'Inativar' }).click();
   await expect(updatedRow.getByText('Inativo')).toBeVisible();
-  await expect(updatedRow.getByRole('button', { name: 'Ativar' })).toBeVisible();
 
   // Reativar usuario
-  await updatedRow.getByRole('button', { name: 'Ativar' }).click();
+  await selectRow(page, uniqueEmail);
+  await page.getByRole('button', { name: 'Ativar' }).click();
   await expect(updatedRow.getByText('Ativo')).toBeVisible();
 });
 
@@ -54,9 +65,9 @@ test('admin nao consegue inativar nem eliminar a propria conta', async ({ page }
   await login(page);
   await page.getByRole('link', { name: 'Usuarios' }).click();
 
-  const adminRow = page.locator('tr', { hasText: 'admin@back-stage.dev' });
-  await expect(adminRow.getByRole('button', { name: 'Inativar' })).toBeDisabled();
-  await expect(adminRow.getByRole('button', { name: 'Eliminar' })).toBeDisabled();
+  await selectRow(page, 'admin@back-stage.dev');
+  await expect(page.getByRole('button', { name: 'Inativar' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Eliminar' })).toBeDisabled();
 });
 
 test('admin redefine a senha de um usuario e o novo login funciona', async ({ page }) => {
@@ -74,8 +85,8 @@ test('admin redefine a senha de um usuario e o novo login funciona', async ({ pa
   await page.getByRole('button', { name: 'Criar usuario' }).click();
   await expect(page.getByRole('heading', { name: 'Novo Usuario' })).not.toBeVisible();
 
-  const row = page.locator('tr', { hasText: uniqueEmail });
-  await row.getByRole('button', { name: 'Editar' }).click();
+  await selectRow(page, uniqueEmail);
+  await page.getByRole('button', { name: 'Editar' }).click();
   await expect(page.getByRole('heading', { name: 'Editar Usuario' })).toBeVisible();
   await page.getByLabel('Nova senha (minimo 8 caracteres)').fill('SenhaNova456!');
   await page.getByRole('button', { name: 'Salvar alteracoes' }).click();
@@ -104,11 +115,11 @@ test('admin elimina um usuario e ele desaparece da lista', async ({ page }) => {
   await page.getByRole('button', { name: 'Criar usuario' }).click();
   await expect(page.getByRole('heading', { name: 'Novo Usuario' })).not.toBeVisible();
 
-  const row = page.locator('tr', { hasText: uniqueEmail });
-  await expect(row).toBeVisible();
+  await expect(page.locator('tr', { hasText: uniqueEmail })).toBeVisible();
+  await selectRow(page, uniqueEmail);
 
   page.once('dialog', (dialog) => dialog.accept());
-  await row.getByRole('button', { name: 'Eliminar' }).click();
+  await page.getByRole('button', { name: 'Eliminar' }).click();
 
   await expect(page.locator('tr', { hasText: uniqueEmail })).toHaveCount(0);
 });

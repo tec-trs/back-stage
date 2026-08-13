@@ -62,7 +62,7 @@ export function UserFormDialog({
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
 
-    if (!CODE_PATTERN.test(code)) {
+    if (!isEditMode && !CODE_PATTERN.test(code)) {
       setCodeError('O codigo deve conter apenas letras minusculas, numeros, ponto, hifen e underscore');
       return;
     }
@@ -106,12 +106,12 @@ export function UserFormDialog({
           <span className="text-slate-400">Codigo de usuario *</span>
           <input
             required
+            disabled={isEditMode}
             value={code}
             onChange={(event) => setCode(event.target.value)}
             placeholder="maria.souza"
-            className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-slate-500"
+            className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:text-slate-500 disabled:opacity-70"
           />
-          <span className="text-xs text-slate-500">Usado para acessar o sistema, no lugar do email.</span>
           {codeError && <span className="text-xs text-red-400">{codeError}</span>}
         </label>
 

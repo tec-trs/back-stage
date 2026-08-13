@@ -28,6 +28,30 @@ const ADMIN_USER = {
   roles: ['admin'],
 };
 
+const JANE_DOE_ITEM = {
+  id: 'user-1',
+  code: 'jane.doe',
+  email: 'jane.doe@back-stage.dev',
+  fullName: 'Jane Doe',
+  avatarUrl: null,
+  isActive: true,
+  roles: ['viewer'],
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+};
+
+const ADMIN_ITEM = {
+  id: 'admin-1',
+  code: 'admin',
+  email: 'admin@back-stage.dev',
+  fullName: 'Administrador',
+  avatarUrl: null,
+  isActive: true,
+  roles: ['admin'],
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+};
+
 describe('UsersPage', () => {
   afterEach(() => {
     useAuthStore.setState({ accessToken: null, user: null });
@@ -53,22 +77,10 @@ describe('UsersPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('lista os usuarios retornados pela API para um admin', async () => {
+  it('lista os usuarios retornados pela API e mantem as acoes desabilitadas sem selecao', async () => {
     useAuthStore.setState({ accessToken: 'token', user: ADMIN_USER });
     vi.mocked(apiRequest).mockResolvedValueOnce({
-      items: [
-        {
-          id: 'user-1',
-          code: 'jane.doe',
-          email: 'jane.doe@back-stage.dev',
-          fullName: 'Jane Doe',
-          avatarUrl: null,
-          isActive: true,
-          roles: ['viewer'],
-          createdAt: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-01-01T00:00:00.000Z',
-        },
-      ],
+      items: [JANE_DOE_ITEM],
       pagination: { page: 1, pageSize: 20, total: 1 },
     });
 
@@ -77,51 +89,47 @@ describe('UsersPage', () => {
     expect(await screen.findByText('Jane Doe')).toBeInTheDocument();
     expect(screen.getByText('Visualizador')).toBeInTheDocument();
     expect(screen.getByText('Ativo')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Editar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Inativar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Eliminar' })).toBeDisabled();
   });
 
-  it('desabilita a acao de inativar para o proprio usuario autenticado', async () => {
+  it('habilita as acoes ao selecionar um usuario diferente do autenticado', async () => {
     useAuthStore.setState({ accessToken: 'token', user: ADMIN_USER });
     vi.mocked(apiRequest).mockResolvedValueOnce({
-      items: [
-        {
-          id: 'admin-1',
-          code: 'admin',
-          email: 'admin@back-stage.dev',
-          fullName: 'Administrador',
-          avatarUrl: null,
-          isActive: true,
-          roles: ['admin'],
-          createdAt: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-01-01T00:00:00.000Z',
-        },
-      ],
+      items: [JANE_DOE_ITEM],
       pagination: { page: 1, pageSize: 20, total: 1 },
     });
 
     renderUsersPage();
 
-    const deactivateButton = await screen.findByRole('button', { name: 'Inativar' });
-    expect(deactivateButton).toBeDisabled();
-    const deleteButton = screen.getByRole('button', { name: 'Eliminar' });
-    expect(deleteButton).toBeDisabled();
+    fireEvent.click(await screen.findByRole('radio', { name: 'Selecionar Jane Doe' }));
+
+    expect(screen.getByRole('button', { name: 'Editar' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Inativar' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Eliminar' })).toBeEnabled();
   });
 
-  it('elimina um usuario apos confirmacao', async () => {
+  it('desabilita inativar e eliminar quando o proprio usuario autenticado esta selecionado', async () => {
     useAuthStore.setState({ accessToken: 'token', user: ADMIN_USER });
     vi.mocked(apiRequest).mockResolvedValueOnce({
-      items: [
-        {
-          id: 'user-1',
-          code: 'jane.doe',
-          email: 'jane.doe@back-stage.dev',
-          fullName: 'Jane Doe',
-          avatarUrl: null,
-          isActive: true,
-          roles: ['viewer'],
-          createdAt: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-01-01T00:00:00.000Z',
-        },
-      ],
+      items: [ADMIN_ITEM],
+      pagination: { page: 1, pageSize: 20, total: 1 },
+    });
+
+    renderUsersPage();
+
+    fireEvent.click(await screen.findByRole('radio', { name: 'Selecionar Administrador' }));
+
+    expect(screen.getByRole('button', { name: 'Editar' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Inativar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Eliminar' })).toBeDisabled();
+  });
+
+  it('elimina o usuario selecionado apos confirmacao', async () => {
+    useAuthStore.setState({ accessToken: 'token', user: ADMIN_USER });
+    vi.mocked(apiRequest).mockResolvedValueOnce({
+      items: [JANE_DOE_ITEM],
       pagination: { page: 1, pageSize: 20, total: 1 },
     });
     vi.mocked(apiRequest).mockResolvedValueOnce(undefined);
@@ -129,7 +137,8 @@ describe('UsersPage', () => {
 
     renderUsersPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Eliminar' }));
+    fireEvent.click(await screen.findByRole('radio', { name: 'Selecionar Jane Doe' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
 
     await waitFor(() => {
       expect(apiRequest).toHaveBeenCalledWith('/api/users/user-1', { method: 'DELETE' });
@@ -140,29 +149,35 @@ describe('UsersPage', () => {
   it('nao elimina o usuario quando a confirmacao e cancelada', async () => {
     useAuthStore.setState({ accessToken: 'token', user: ADMIN_USER });
     vi.mocked(apiRequest).mockResolvedValueOnce({
-      items: [
-        {
-          id: 'user-1',
-          code: 'jane.doe',
-          email: 'jane.doe@back-stage.dev',
-          fullName: 'Jane Doe',
-          avatarUrl: null,
-          isActive: true,
-          roles: ['viewer'],
-          createdAt: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-01-01T00:00:00.000Z',
-        },
-      ],
+      items: [JANE_DOE_ITEM],
       pagination: { page: 1, pageSize: 20, total: 1 },
     });
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
 
     renderUsersPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Eliminar' }));
+    fireEvent.click(await screen.findByRole('radio', { name: 'Selecionar Jane Doe' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
 
     expect(apiRequest).toHaveBeenCalledTimes(1);
     confirmSpy.mockRestore();
+  });
+
+  it('abre o dialogo de edicao com o usuario selecionado ao clicar em Editar', async () => {
+    useAuthStore.setState({ accessToken: 'token', user: ADMIN_USER });
+    vi.mocked(apiRequest).mockResolvedValueOnce({
+      items: [JANE_DOE_ITEM],
+      pagination: { page: 1, pageSize: 20, total: 1 },
+    });
+
+    renderUsersPage();
+
+    fireEvent.click(await screen.findByRole('radio', { name: 'Selecionar Jane Doe' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Editar' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Editar Usuario')).toBeInTheDocument();
+    });
   });
 
   it('abre o dialogo de criacao ao clicar em "+ Novo Usuario"', async () => {

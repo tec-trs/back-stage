@@ -22,6 +22,7 @@ export function UsersPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserSummary | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   if (!currentUser?.roles.includes('admin')) {
     return (
@@ -31,6 +32,9 @@ export function UsersPage() {
       </div>
     );
   }
+
+  const selectedUser = data?.items.find((item) => item.id === selectedUserId) ?? null;
+  const isSelfSelected = selectedUser?.id === currentUser.id;
 
   function openCreateDialog(): void {
     setEditingUser(null);
@@ -47,12 +51,27 @@ export function UsersPage() {
     setEditingUser(null);
   }
 
-  function handleDelete(user: UserSummary): void {
+  function handleEditSelected(): void {
+    if (selectedUser) {
+      openEditDialog(selectedUser);
+    }
+  }
+
+  function handleToggleActiveSelected(): void {
+    if (selectedUser) {
+      setUserActive.mutate({ id: selectedUser.id, isActive: !selectedUser.isActive });
+    }
+  }
+
+  function handleDeleteSelected(): void {
+    if (!selectedUser) {
+      return;
+    }
     const confirmed = window.confirm(
-      `Tem certeza que deseja eliminar o usuario "${user.fullName}"? Esta acao nao pode ser desfeita.`,
+      `Tem certeza que deseja eliminar o usuario "${selectedUser.fullName}"? Esta acao nao pode ser desfeita.`,
     );
     if (confirmed) {
-      deleteUser.mutate(user.id);
+      deleteUser.mutate(selectedUser.id, { onSuccess: () => setSelectedUserId(null) });
     }
   }
 
@@ -65,6 +84,40 @@ export function UsersPage() {
       />
 
       <UserFormDialog isOpen={isFormOpen} onClose={closeDialog} user={editingUser} />
+
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={!selectedUser}
+          onClick={handleEditSelected}
+        >
+          Editar
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={!selectedUser || isSelfSelected || setUserActive.isPending}
+          onClick={handleToggleActiveSelected}
+          title={isSelfSelected ? 'Voce nao pode inativar sua propria conta' : undefined}
+        >
+          {selectedUser && !selectedUser.isActive ? 'Ativar' : 'Inativar'}
+        </Button>
+        <Button
+          size="sm"
+          variant="danger"
+          disabled={!selectedUser || isSelfSelected || deleteUser.isPending}
+          onClick={handleDeleteSelected}
+          title={isSelfSelected ? 'Voce nao pode eliminar sua propria conta' : undefined}
+        >
+          Eliminar
+        </Button>
+        <span className="ml-auto text-xs text-slate-500">
+          {selectedUser
+            ? `Selecionado: ${selectedUser.fullName}`
+            : 'Selecione um usuario na lista para editar, ativar/inativar ou eliminar.'}
+        </span>
+      </div>
 
       {isLoading && <Spinner />}
       {isError && (
@@ -90,17 +143,33 @@ export function UsersPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-900 text-slate-400">
               <tr>
+                <th className="w-10 px-4 py-2" />
                 <th className="px-4 py-2 font-medium">Nome</th>
                 <th className="px-4 py-2 font-medium">Codigo</th>
                 <th className="px-4 py-2 font-medium">Email</th>
                 <th className="px-4 py-2 font-medium">Perfis</th>
                 <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Acoes</th>
               </tr>
             </thead>
             <tbody>
               {data.items.map((user) => (
-                <tr key={user.id} className="border-t border-slate-800 hover:bg-slate-900/50">
+                <tr
+                  key={user.id}
+                  onClick={() => setSelectedUserId(user.id)}
+                  className={`cursor-pointer border-t border-slate-800 ${
+                    user.id === selectedUserId ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
+                  }`}
+                >
+                  <td className="px-4 py-2">
+                    <input
+                      type="radio"
+                      name="selected-user"
+                      checked={user.id === selectedUserId}
+                      onChange={() => setSelectedUserId(user.id)}
+                      aria-label={`Selecionar ${user.fullName}`}
+                      className="h-4 w-4 accent-sky-500"
+                    />
+                  </td>
                   <td className="px-4 py-2 text-slate-100">{user.fullName}</td>
                   <td className="px-4 py-2 font-mono text-xs text-slate-400">{user.code}</td>
                   <td className="px-4 py-2 text-slate-400">{user.email}</td>
@@ -115,41 +184,6 @@ export function UsersPage() {
                     <Badge tone={user.isActive ? 'success' : 'danger'}>
                       {user.isActive ? 'Ativo' : 'Inativo'}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-2">
-                    <div className="flex gap-1.5">
-                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(user)}>
-                        Editar
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={user.id === currentUser.id || setUserActive.isPending}
-                        onClick={() =>
-                          setUserActive.mutate({ id: user.id, isActive: !user.isActive })
-                        }
-                        title={
-                          user.id === currentUser.id
-                            ? 'Voce nao pode inativar sua propria conta'
-                            : undefined
-                        }
-                      >
-                        {user.isActive ? 'Inativar' : 'Ativar'}
-                      </Button>
-                      <Button
-                        variant="ghost-danger"
-                        size="sm"
-                        disabled={user.id === currentUser.id || deleteUser.isPending}
-                        onClick={() => handleDelete(user)}
-                        title={
-                          user.id === currentUser.id
-                            ? 'Voce nao pode eliminar sua propria conta'
-                            : undefined
-                        }
-                      >
-                        Eliminar
-                      </Button>
-                    </div>
                   </td>
                 </tr>
               ))}

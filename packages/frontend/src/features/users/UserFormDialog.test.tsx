@@ -69,7 +69,8 @@ describe('UserFormDialog', () => {
     const passwordInput = screen.getByLabelText('Nova senha (minimo 8 caracteres)');
     expect(passwordInput).not.toBeRequired();
     expect(screen.getByDisplayValue('Jane Doe')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('jane.doe')).toBeInTheDocument();
+    const codeInput = screen.getByDisplayValue('jane.doe');
+    expect(codeInput).toBeDisabled();
   });
 
   it('envia a senha somente quando preenchida ao editar um usuario', async () => {
