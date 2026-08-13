@@ -135,7 +135,8 @@ export class ApplicationRepository implements IApplicationRepository {
       )
       .innerJoin(TABLE_NAME, `${TABLE_NAME}.id`, `${DEPENDENCIES_TABLE_NAME}.depends_on_application_id`)
       .whereIn(`${DEPENDENCIES_TABLE_NAME}.application_id`, applicationIds)
-      .whereNull(`${DEPENDENCIES_TABLE_NAME}.deleted_at`)) as DependencyJoinRow[];
+      .whereNull(`${DEPENDENCIES_TABLE_NAME}.deleted_at`)
+      .whereNull(`${TABLE_NAME}.deleted_at`)) as DependencyJoinRow[];
 
     const dependentsRows = (await this.db(DEPENDENCIES_TABLE_NAME)
       .select(
@@ -146,7 +147,8 @@ export class ApplicationRepository implements IApplicationRepository {
       )
       .innerJoin(TABLE_NAME, `${TABLE_NAME}.id`, `${DEPENDENCIES_TABLE_NAME}.application_id`)
       .whereIn(`${DEPENDENCIES_TABLE_NAME}.depends_on_application_id`, applicationIds)
-      .whereNull(`${DEPENDENCIES_TABLE_NAME}.deleted_at`)) as DependencyJoinRow[];
+      .whereNull(`${DEPENDENCIES_TABLE_NAME}.deleted_at`)
+      .whereNull(`${TABLE_NAME}.deleted_at`)) as DependencyJoinRow[];
 
     const dependsOn = new Map<string, ApplicationDependencyRef[]>();
     for (const row of dependsOnRows) {

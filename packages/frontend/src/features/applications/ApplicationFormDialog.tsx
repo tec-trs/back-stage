@@ -240,6 +240,7 @@ export function ApplicationFormDialog({
       title={isEditMode ? 'Editar Aplicacao' : 'Incluir Aplicacao'}
       isOpen={isOpen}
       onClose={handleClose}
+      size="lg"
     >
       <form onSubmit={handleSubmit} className="flex max-h-[70vh] flex-col gap-5 overflow-y-auto pr-1">
         <fieldset className="flex flex-col gap-3">

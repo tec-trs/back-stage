@@ -90,19 +90,25 @@ export class EcosystemGraphRepository implements IEcosystemGraphRepository {
       lifecycle: row.status,
     }));
 
-    const hostingEdges: EcosystemEdge[] = deploymentRows.map((row) => ({
-      id: row.id,
-      source: row.server_id,
-      target: row.application_id,
-      relationType: 'hosts',
-    }));
+    const nodeIds = new Set([...serverNodes, ...applicationNodes].map((node) => node.id));
 
-    const dependencyEdges: EcosystemEdge[] = dependencyRows.map((row) => ({
-      id: row.id,
-      source: row.application_id,
-      target: row.depends_on_application_id,
-      relationType: 'dependsOn',
-    }));
+    const hostingEdges: EcosystemEdge[] = deploymentRows
+      .filter((row) => nodeIds.has(row.server_id) && nodeIds.has(row.application_id))
+      .map((row) => ({
+        id: row.id,
+        source: row.server_id,
+        target: row.application_id,
+        relationType: 'hosts',
+      }));
+
+    const dependencyEdges: EcosystemEdge[] = dependencyRows
+      .filter((row) => nodeIds.has(row.application_id) && nodeIds.has(row.depends_on_application_id))
+      .map((row) => ({
+        id: row.id,
+        source: row.application_id,
+        target: row.depends_on_application_id,
+        relationType: 'dependsOn',
+      }));
 
     return {
       nodes: [...serverNodes, ...applicationNodes],
