@@ -16,12 +16,18 @@ export interface DependencyGraphProps {
   selectedNodeId?: string | null;
   onNodeSelect?: (node: GraphNode) => void;
   onNodeNavigate?: (node: GraphNode) => void;
+  ariaLabel?: string;
 }
 
 const LIFECYCLE_STROKE: Record<string, string> = {
   production: '#34d399',
   experimental: '#fbbf24',
   deprecated: '#f87171',
+  active: '#34d399',
+  maintenance: '#fbbf24',
+  provisioning: '#38bdf8',
+  deactivated: '#f87171',
+  developing: '#a78bfa',
 };
 
 const KIND_FILL: Record<string, string> = {
@@ -30,6 +36,8 @@ const KIND_FILL: Record<string, string> = {
   resource: '#fb923c',
   system: '#f472b6',
   domain: '#94a3b8',
+  server: '#22d3ee',
+  application: '#a3e635',
 };
 
 const WIDTH = 900;
@@ -43,6 +51,7 @@ export function DependencyGraph({
   selectedNodeId,
   onNodeSelect,
   onNodeNavigate,
+  ariaLabel = 'Grafo de dependencias entre entidades do catalogo',
 }: DependencyGraphProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const nodeSelectionRef = useRef<d3.Selection<
@@ -199,7 +208,7 @@ export function DependencyGraph({
       ref={svgRef}
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       role="img"
-      aria-label="Grafo de dependencias entre entidades do catalogo"
+      aria-label={ariaLabel}
       className="h-[520px] w-full rounded-lg border border-slate-800 bg-slate-950"
     />
   );

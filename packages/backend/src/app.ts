@@ -7,13 +7,16 @@ import swaggerUi from 'swagger-ui-express';
 
 import { env } from './config/env.js';
 import { openapiSpec } from './docs/openapi.js';
+import { registerApplicationsModule } from './modules/applications/applications.module.js';
 import { registerAuditModule } from './modules/audit/audit.module.js';
 import { registerAuthModule } from './modules/auth/auth.module.js';
 import { registerCatalogModule } from './modules/catalog/catalog.module.js';
 import { registerDeploymentsModule } from './modules/deployments/deployments.module.js';
+import { registerEcosystemModule } from './modules/ecosystem/ecosystem.module.js';
 import { registerGovernanceModule } from './modules/governance/governance.module.js';
 import { registerHealthModule } from './modules/health/health.module.js';
 import { registerSearchModule } from './modules/search/search.module.js';
+import { registerServersModule } from './modules/servers/servers.module.js';
 import { registerServiceCatalogModule } from './modules/service-catalog/service-catalog.module.js';
 import { registerUsersModule } from './modules/users/users.module.js';
 import { metricsRegistry } from './observability/metrics.js';
@@ -73,6 +76,9 @@ export function createApp(): Express {
   app.use('/api/catalog-entities', registerCatalogModule());
   app.use('/api/audit-logs', registerAuditModule());
   app.use('/api/users', registerUsersModule());
+  app.use('/api/servers', registerServersModule());
+  app.use('/api/applications', registerApplicationsModule());
+  app.use('/api/ecosystem', registerEcosystemModule());
   app.use(registerDeploymentsModule());
 
   app.use(notFoundMiddleware);

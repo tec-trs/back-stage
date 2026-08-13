@@ -7,17 +7,17 @@ test.describe('Login flow', () => {
     await expect(page.getByRole('heading', { name: 'Platform Engineering Center' })).toBeVisible();
   });
 
-  test('exige email e senha para submeter o formulario', async ({ page }) => {
+  test('exige codigo e senha para submeter o formulario', async ({ page }) => {
     await page.goto('/login');
-    const emailInput = page.getByLabel('Email');
-    await expect(emailInput).toHaveAttribute('required', '');
+    const codeInput = page.getByLabel('Codigo de usuario');
+    await expect(codeInput).toHaveAttribute('required', '');
     const passwordInput = page.getByLabel('Senha');
     await expect(passwordInput).toHaveAttribute('required', '');
   });
 
   test('exibe mensagem de erro ao tentar logar com credenciais invalidas', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel('Email').fill('invalido@back-stage.dev');
+    await page.getByLabel('Codigo de usuario').fill('codigo-invalido');
     await page.getByLabel('Senha').fill('senha-errada');
     await page.getByRole('button', { name: 'Entrar' }).click();
     await expect(page.getByRole('button', { name: /Entrando|Entrar/ })).toBeVisible();
