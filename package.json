@@ -1,0 +1,41 @@
+{
+  "name": "back-stage",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Platform Engineering Center - monorepo raiz",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "build:shared": "npm run build --workspace=@back-stage/shared",
+    "build": "npm run build:shared && npm run build --workspace=@back-stage/backend && npm run build --workspace=@back-stage/frontend && npm run build --workspace=@back-stage/cli",
+    "dev:backend": "npm run dev --workspace=@back-stage/backend",
+    "dev:frontend": "npm run dev --workspace=@back-stage/frontend",
+    "dev:cli": "npm run dev --workspace=@back-stage/cli",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "format": "prettier --write \"packages/**/*.{ts,tsx,json,md}\" \"*.md\"",
+    "format:check": "prettier --check \"packages/**/*.{ts,tsx,json,md}\" \"*.md\"",
+    "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
+    "test": "npm run build:shared && npm run test --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@typescript-eslint/eslint-plugin": "^8.15.0",
+    "@typescript-eslint/parser": "^8.15.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-import-resolver-typescript": "^3.6.3",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.14",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  }
+}

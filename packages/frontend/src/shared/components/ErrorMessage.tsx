@@ -1,0 +1,11 @@
+interface ErrorMessageProps {
+  message: string;
+}
+
+export function ErrorMessage({ message }: ErrorMessageProps) {
+  return (
+    <div className="rounded-lg border border-red-900/50 bg-red-950/30 p-4 text-sm text-red-300">
+      {message}
+    </div>
+  );
+}

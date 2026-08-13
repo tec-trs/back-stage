@@ -1,0 +1,29 @@
+{
+  "name": "@back-stage/cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CLI de operacao e scaffolding do Platform Engineering Center",
+  "type": "module",
+  "bin": {
+    "backstage": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "clean": "rimraf dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@back-stage/shared": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}

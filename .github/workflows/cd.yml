@@ -1,0 +1,68 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["Build"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Ambiente de destino"
+        required: true
+        default: staging
+        type: choice
+        options: [staging, production]
+
+concurrency:
+  group: cd-${{ github.event.inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    name: Deploy (${{ github.event.inputs.environment || 'staging' }})
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.30.0"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "v3.16.1"
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$HOME/.kube/config"
+
+      - name: Deploy via Helm
+        run: |
+          helm upgrade --install back-stage ./helm/back-stage \
+            --namespace back-stage \
+            --create-namespace \
+            --set backend.image.tag=${{ github.sha }} \
+            --set frontend.image.tag=${{ github.sha }} \
+            --set secret.data.DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            --set secret.data.REDIS_URL="${{ secrets.REDIS_URL }}" \
+            --set secret.data.KAFKA_BROKERS="${{ secrets.KAFKA_BROKERS }}" \
+            --set secret.data.JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            --set secret.data.GITHUB_WEBHOOK_SECRET="${{ secrets.GH_WEBHOOK_SECRET }}" \
+            --set secret.data.GITLAB_WEBHOOK_SECRET="${{ secrets.GITLAB_WEBHOOK_SECRET }}" \
+            --wait --timeout 5m
+
+      - name: Verify rollout
+        run: |
+          kubectl -n back-stage rollout status deployment/back-stage-backend
+          kubectl -n back-stage rollout status deployment/back-stage-frontend

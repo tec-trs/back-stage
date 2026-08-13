@@ -1,0 +1,13 @@
+Back-Stage Platform Engineering Center foi instalado.
+
+{{- if .Values.ingress.enabled }}
+Acesse a aplicacao em:
+  https://{{ .Values.ingress.host }}
+{{- else }}
+Ingress desabilitado. Use port-forward para acessar:
+  kubectl port-forward svc/{{ include "back-stage.fullname" . }}-frontend {{ .Values.frontend.port }}:{{ .Values.frontend.port }}
+  kubectl port-forward svc/{{ include "back-stage.fullname" . }}-backend {{ .Values.backend.port }}:{{ .Values.backend.port }}
+{{- end }}
+
+Verifique o status dos pods:
+  kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }}

@@ -1,0 +1,55 @@
+groups:
+  - name: back-stage-backend
+    rules:
+      - alert: BackendDown
+        expr: up{job="back-stage-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend indisponivel"
+          description: "O alvo back-stage-backend esta fora do ar ha mais de 1 minuto (Availability)."
+
+      - alert: HighApiLatency
+        expr: histogram_quantile(0.95, sum(rate(backstage_http_request_duration_seconds_bucket[5m])) by (le, route)) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latencia da API acima do esperado"
+          description: "p95 de latencia HTTP acima de 1s na rota {{ $labels.route }} nos ultimos 5 minutos."
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(backstage_http_errors_total[5m]))
+            /
+          sum(rate(backstage_http_requests_total[5m]))
+          > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Taxa de erro elevada"
+          description: "Mais de 5% das requisicoes HTTP retornaram erro 5xx nos ultimos 5 minutos (Error Rate)."
+
+      - alert: HighDatabaseLatency
+        expr: histogram_quantile(0.95, sum(rate(backstage_db_query_duration_seconds_bucket[5m])) by (le)) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latencia do banco de dados acima do esperado"
+          description: "p95 de latencia de queries acima de 500ms nos ultimos 5 minutos (DB Latency)."
+
+      - alert: LowDeploymentSuccessRate
+        expr: |
+          sum(rate(backstage_deployments_total{status="succeeded"}[1h]))
+            /
+          sum(rate(backstage_deployments_total[1h]))
+          < 0.8
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Taxa de sucesso de deployments baixa"
+          description: "Menos de 80% dos deployments na ultima hora foram bem-sucedidos (Deployment Success Rate)."
