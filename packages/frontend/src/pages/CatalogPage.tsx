@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { CreateServiceDialog } from '../features/services/CreateServiceDialog';
 import { useServices } from '../features/services/use-services';
 import { Badge } from '../shared/components/Badge';
 import { EmptyState } from '../shared/components/EmptyState';
@@ -15,10 +17,28 @@ const LIFECYCLE_TONE = {
 
 export function CatalogPage() {
   const { data, isLoading, isError, error } = useServices();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   return (
     <div>
-      <PageHeader title="Service Catalog" description="Services registrados na plataforma" />
+      <PageHeader
+        title="Service Catalog"
+        description="Services registrados na plataforma"
+        actions={
+          <button
+            type="button"
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-white"
+          >
+            + Novo Service
+          </button>
+        }
+      />
+
+      <CreateServiceDialog
+        isOpen={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
+      />
 
       {isLoading && <Spinner />}
       {isError && (
