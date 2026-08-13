@@ -2,14 +2,15 @@ import { expect, test } from '@playwright/test';
 
 async function login(page: import('@playwright/test').Page): Promise<void> {
   await page.goto('/login');
-  await page.getByLabel('Email').fill('admin@back-stage.dev');
+  await page.getByLabel('Codigo de usuario').fill('admin');
   await page.getByLabel('Senha').fill('ChangeMe123!');
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL('http://localhost:5173/');
 }
 
 test('admin cria, edita e inativa um usuario pela tela de Usuarios', async ({ page }) => {
-  const uniqueEmail = `qa.${Date.now()}@back-stage.dev`;
+  const uniqueCode = `qa.${Date.now()}`;
+  const uniqueEmail = `${uniqueCode}@back-stage.dev`;
 
   await login(page);
   await page.getByRole('link', { name: 'Usuarios' }).click();
@@ -18,6 +19,7 @@ test('admin cria, edita e inativa um usuario pela tela de Usuarios', async ({ pa
   // Criar usuario
   await page.getByRole('button', { name: '+ Novo Usuario' }).click();
   await expect(page.getByRole('heading', { name: 'Novo Usuario' })).toBeVisible();
+  await page.getByPlaceholder('maria.souza', { exact: true }).fill(uniqueCode);
   await page.getByPlaceholder('Maria Souza').fill('QA Tester');
   await page.getByPlaceholder('maria.souza@back-stage.dev').fill(uniqueEmail);
   await page.getByLabel('Senha (minimo 8 caracteres) *').fill('SenhaForte123!');
@@ -58,12 +60,14 @@ test('admin nao consegue inativar nem eliminar a propria conta', async ({ page }
 });
 
 test('admin redefine a senha de um usuario e o novo login funciona', async ({ page }) => {
-  const uniqueEmail = `qa.pwd.${Date.now()}@back-stage.dev`;
+  const uniqueCode = `qa.pwd.${Date.now()}`;
+  const uniqueEmail = `${uniqueCode}@back-stage.dev`;
 
   await login(page);
   await page.getByRole('link', { name: 'Usuarios' }).click();
 
   await page.getByRole('button', { name: '+ Novo Usuario' }).click();
+  await page.getByPlaceholder('maria.souza', { exact: true }).fill(uniqueCode);
   await page.getByPlaceholder('Maria Souza').fill('QA Password Tester');
   await page.getByPlaceholder('maria.souza@back-stage.dev').fill(uniqueEmail);
   await page.getByLabel('Senha (minimo 8 caracteres) *').fill('SenhaOriginal123!');
@@ -79,19 +83,21 @@ test('admin redefine a senha de um usuario e o novo login funciona', async ({ pa
 
   await page.getByRole('button', { name: 'Sair' }).click();
   await expect(page).toHaveURL(/\/login/);
-  await page.getByLabel('Email').fill(uniqueEmail);
+  await page.getByLabel('Codigo de usuario').fill(uniqueCode);
   await page.getByLabel('Senha').fill('SenhaNova456!');
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL('http://localhost:5173/');
 });
 
 test('admin elimina um usuario e ele desaparece da lista', async ({ page }) => {
-  const uniqueEmail = `qa.del.${Date.now()}@back-stage.dev`;
+  const uniqueCode = `qa.del.${Date.now()}`;
+  const uniqueEmail = `${uniqueCode}@back-stage.dev`;
 
   await login(page);
   await page.getByRole('link', { name: 'Usuarios' }).click();
 
   await page.getByRole('button', { name: '+ Novo Usuario' }).click();
+  await page.getByPlaceholder('maria.souza', { exact: true }).fill(uniqueCode);
   await page.getByPlaceholder('Maria Souza').fill('QA Delete Tester');
   await page.getByPlaceholder('maria.souza@back-stage.dev').fill(uniqueEmail);
   await page.getByLabel('Senha (minimo 8 caracteres) *').fill('SenhaForte123!');

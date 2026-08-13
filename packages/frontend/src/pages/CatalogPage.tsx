@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { CreateServiceDialog } from '../features/services/CreateServiceDialog';
 import { useServices } from '../features/services/use-services';
 import { Badge } from '../shared/components/Badge';
+import { Button } from '../shared/components/Button';
 import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { PageHeader } from '../shared/components/PageHeader';
@@ -25,15 +26,7 @@ export function CatalogPage() {
       <PageHeader
         title="Catalogo de Servicos"
         description="Servicos registrados na plataforma"
-        actions={
-          <button
-            type="button"
-            onClick={() => setIsCreateDialogOpen(true)}
-            className="rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-white"
-          >
-            + Novo Servico
-          </button>
-        }
+        actions={<Button onClick={() => setIsCreateDialogOpen(true)}>+ Novo Servico</Button>}
       />
 
       <CreateServiceDialog

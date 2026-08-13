@@ -6,6 +6,7 @@ import type { UserRole, UserSummary } from './use-users';
 
 export interface UpdateUserInput {
   id: string;
+  code?: string;
   email?: string;
   fullName?: string;
   roles?: UserRole[];

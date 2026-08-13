@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from 'react';
 
+import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
 import { translateLifecycle } from '../../shared/constants/labels';
@@ -161,20 +162,12 @@ export function CreateServiceDialog({ isOpen, onClose }: CreateServiceDialogProp
         )}
 
         <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="rounded-md border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
-          >
+          <Button type="button" variant="secondary" onClick={handleClose}>
             Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={createService.isPending}
-            className="rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-white disabled:opacity-60"
-          >
+          </Button>
+          <Button type="submit" disabled={createService.isPending}>
             {createService.isPending ? 'Criando...' : 'Criar servico'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

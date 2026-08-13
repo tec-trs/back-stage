@@ -12,6 +12,7 @@ vi.mock('../../../shared/audit/audit-logger.js', () => ({
 function buildUser(overrides: Partial<ConstructorParameters<typeof User>[0]> = {}): User {
   return new User({
     id: '11111111-1111-1111-1111-111111111111',
+    code: 'jane.doe',
     email: 'jane.doe@back-stage.dev',
     full_name: 'Jane Doe',
     avatar_url: null,
@@ -29,6 +30,7 @@ function buildRepositoryMock(overrides: Partial<IUserRepository> = {}): IUserRep
     findMany: vi.fn(),
     findById: vi.fn(),
     findByEmail: vi.fn(),
+    findByCode: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
     setActive: vi.fn(),
@@ -38,6 +40,26 @@ function buildRepositoryMock(overrides: Partial<IUserRepository> = {}): IUserRep
 }
 
 describe('UserService', () => {
+  it('lanca ConflictError ao criar usuario com codigo duplicado', async () => {
+    const repository = buildRepositoryMock({
+      findByCode: vi.fn().mockResolvedValue(buildUser()),
+    });
+    const service = new UserService(repository);
+
+    await expect(
+      service.create(
+        {
+          code: 'jane.doe',
+          email: 'jane.doe@back-stage.dev',
+          fullName: 'Jane Doe',
+          password: 'ChangeMe123!',
+          roles: ['viewer'],
+        },
+        {},
+      ),
+    ).rejects.toThrow("Ja existe um usuario com o codigo 'jane.doe'");
+  });
+
   it('lanca ConflictError ao criar usuario com email duplicado', async () => {
     const repository = buildRepositoryMock({
       findByEmail: vi.fn().mockResolvedValue(buildUser()),
@@ -47,6 +69,7 @@ describe('UserService', () => {
     await expect(
       service.create(
         {
+          code: 'jane.doe',
           email: 'jane.doe@back-stage.dev',
           fullName: 'Jane Doe',
           password: 'ChangeMe123!',
@@ -73,6 +96,7 @@ describe('UserService', () => {
 
     const user = await service.create(
       {
+        code: 'jane.doe',
         email: 'jane.doe@back-stage.dev',
         fullName: 'Jane Doe',
         password: 'ChangeMe123!',
@@ -83,7 +107,7 @@ describe('UserService', () => {
 
     expect(user.email).toBe('jane.doe@back-stage.dev');
     expect(repository.create).toHaveBeenCalledWith(
-      expect.objectContaining({ email: 'jane.doe@back-stage.dev', roles: ['viewer'] }),
+      expect.objectContaining({ code: 'jane.doe', email: 'jane.doe@back-stage.dev', roles: ['viewer'] }),
     );
   });
 

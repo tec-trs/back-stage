@@ -32,7 +32,7 @@ describe('ProtectedRoute', () => {
   it('renderiza o conteudo protegido quando ha accessToken', () => {
     useAuthStore.setState({
       accessToken: 'valid-token',
-      user: { id: '1', email: 'a@a.com', fullName: 'A', roles: ['admin'] },
+      user: { id: '1', code: 'a', email: 'a@a.com', fullName: 'A', roles: ['admin'] },
     });
     renderWithRoute('/');
     expect(screen.getByText('Conteudo protegido')).toBeInTheDocument();

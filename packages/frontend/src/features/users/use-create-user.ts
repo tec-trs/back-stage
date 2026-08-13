@@ -5,6 +5,7 @@ import { apiRequest } from '../../shared/api/http-client';
 import type { UserRole, UserSummary } from './use-users';
 
 export interface CreateUserInput {
+  code: string;
   email: string;
   fullName: string;
   password: string;

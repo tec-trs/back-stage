@@ -6,6 +6,7 @@ const TABLE_NAME = 'users';
 
 const SAFE_COLUMNS = [
   'id',
+  'code',
   'email',
   'full_name',
   'avatar_url',
@@ -27,6 +28,7 @@ export interface Pagination {
 }
 
 export interface CreateUserInput {
+  code: string;
   email: string;
   fullName: string;
   passwordHash: string;
@@ -34,6 +36,7 @@ export interface CreateUserInput {
 }
 
 export interface UpdateUserInput {
+  code?: string;
   email?: string;
   fullName?: string;
   roles?: string[];
@@ -44,6 +47,7 @@ export interface IUserRepository {
   findMany(filters: UserFilters, pagination: Pagination): Promise<{ items: User[]; total: number }>;
   findById(id: string): Promise<User | undefined>;
   findByEmail(email: string): Promise<User | undefined>;
+  findByCode(code: string): Promise<User | undefined>;
   create(input: CreateUserInput): Promise<User>;
   update(id: string, input: UpdateUserInput): Promise<User | undefined>;
   setActive(id: string, isActive: boolean): Promise<User | undefined>;
@@ -68,10 +72,10 @@ export class UserRepository implements IUserRepository {
     }
     if (filters.search) {
       filteredQuery.where((builder) => {
-        builder.whereILike('full_name', `%${filters.search}%`).orWhereILike(
-          'email',
-          `%${filters.search}%`,
-        );
+        builder
+          .whereILike('full_name', `%${filters.search}%`)
+          .orWhereILike('email', `%${filters.search}%`)
+          .orWhereILike('code', `%${filters.search}%`);
       });
     }
 
@@ -101,9 +105,15 @@ export class UserRepository implements IUserRepository {
     return row ? new User(row) : undefined;
   }
 
+  public async findByCode(code: string): Promise<User | undefined> {
+    const row = (await this.baseQuery().where({ code }).first()) as UserRow | undefined;
+    return row ? new User(row) : undefined;
+  }
+
   public async create(input: CreateUserInput): Promise<User> {
     const rows = (await this.db(TABLE_NAME)
       .insert({
+        code: input.code,
         email: input.email,
         full_name: input.fullName,
         password_hash: input.passwordHash,
@@ -119,6 +129,7 @@ export class UserRepository implements IUserRepository {
   public async update(id: string, input: UpdateUserInput): Promise<User | undefined> {
     const patch: Record<string, unknown> = {};
 
+    if (input.code !== undefined) patch.code = input.code;
     if (input.email !== undefined) patch.email = input.email;
     if (input.fullName !== undefined) patch.full_name = input.fullName;
     if (input.roles !== undefined) patch.roles = input.roles;

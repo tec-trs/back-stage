@@ -2,6 +2,7 @@ export type UserRole = 'admin' | 'maintainer' | 'viewer';
 
 export interface UserRow {
   id: string;
+  code: string;
   email: string;
   full_name: string;
   avatar_url: string | null;
@@ -14,6 +15,7 @@ export interface UserRow {
 
 export class User {
   public readonly id: string;
+  public readonly code: string;
   public readonly email: string;
   public readonly fullName: string;
   public readonly avatarUrl: string | null;
@@ -25,6 +27,7 @@ export class User {
 
   public constructor(row: UserRow) {
     this.id = row.id;
+    this.code = row.code;
     this.email = row.email;
     this.fullName = row.full_name;
     this.avatarUrl = row.avatar_url;
@@ -37,6 +40,7 @@ export class User {
 
   public toJSON(): {
     id: string;
+    code: string;
     email: string;
     fullName: string;
     avatarUrl: string | null;
@@ -47,6 +51,7 @@ export class User {
   } {
     return {
       id: this.id,
+      code: this.code,
       email: this.email,
       fullName: this.fullName,
       avatarUrl: this.avatarUrl,

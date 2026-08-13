@@ -7,6 +7,7 @@ import { useUsers } from '../features/users/use-users';
 import type { UserSummary } from '../features/users/use-users';
 import { UserFormDialog } from '../features/users/UserFormDialog';
 import { Badge } from '../shared/components/Badge';
+import { Button } from '../shared/components/Button';
 import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { PageHeader } from '../shared/components/PageHeader';
@@ -60,15 +61,7 @@ export function UsersPage() {
       <PageHeader
         title="Usuarios"
         description="Gestao de acesso a aplicacao"
-        actions={
-          <button
-            type="button"
-            onClick={openCreateDialog}
-            className="rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-white"
-          >
-            + Novo Usuario
-          </button>
-        }
+        actions={<Button onClick={openCreateDialog}>+ Novo Usuario</Button>}
       />
 
       <UserFormDialog isOpen={isFormOpen} onClose={closeDialog} user={editingUser} />
@@ -98,6 +91,7 @@ export function UsersPage() {
             <thead className="bg-slate-900 text-slate-400">
               <tr>
                 <th className="px-4 py-2 font-medium">Nome</th>
+                <th className="px-4 py-2 font-medium">Codigo</th>
                 <th className="px-4 py-2 font-medium">Email</th>
                 <th className="px-4 py-2 font-medium">Perfis</th>
                 <th className="px-4 py-2 font-medium">Status</th>
@@ -108,6 +102,7 @@ export function UsersPage() {
               {data.items.map((user) => (
                 <tr key={user.id} className="border-t border-slate-800 hover:bg-slate-900/50">
                   <td className="px-4 py-2 text-slate-100">{user.fullName}</td>
+                  <td className="px-4 py-2 font-mono text-xs text-slate-400">{user.code}</td>
                   <td className="px-4 py-2 text-slate-400">{user.email}</td>
                   <td className="px-4 py-2">
                     <div className="flex flex-wrap gap-1">
@@ -122,21 +117,17 @@ export function UsersPage() {
                     </Badge>
                   </td>
                   <td className="px-4 py-2">
-                    <div className="flex gap-3">
-                      <button
-                        type="button"
-                        onClick={() => openEditDialog(user)}
-                        className="text-sky-400 hover:underline"
-                      >
+                    <div className="flex gap-1.5">
+                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(user)}>
                         Editar
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         disabled={user.id === currentUser.id || setUserActive.isPending}
                         onClick={() =>
                           setUserActive.mutate({ id: user.id, isActive: !user.isActive })
                         }
-                        className="text-slate-300 hover:underline disabled:cursor-not-allowed disabled:text-slate-600 disabled:hover:no-underline"
                         title={
                           user.id === currentUser.id
                             ? 'Voce nao pode inativar sua propria conta'
@@ -144,12 +135,12 @@ export function UsersPage() {
                         }
                       >
                         {user.isActive ? 'Inativar' : 'Ativar'}
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
+                        variant="ghost-danger"
+                        size="sm"
                         disabled={user.id === currentUser.id || deleteUser.isPending}
                         onClick={() => handleDelete(user)}
-                        className="text-red-400 hover:underline disabled:cursor-not-allowed disabled:text-slate-600 disabled:hover:no-underline"
                         title={
                           user.id === currentUser.id
                             ? 'Voce nao pode eliminar sua propria conta'
@@ -157,7 +148,7 @@ export function UsersPage() {
                         }
                       >
                         Eliminar
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>

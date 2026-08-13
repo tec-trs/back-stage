@@ -22,9 +22,9 @@ export function createAuthRouter(controller: AuthController): Router {
    *         application/json:
    *           schema:
    *             type: object
-   *             required: [email, password]
+   *             required: [code, password]
    *             properties:
-   *               email: { type: string, format: email }
+   *               code: { type: string }
    *               password: { type: string, format: password }
    *     responses:
    *       200:

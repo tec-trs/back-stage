@@ -1,8 +1,14 @@
 import { z } from 'zod';
 
 const roleEnum = z.enum(['admin', 'maintainer', 'viewer']);
+const codeSchema = z
+  .string()
+  .min(3)
+  .max(50)
+  .regex(/^[a-z0-9._-]+$/, 'codigo deve conter apenas letras minusculas, numeros, ponto, hifen e underscore');
 
 export const createUserBodySchema = z.object({
+  code: codeSchema,
   email: z.string().email().max(255),
   fullName: z.string().min(1).max(255),
   password: z.string().min(8).max(255),
@@ -10,6 +16,7 @@ export const createUserBodySchema = z.object({
 });
 
 export const updateUserBodySchema = z.object({
+  code: codeSchema.optional(),
   email: z.string().email().max(255).optional(),
   fullName: z.string().min(1).max(255).optional(),
   roles: z.array(roleEnum).min(1).optional(),

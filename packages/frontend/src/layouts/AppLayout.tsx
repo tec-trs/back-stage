@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
 import { useAuthStore } from '../features/auth/auth.store';
+import { Button } from '../shared/components/Button';
 import { useAppStore } from '../store/app.store';
 
 const NAV_ITEMS: { to: string; label: string; adminOnly?: boolean }[] = [
@@ -47,22 +48,14 @@ export function AppLayout() {
 
       <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-slate-800 px-6 py-3">
-          <button
-            type="button"
-            onClick={toggleSidebar}
-            className="rounded-md border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800"
-          >
+          <Button variant="secondary" size="sm" onClick={toggleSidebar}>
             {isSidebarOpen ? 'Ocultar menu' : 'Exibir menu'}
-          </button>
+          </Button>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-400">{user?.email}</span>
-            <button
-              type="button"
-              onClick={logout}
-              className="rounded-md border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800"
-            >
+            <span className="font-mono text-sm text-slate-400">{user?.code}</span>
+            <Button variant="secondary" size="sm" onClick={logout}>
               Sair
-            </button>
+            </Button>
           </div>
         </header>
 

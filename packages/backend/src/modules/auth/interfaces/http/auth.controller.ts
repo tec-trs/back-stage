@@ -6,8 +6,8 @@ export class AuthController {
   public constructor(private readonly loginService: LoginService) {}
 
   public login = async (request: Request, response: Response): Promise<void> => {
-    const { email, password } = request.body as { email: string; password: string };
-    const result = await this.loginService.execute(email, password);
+    const { code, password } = request.body as { code: string; password: string };
+    const result = await this.loginService.execute(code, password);
     response.status(200).json(result);
   };
 

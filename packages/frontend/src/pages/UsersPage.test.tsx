@@ -22,6 +22,7 @@ function renderUsersPage() {
 
 const ADMIN_USER = {
   id: 'admin-1',
+  code: 'admin',
   email: 'admin@back-stage.dev',
   fullName: 'Administrador',
   roles: ['admin'],
@@ -36,7 +37,13 @@ describe('UsersPage', () => {
   it('exibe mensagem de acesso negado para usuarios sem perfil admin', () => {
     useAuthStore.setState({
       accessToken: 'token',
-      user: { id: 'viewer-1', email: 'v@back-stage.dev', fullName: 'Viewer', roles: ['viewer'] },
+      user: {
+        id: 'viewer-1',
+        code: 'viewer',
+        email: 'v@back-stage.dev',
+        fullName: 'Viewer',
+        roles: ['viewer'],
+      },
     });
 
     renderUsersPage();
@@ -52,6 +59,7 @@ describe('UsersPage', () => {
       items: [
         {
           id: 'user-1',
+          code: 'jane.doe',
           email: 'jane.doe@back-stage.dev',
           fullName: 'Jane Doe',
           avatarUrl: null,
@@ -77,6 +85,7 @@ describe('UsersPage', () => {
       items: [
         {
           id: 'admin-1',
+          code: 'admin',
           email: 'admin@back-stage.dev',
           fullName: 'Administrador',
           avatarUrl: null,
@@ -103,6 +112,7 @@ describe('UsersPage', () => {
       items: [
         {
           id: 'user-1',
+          code: 'jane.doe',
           email: 'jane.doe@back-stage.dev',
           fullName: 'Jane Doe',
           avatarUrl: null,
@@ -133,6 +143,7 @@ describe('UsersPage', () => {
       items: [
         {
           id: 'user-1',
+          code: 'jane.doe',
           email: 'jane.doe@back-stage.dev',
           fullName: 'Jane Doe',
           avatarUrl: null,

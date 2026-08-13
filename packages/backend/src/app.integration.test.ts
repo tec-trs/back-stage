@@ -45,7 +45,7 @@ describe('App HTTP layer (integration)', () => {
   it('valida o corpo da requisicao de login', async () => {
     const response = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'invalido', password: '123' });
+      .send({ code: '', password: '123' });
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe('VALIDATION_ERROR');
   });

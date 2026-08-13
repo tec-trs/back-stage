@@ -21,6 +21,7 @@ export interface AuditContext {
 }
 
 export interface CreateUserServiceInput {
+  code: string;
   email: string;
   fullName: string;
   password: string;
@@ -28,6 +29,7 @@ export interface CreateUserServiceInput {
 }
 
 export interface UpdateUserServiceInput {
+  code?: string;
   email?: string;
   fullName?: string;
   roles?: string[];
@@ -51,13 +53,19 @@ export class UserService {
   }
 
   public async create(input: CreateUserServiceInput, audit: AuditContext): Promise<User> {
-    const existing = await this.userRepository.findByEmail(input.email);
-    if (existing) {
+    const existingByCode = await this.userRepository.findByCode(input.code);
+    if (existingByCode) {
+      throw new ConflictError(`Ja existe um usuario com o codigo '${input.code}'`);
+    }
+
+    const existingByEmail = await this.userRepository.findByEmail(input.email);
+    if (existingByEmail) {
       throw new ConflictError(`Ja existe um usuario com o email '${input.email}'`);
     }
 
     const passwordHash = await hashPassword(input.password);
     const user = await this.userRepository.create({
+      code: input.code,
       email: input.email,
       fullName: input.fullName,
       passwordHash,
@@ -71,7 +79,7 @@ export class UserService {
       resourceId: user.id,
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
-      metadata: { email: user.email },
+      metadata: { code: user.code, email: user.email },
     });
 
     return user;
@@ -84,6 +92,13 @@ export class UserService {
   ): Promise<User> {
     await this.getById(id);
 
+    if (input.code !== undefined) {
+      const existing = await this.userRepository.findByCode(input.code);
+      if (existing && existing.id !== id) {
+        throw new ConflictError(`Ja existe um usuario com o codigo '${input.code}'`);
+      }
+    }
+
     if (input.email !== undefined) {
       const existing = await this.userRepository.findByEmail(input.email);
       if (existing && existing.id !== id) {
@@ -95,6 +110,7 @@ export class UserService {
       input.password !== undefined ? await hashPassword(input.password) : undefined;
 
     const updated = await this.userRepository.update(id, {
+      code: input.code,
       email: input.email,
       fullName: input.fullName,
       roles: input.roles,
@@ -111,7 +127,9 @@ export class UserService {
       resourceId: id,
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
-      metadata: { changes: { email: input.email, fullName: input.fullName, roles: input.roles } },
+      metadata: {
+        changes: { code: input.code, email: input.email, fullName: input.fullName, roles: input.roles },
+      },
     });
 
     return updated;

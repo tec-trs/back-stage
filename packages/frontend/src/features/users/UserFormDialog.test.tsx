@@ -23,6 +23,21 @@ function renderDialog(props: Partial<Parameters<typeof UserFormDialog>[0]> = {})
   };
 }
 
+function fillCreateForm(): void {
+  fireEvent.change(screen.getByPlaceholderText('maria.souza'), {
+    target: { value: 'jane.doe' },
+  });
+  fireEvent.change(screen.getByPlaceholderText('Maria Souza'), {
+    target: { value: 'Jane Doe' },
+  });
+  fireEvent.change(screen.getByPlaceholderText('maria.souza@back-stage.dev'), {
+    target: { value: 'jane.doe@back-stage.dev' },
+  });
+  fireEvent.change(screen.getByLabelText('Senha (minimo 8 caracteres) *'), {
+    target: { value: 'SenhaForte123!' },
+  });
+}
+
 describe('UserFormDialog', () => {
   afterEach(() => {
     vi.mocked(apiRequest).mockReset();
@@ -39,6 +54,7 @@ describe('UserFormDialog', () => {
     renderDialog({
       user: {
         id: 'user-1',
+        code: 'jane.doe',
         email: 'jane.doe@back-stage.dev',
         fullName: 'Jane Doe',
         avatarUrl: null,
@@ -53,11 +69,13 @@ describe('UserFormDialog', () => {
     const passwordInput = screen.getByLabelText('Nova senha (minimo 8 caracteres)');
     expect(passwordInput).not.toBeRequired();
     expect(screen.getByDisplayValue('Jane Doe')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('jane.doe')).toBeInTheDocument();
   });
 
   it('envia a senha somente quando preenchida ao editar um usuario', async () => {
     vi.mocked(apiRequest).mockResolvedValueOnce({
       id: 'user-1',
+      code: 'jane.doe',
       email: 'jane.doe@back-stage.dev',
       fullName: 'Jane Doe',
       avatarUrl: null,
@@ -70,6 +88,7 @@ describe('UserFormDialog', () => {
     const { onClose } = renderDialog({
       user: {
         id: 'user-1',
+        code: 'jane.doe',
         email: 'jane.doe@back-stage.dev',
         fullName: 'Jane Doe',
         avatarUrl: null,
@@ -87,7 +106,7 @@ describe('UserFormDialog', () => {
     });
     expect(apiRequest).toHaveBeenCalledWith('/api/users/user-1', {
       method: 'PUT',
-      body: expect.objectContaining({ password: undefined }),
+      body: expect.objectContaining({ code: 'jane.doe', password: undefined }),
     });
   });
 
@@ -95,6 +114,19 @@ describe('UserFormDialog', () => {
     renderDialog();
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Visualizador' }));
+    fillCreateForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Criar usuario' }));
+
+    expect(screen.getByText('Selecione pelo menos um perfil')).toBeInTheDocument();
+    expect(apiRequest).not.toHaveBeenCalled();
+  });
+
+  it('valida o formato do codigo antes de enviar', () => {
+    renderDialog();
+
+    fireEvent.change(screen.getByPlaceholderText('maria.souza'), {
+      target: { value: 'Codigo Invalido!' },
+    });
     fireEvent.change(screen.getByPlaceholderText('Maria Souza'), {
       target: { value: 'Jane Doe' },
     });
@@ -106,13 +138,18 @@ describe('UserFormDialog', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Criar usuario' }));
 
-    expect(screen.getByText('Selecione pelo menos um perfil')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'O codigo deve conter apenas letras minusculas, numeros, ponto, hifen e underscore',
+      ),
+    ).toBeInTheDocument();
     expect(apiRequest).not.toHaveBeenCalled();
   });
 
   it('cria um usuario e fecha o dialogo ao submeter com sucesso', async () => {
     vi.mocked(apiRequest).mockResolvedValueOnce({
       id: 'user-1',
+      code: 'jane.doe',
       email: 'jane.doe@back-stage.dev',
       fullName: 'Jane Doe',
       avatarUrl: null,
@@ -124,15 +161,7 @@ describe('UserFormDialog', () => {
 
     const { onClose } = renderDialog();
 
-    fireEvent.change(screen.getByPlaceholderText('Maria Souza'), {
-      target: { value: 'Jane Doe' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('maria.souza@back-stage.dev'), {
-      target: { value: 'jane.doe@back-stage.dev' },
-    });
-    fireEvent.change(screen.getByLabelText('Senha (minimo 8 caracteres) *'), {
-      target: { value: 'SenhaForte123!' },
-    });
+    fillCreateForm();
     fireEvent.click(screen.getByRole('button', { name: 'Criar usuario' }));
 
     await waitFor(() => {
@@ -140,7 +169,11 @@ describe('UserFormDialog', () => {
     });
     expect(apiRequest).toHaveBeenCalledWith('/api/users', {
       method: 'POST',
-      body: expect.objectContaining({ email: 'jane.doe@back-stage.dev', roles: ['viewer'] }),
+      body: expect.objectContaining({
+        code: 'jane.doe',
+        email: 'jane.doe@back-stage.dev',
+        roles: ['viewer'],
+      }),
     });
   });
 
@@ -149,15 +182,7 @@ describe('UserFormDialog', () => {
 
     renderDialog();
 
-    fireEvent.change(screen.getByPlaceholderText('Maria Souza'), {
-      target: { value: 'Jane Doe' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('maria.souza@back-stage.dev'), {
-      target: { value: 'jane.doe@back-stage.dev' },
-    });
-    fireEvent.change(screen.getByLabelText('Senha (minimo 8 caracteres) *'), {
-      target: { value: 'SenhaForte123!' },
-    });
+    fillCreateForm();
     fireEvent.click(screen.getByRole('button', { name: 'Criar usuario' }));
 
     expect(await screen.findByText('Usuario ja existe')).toBeInTheDocument();

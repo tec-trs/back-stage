@@ -6,6 +6,7 @@ export type UserRole = 'admin' | 'maintainer' | 'viewer';
 
 export interface UserSummary {
   id: string;
+  code: string;
   email: string;
   fullName: string;
   avatarUrl: string | null;

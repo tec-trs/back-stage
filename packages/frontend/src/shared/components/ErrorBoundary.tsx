@@ -1,5 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
+import { Button } from './Button';
+
 interface ErrorBoundaryProps {
   children: ReactNode;
 }
@@ -25,13 +27,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-950 p-6 text-center text-slate-100">
           <h1 className="text-2xl font-semibold">Algo deu errado</h1>
           <p className="max-w-md text-slate-400">{this.state.error.message}</p>
-          <button
-            type="button"
-            onClick={() => this.setState({ error: null })}
-            className="rounded-md border border-slate-700 px-4 py-2 text-sm hover:bg-slate-800"
-          >
+          <Button variant="secondary" onClick={() => this.setState({ error: null })}>
             Tentar novamente
-          </button>
+          </Button>
         </div>
       );
     }

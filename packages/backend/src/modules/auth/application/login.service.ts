@@ -8,6 +8,7 @@ export interface LoginResult {
   accessToken: string;
   user: {
     id: string;
+    code: string;
     email: string;
     fullName: string;
     roles: string[];
@@ -17,8 +18,8 @@ export interface LoginResult {
 export class LoginService {
   public constructor(private readonly userAuthRepository: UserAuthRepository) {}
 
-  public async execute(email: string, password: string): Promise<LoginResult> {
-    const record = await this.userAuthRepository.findByEmail(email);
+  public async execute(code: string, password: string): Promise<LoginResult> {
+    const record = await this.userAuthRepository.findByCode(code);
 
     if (!record || !record.is_active) {
       throw new UnauthorizedError('Credenciais invalidas');
@@ -32,6 +33,7 @@ export class LoginService {
 
     const user = {
       id: record.id,
+      code: record.code,
       email: record.email,
       fullName: record.full_name,
       roles: record.roles,

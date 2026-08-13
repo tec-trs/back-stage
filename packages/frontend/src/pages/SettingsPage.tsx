@@ -14,6 +14,8 @@ export function SettingsPage() {
         <dl className="grid max-w-lg grid-cols-2 gap-4 rounded-lg border border-slate-800 p-4 text-sm">
           <dt className="text-slate-500">Nome</dt>
           <dd>{user.fullName}</dd>
+          <dt className="text-slate-500">Codigo de usuario</dt>
+          <dd className="font-mono">{user.code}</dd>
           <dt className="text-slate-500">Email</dt>
           <dd>{user.email}</dd>
           <dt className="text-slate-500">Perfis</dt>

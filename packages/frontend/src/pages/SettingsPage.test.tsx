@@ -15,6 +15,7 @@ describe('SettingsPage', () => {
       accessToken: 'token',
       user: {
         id: '1',
+        code: 'admin',
         email: 'admin@back-stage.dev',
         fullName: 'Admin',
         roles: ['admin', 'maintainer'],
@@ -25,6 +26,7 @@ describe('SettingsPage', () => {
 
     expect(screen.getByText('admin@back-stage.dev')).toBeInTheDocument();
     expect(screen.getByText('Admin')).toBeInTheDocument();
+    expect(screen.getByText('admin')).toBeInTheDocument();
     expect(screen.getByText('Administrador')).toBeInTheDocument();
     expect(screen.getByText('Mantenedor')).toBeInTheDocument();
   });

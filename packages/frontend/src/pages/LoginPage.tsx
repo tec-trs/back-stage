@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuthStore } from '../features/auth/auth.store';
 import { useLogin } from '../features/auth/use-login';
+import { Button } from '../shared/components/Button';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 
 interface LocationState {
@@ -15,7 +16,7 @@ export function LoginPage() {
   const location = useLocation();
   const login = useLogin();
 
-  const [email, setEmail] = useState('admin@back-stage.dev');
+  const [code, setCode] = useState('admin');
   const [password, setPassword] = useState('');
 
   if (accessToken) {
@@ -25,7 +26,7 @@ export function LoginPage() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    login.mutate({ email, password }, { onSuccess: () => navigate('/', { replace: true }) });
+    login.mutate({ code, password }, { onSuccess: () => navigate('/', { replace: true }) });
   }
 
   return (
@@ -39,12 +40,12 @@ export function LoginPage() {
       </div>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-slate-400">Email</span>
+        <span className="text-slate-400">Codigo de usuario</span>
         <input
-          type="email"
+          type="text"
           required
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          value={code}
+          onChange={(event) => setCode(event.target.value)}
           className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-slate-500"
         />
       </label>
@@ -66,13 +67,9 @@ export function LoginPage() {
         />
       )}
 
-      <button
-        type="submit"
-        disabled={login.isPending}
-        className="rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-white disabled:opacity-60"
-      >
+      <Button type="submit" disabled={login.isPending} className="w-full">
         {login.isPending ? 'Entrando...' : 'Entrar'}
-      </button>
+      </Button>
     </form>
   );
 }

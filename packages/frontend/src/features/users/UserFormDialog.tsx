@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useState } from 'react';
 
+import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
 import { ROLE_LABELS, translateRole } from '../../shared/constants/labels';
@@ -9,31 +10,38 @@ import { useUpdateUser } from './use-update-user';
 import type { UserRole, UserSummary } from './use-users';
 
 const ALL_ROLES = Object.keys(ROLE_LABELS) as UserRole[];
+const CODE_PATTERN = /^[a-z0-9._-]+$/;
 
-interface UserFormDialogProps {
+export function UserFormDialog({
+  isOpen,
+  onClose,
+  user,
+}: {
   isOpen: boolean;
   onClose: () => void;
   user?: UserSummary | null;
-}
-
-export function UserFormDialog({ isOpen, onClose, user }: UserFormDialogProps) {
+}) {
   const isEditMode = Boolean(user);
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const mutation = isEditMode ? updateUser : createUser;
 
+  const [code, setCode] = useState('');
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
   const [roles, setRoles] = useState<UserRole[]>(['viewer']);
+  const [codeError, setCodeError] = useState<string | null>(null);
   const [rolesError, setRolesError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
+      setCode(user?.code ?? '');
       setEmail(user?.email ?? '');
       setFullName(user?.fullName ?? '');
       setPassword('');
       setRoles(user?.roles ?? ['viewer']);
+      setCodeError(null);
       setRolesError(null);
       createUser.reset();
       updateUser.reset();
@@ -54,6 +62,12 @@ export function UserFormDialog({ isOpen, onClose, user }: UserFormDialogProps) {
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
 
+    if (!CODE_PATTERN.test(code)) {
+      setCodeError('O codigo deve conter apenas letras minusculas, numeros, ponto, hifen e underscore');
+      return;
+    }
+    setCodeError(null);
+
     if (roles.length === 0) {
       setRolesError('Selecione pelo menos um perfil');
       return;
@@ -64,6 +78,7 @@ export function UserFormDialog({ isOpen, onClose, user }: UserFormDialogProps) {
       updateUser.mutate(
         {
           id: user.id,
+          code,
           email,
           fullName,
           roles,
@@ -75,7 +90,7 @@ export function UserFormDialog({ isOpen, onClose, user }: UserFormDialogProps) {
     }
 
     createUser.mutate(
-      { email, fullName, password, roles },
+      { code, email, fullName, password, roles },
       { onSuccess: handleClose },
     );
   }
@@ -87,6 +102,19 @@ export function UserFormDialog({ isOpen, onClose, user }: UserFormDialogProps) {
       onClose={handleClose}
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-slate-400">Codigo de usuario *</span>
+          <input
+            required
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            placeholder="maria.souza"
+            className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-slate-500"
+          />
+          <span className="text-xs text-slate-500">Usado para acessar o sistema, no lugar do email.</span>
+          {codeError && <span className="text-xs text-red-400">{codeError}</span>}
+        </label>
+
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-slate-400">Nome completo *</span>
           <input
@@ -152,24 +180,16 @@ export function UserFormDialog({ isOpen, onClose, user }: UserFormDialogProps) {
         )}
 
         <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="rounded-md border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
-          >
+          <Button type="button" variant="secondary" onClick={handleClose}>
             Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={mutation.isPending}
-            className="rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-white disabled:opacity-60"
-          >
+          </Button>
+          <Button type="submit" disabled={mutation.isPending}>
             {mutation.isPending
               ? 'Salvando...'
               : isEditMode
                 ? 'Salvar alteracoes'
                 : 'Criar usuario'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

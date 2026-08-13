@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 
 export interface UserAuthRecord {
   id: string;
+  code: string;
   email: string;
   full_name: string;
   password_hash: string;
@@ -12,10 +13,10 @@ export interface UserAuthRecord {
 export class UserAuthRepository {
   public constructor(private readonly db: Knex) {}
 
-  public async findByEmail(email: string): Promise<UserAuthRecord | undefined> {
+  public async findByCode(code: string): Promise<UserAuthRecord | undefined> {
     return this.db<UserAuthRecord>('users')
-      .select('id', 'email', 'full_name', 'password_hash', 'roles', 'is_active')
-      .where({ email })
+      .select('id', 'code', 'email', 'full_name', 'password_hash', 'roles', 'is_active')
+      .where({ code })
       .whereNull('deleted_at')
       .first();
   }

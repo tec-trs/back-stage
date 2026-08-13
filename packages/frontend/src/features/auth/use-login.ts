@@ -5,7 +5,7 @@ import { apiRequest } from '../../shared/api/http-client';
 import { useAuthStore, type AuthUser } from './auth.store';
 
 interface LoginInput {
-  email: string;
+  code: string;
   password: string;
 }
 

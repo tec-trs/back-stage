@@ -7,6 +7,7 @@ import type { AuthenticatedUser, JwtPayload } from './auth.types.js';
 export function signAccessToken(user: AuthenticatedUser): string {
   const payload: JwtPayload = {
     sub: user.id,
+    code: user.code,
     email: user.email,
     fullName: user.fullName,
     roles: user.roles,
@@ -22,6 +23,7 @@ export function verifyAccessToken(token: string): AuthenticatedUser {
 
   return {
     id: decoded.sub,
+    code: decoded.code,
     email: decoded.email,
     fullName: decoded.fullName,
     roles: decoded.roles,
