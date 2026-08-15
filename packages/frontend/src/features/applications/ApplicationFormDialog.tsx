@@ -5,11 +5,11 @@ import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
 import { Tabs, type TabItem } from '../../shared/components/Tabs';
 import {
-  APP_TYPE_LABELS,
   APPLICATION_STATUS_LABELS,
   CRITICALITY_LABELS,
-  ENVIRONMENT_LABELS,
 } from '../../shared/constants/labels';
+import { useApplicationTypes } from '../application-types/use-application-types';
+import { useEnvironments } from '../environments/use-environments';
 import { useServers } from '../servers/use-servers';
 
 import type { ApplicationStatus, ApplicationSummary, AppType, Criticality, DeployEnvironment } from './use-applications';
@@ -19,10 +19,8 @@ import { useCreateApplication } from './use-create-application';
 import { useUpdateApplication } from './use-update-application';
 
 const CODE_PATTERN = /^[a-z0-9._-]+$/;
-const APP_TYPES = Object.keys(APP_TYPE_LABELS) as AppType[];
 const CRITICALITIES = Object.keys(CRITICALITY_LABELS) as Criticality[];
 const STATUSES = Object.keys(APPLICATION_STATUS_LABELS) as ApplicationStatus[];
-const ENVIRONMENTS = Object.keys(ENVIRONMENT_LABELS) as DeployEnvironment[];
 
 type TabKey = 'identification' | 'technology' | 'relationships' | 'governance';
 
@@ -136,6 +134,8 @@ export function ApplicationFormDialog({
   const isDuplicateMode = Boolean(duplicateFrom);
   const createApplication = useCreateApplication();
   const updateApplication = useUpdateApplication();
+  const { data: environments } = useEnvironments();
+  const { data: applicationTypes } = useApplicationTypes();
   const mutation = isEditMode ? updateApplication : createApplication;
 
   const servers = useServers();
@@ -305,9 +305,9 @@ export function ApplicationFormDialog({
                     onChange={(event) => setField('appType', event.target.value as AppType)}
                     className={inputClass}
                   >
-                    {APP_TYPES.map((type) => (
-                      <option key={type} value={type}>
-                        {APP_TYPE_LABELS[type]}
+                    {(applicationTypes ?? []).map((type) => (
+                      <option key={type.slug} value={type.slug}>
+                        {type.name}
                       </option>
                     ))}
                   </select>
@@ -473,9 +473,9 @@ export function ApplicationFormDialog({
                           }
                           className={`${inputClass} py-1.5 text-sm`}
                         >
-                          {ENVIRONMENTS.map((environment) => (
-                            <option key={environment} value={environment}>
-                              {ENVIRONMENT_LABELS[environment]}
+                          {(environments ?? []).map((env) => (
+                            <option key={env.slug} value={env.slug}>
+                              {env.name}
                             </option>
                           ))}
                         </select>

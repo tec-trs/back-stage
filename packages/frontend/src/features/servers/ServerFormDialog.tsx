@@ -7,10 +7,10 @@ import { Tabs, type TabItem } from '../../shared/components/Tabs';
 import {
   DISK_PURPOSE_LABELS,
   DISK_TYPE_LABELS,
-  ENVIRONMENT_LABELS,
   SERVER_STATUS_LABELS,
-  SERVER_TYPE_LABELS,
 } from '../../shared/constants/labels';
+import { useEnvironments } from '../environments/use-environments';
+import { useServerTypes } from '../server-types/use-server-types';
 
 import type { ServerDiskInput } from './use-create-server';
 import { useCreateServer } from './use-create-server';
@@ -26,9 +26,7 @@ import type {
 import { useUpdateServer } from './use-update-server';
 
 const HOSTNAME_PATTERN = /^[a-z0-9.-]+$/;
-const SERVER_TYPES = Object.keys(SERVER_TYPE_LABELS) as ServerType[];
 const STATUSES = Object.keys(SERVER_STATUS_LABELS) as ServerStatus[];
-const ENVIRONMENTS = Object.keys(ENVIRONMENT_LABELS) as ServerEnvironment[];
 const DISK_TYPES = Object.keys(DISK_TYPE_LABELS) as DiskType[];
 const DISK_PURPOSES = Object.keys(DISK_PURPOSE_LABELS) as DiskPurpose[];
 
@@ -169,6 +167,8 @@ export function ServerFormDialog({
   const createServer = useCreateServer();
   const updateServer = useUpdateServer();
   const mutation = isEditMode ? updateServer : createServer;
+  const { data: environments } = useEnvironments();
+  const { data: serverTypes } = useServerTypes();
 
   const [activeTab, setActiveTab] = useState<TabKey>('identification');
   const [form, setForm] = useState<FormState>(emptyForm());
@@ -381,9 +381,9 @@ export function ServerFormDialog({
                     }}
                     className={inputClass}
                   >
-                    {SERVER_TYPES.map((type) => (
-                      <option key={type} value={type}>
-                        {SERVER_TYPE_LABELS[type]}
+                    {(serverTypes ?? []).map((type) => (
+                      <option key={type.slug} value={type.slug}>
+                        {type.name}
                       </option>
                     ))}
                   </select>
@@ -413,9 +413,9 @@ export function ServerFormDialog({
                     }
                     className={inputClass}
                   >
-                    {ENVIRONMENTS.map((env) => (
-                      <option key={env} value={env}>
-                        {ENVIRONMENT_LABELS[env]}
+                    {(environments ?? []).map((env) => (
+                      <option key={env.slug} value={env.slug}>
+                        {env.name}
                       </option>
                     ))}
                   </select>

@@ -13,7 +13,7 @@ export type AppType =
   | 'middleware';
 export type Criticality = 'critical' | 'high' | 'medium' | 'low';
 export type ApplicationStatus = 'developing' | 'active' | 'maintenance' | 'deprecated' | 'deactivated';
-export type DeployEnvironment = 'production' | 'staging' | 'development' | 'dr' | 'sandbox';
+export type DeployEnvironment = string;
 
 export interface ApplicationDeployment {
   id: string;

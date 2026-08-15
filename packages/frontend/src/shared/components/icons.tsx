@@ -162,3 +162,79 @@ export function SettingsIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+export function TagIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <line x1="7" y1="7" x2="7.01" y2="7" />
+    </svg>
+  );
+}
+
+export function UploadIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+  );
+}
+
+export function DownloadIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+export function CpuIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+      <rect x="9" y="9" width="6" height="6" />
+      <line x1="9" y1="1" x2="9" y2="4" />
+      <line x1="15" y1="1" x2="15" y2="4" />
+      <line x1="9" y1="20" x2="9" y2="23" />
+      <line x1="15" y1="20" x2="15" y2="23" />
+      <line x1="20" y1="9" x2="23" y2="9" />
+      <line x1="20" y1="14" x2="23" y2="14" />
+      <line x1="1" y1="9" x2="4" y2="9" />
+      <line x1="1" y1="14" x2="4" y2="14" />
+    </svg>
+  );
+}
+
+export function AppWindowIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <rect x="2" y="3" width="20" height="18" rx="2" />
+      <line x1="2" y1="8" x2="22" y2="8" />
+      <line x1="6" y1="5.5" x2="6.01" y2="5.5" />
+      <line x1="9" y1="5.5" x2="9.01" y2="5.5" />
+    </svg>
+  );
+}
+
+export function GroupIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <circle cx="9" cy="7" r="4" />
+      <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      <path d="M21 21v-2a4 4 0 0 0-3-3.87" />
+    </svg>
+  );
+}

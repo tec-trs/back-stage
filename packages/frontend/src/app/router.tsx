@@ -42,6 +42,18 @@ const ApplicationDetailPage = lazy(() =>
 const EcosystemPage = lazy(() =>
   import('../pages/EcosystemPage').then((m) => ({ default: m.EcosystemPage })),
 );
+const EnvironmentsPage = lazy(() =>
+  import('../pages/EnvironmentsPage').then((m) => ({ default: m.EnvironmentsPage })),
+);
+const ServerTypesPage = lazy(() =>
+  import('../pages/ServerTypesPage').then((m) => ({ default: m.ServerTypesPage })),
+);
+const ApplicationTypesPage = lazy(() =>
+  import('../pages/ApplicationTypesPage').then((m) => ({ default: m.ApplicationTypesPage })),
+);
+const TeamsPage = lazy(() =>
+  import('../pages/TeamsPage').then((m) => ({ default: m.TeamsPage })),
+);
 
 function withSuspense(element: ReactNode) {
   return <Suspense fallback={<Spinner />}>{element}</Suspense>;
@@ -70,6 +82,10 @@ export const router = createBrowserRouter([
           { path: '/applications', element: withSuspense(<ApplicationsPage />) },
           { path: '/applications/:id', element: withSuspense(<ApplicationDetailPage />) },
           { path: '/ecosystem', element: withSuspense(<EcosystemPage />) },
+          { path: '/environments', element: withSuspense(<EnvironmentsPage />) },
+          { path: '/teams', element: withSuspense(<TeamsPage />) },
+          { path: '/server-types', element: withSuspense(<ServerTypesPage />) },
+          { path: '/application-types', element: withSuspense(<ApplicationTypesPage />) },
           { path: '/settings', element: withSuspense(<SettingsPage />) },
         ],
       },

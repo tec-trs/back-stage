@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { ServerFormDialog } from '../features/servers/ServerFormDialog';
+import { ServerImportDialog } from '../features/servers/ServerImportDialog';
 import { useDeleteServer } from '../features/servers/use-delete-server';
 import { useServers } from '../features/servers/use-servers';
 import type { ServerSummary } from '../features/servers/use-servers';
@@ -11,7 +12,7 @@ import { Button } from '../shared/components/Button';
 import { ConfirmDialog } from '../shared/components/ConfirmDialog';
 import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
-import { CopyIcon, PencilIcon, PlusIcon, PowerIcon, TrashIcon } from '../shared/components/icons';
+import { CopyIcon, PencilIcon, PlusIcon, PowerIcon, TrashIcon, UploadIcon } from '../shared/components/icons';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Spinner } from '../shared/components/Spinner';
 import {
@@ -34,6 +35,7 @@ export function ServersPage() {
   const deleteServer = useDeleteServer();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingServer, setEditingServer] = useState<ServerSummary | null>(null);
   const [duplicatingServer, setDuplicatingServer] = useState<ServerSummary | null>(null);
   const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
@@ -110,6 +112,7 @@ export function ServersPage() {
       <PageHeader title="Servidores" description="Inventario de infraestrutura" />
 
       <ServerFormDialog isOpen={isFormOpen} onClose={closeDialog} server={editingServer} duplicateFrom={duplicatingServer} />
+      <ServerImportDialog isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
         title="Eliminar servidor"
@@ -124,6 +127,15 @@ export function ServersPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
         <Button size="sm" icon={<PlusIcon />} onClick={openCreateDialog} title="Incluir um novo servidor">
           Incluir Servidor
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<UploadIcon />}
+          onClick={() => setIsImportOpen(true)}
+          title="Importar servidores em massa a partir de arquivo CSV"
+        >
+          Importar
         </Button>
         <div className="mx-1 h-6 w-px bg-slate-800" />
         <Button

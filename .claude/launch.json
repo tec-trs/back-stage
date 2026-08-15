@@ -5,7 +5,8 @@
       "name": "frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--workspace=@back-stage/frontend"],
-      "port": 5200
+      "port": 5200,
+      "autoPort": true
     }
   ]
 }

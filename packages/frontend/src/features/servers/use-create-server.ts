@@ -25,6 +25,8 @@ export interface CreateServerInput {
   description?: string | null;
   serverType: ServerType;
   provider: ServerProvider;
+  domain?: string | null;
+  fqdn?: string | null;
   cpuCores?: number | null;
   cpuModel?: string | null;
   ramGb?: number | null;

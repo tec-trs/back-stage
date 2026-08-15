@@ -5,7 +5,7 @@ import { apiRequest } from '../../shared/api/http-client';
 export type ServerType = 'vm' | 'bare_metal' | 'container_host';
 export type ServerProvider = 'on_premise' | 'aws' | 'azure' | 'gcp' | 'oracle_cloud' | 'own_datacenter';
 export type ServerStatus = 'active' | 'deactivated';
-export type ServerEnvironment = 'production' | 'staging' | 'development' | 'sandbox';
+export type ServerEnvironment = string;
 export type ServiceStatus = 'active' | 'inactive';
 
 export interface ServerService {

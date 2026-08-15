@@ -1,18 +1,9 @@
 import { z } from 'zod';
 
-const appTypeEnum = z.enum([
-  'web_app',
-  'api_backend',
-  'mobile',
-  'batch_job',
-  'microservice',
-  'monolith',
-  'internal_library',
-  'middleware',
-]);
+const appTypeEnum = z.string().min(1).max(50).regex(/^[a-z0-9_-]+$/, 'tipo de aplicacao invalido');
 const criticalityEnum = z.enum(['critical', 'high', 'medium', 'low']);
 const statusEnum = z.enum(['developing', 'active', 'maintenance', 'deprecated', 'deactivated']);
-const environmentEnum = z.enum(['production', 'staging', 'development', 'dr', 'sandbox']);
+const environmentEnum = z.string().min(1).max(50).regex(/^[a-z0-9_-]+$/, 'ambiente invalido');
 
 const codeSchema = z
   .string()

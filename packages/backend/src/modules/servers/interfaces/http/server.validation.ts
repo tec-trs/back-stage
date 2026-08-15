@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const serverTypeEnum = z.enum(['vm', 'bare_metal', 'container_host']);
+const serverTypeEnum = z.string().min(1).max(50).regex(/^[a-z0-9_-]+$/, 'tipo de maquina invalido');
 const providerEnum = z.enum([
   'on_premise',
   'aws',
@@ -10,7 +10,7 @@ const providerEnum = z.enum([
   'own_datacenter',
 ]);
 const statusEnum = z.enum(['active', 'deactivated']);
-const environmentEnum = z.enum(['production', 'staging', 'development', 'sandbox']);
+const environmentEnum = z.string().min(1).max(50).regex(/^[a-z0-9_-]+$/, 'ambiente invalido');
 const diskTypeEnum = z.enum(['ssd', 'hdd', 'nvme']);
 const diskPurposeEnum = z.enum(['system', 'data', 'log', 'backup']);
 
