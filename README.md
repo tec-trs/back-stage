@@ -1,96 +1,434 @@
-# back-stage
+# Back-Stage — Platform Engineering Center
 
-Platform Engineering Center — plataforma corporativa inspirada em Backstage, Spotify Portal Engineering, Internal Developer Platforms e CNCF Platform Engineering Principles.
+Plataforma corporativa de gestao de infraestrutura e aplicacoes, inspirada em Backstage/Spotify, Internal Developer Platforms e CNCF Platform Engineering Principles.
+
+Construida como monorepo npm workspaces com backend DDD + frontend React 19.
+
+---
+
+## Indice
+
+1. [Visao geral](#visao-geral)
+2. [Estrutura do monorepo](#estrutura-do-monorepo)
+3. [Pre-requisitos e inicio rapido](#pre-requisitos-e-inicio-rapido)
+4. [Modulos funcionais](#modulos-funcionais)
+5. [Arquitetura — Backend](#arquitetura--backend)
+6. [Arquitetura — Frontend](#arquitetura--frontend)
+7. [Banco de dados](#banco-de-dados)
+8. [API](#api)
+9. [Autenticacao e RBAC](#autenticacao-e-rbac)
+10. [Auditoria](#auditoria)
+11. [Ecossistema — Grafo D3.js](#ecossistema--grafo-d3js)
+12. [Observabilidade](#observabilidade)
+13. [CI/CD e infraestrutura](#cicd-e-infraestrutura)
+14. [Testes](#testes)
+15. [Scripts](#scripts)
+
+---
+
+## Visao geral
+
+O Back-Stage e um **Internal Developer Portal** que consolida em uma unica interface:
+
+- Inventario de **servidores** (fisicos, virtuais, cloud, containers) com campos de rede, discos e servicos
+- Catalogo de **aplicacoes** com dependencias, implantacoes e ciclo de vida
+- **Grafo do ecossistema** — visualizacao interativa das relacoes servidor-aplicacao
+- **Governanca** — motor de politicas e painel de conformidade
+- **Auditoria** — trilha completa de eventos com filtros e exclusao em lote
+- **Gestao de usuarios** com controle de acesso baseado em papeis (RBAC)
+- **Observabilidade** — metricas Prometheus, dashboards Grafana, logs Loki
+
+---
 
 ## Estrutura do monorepo
 
 ```
 back-stage/
 ├── packages/
-│   ├── shared/    # tipos, erros e utilitarios compartilhados (@back-stage/shared)
-│   ├── backend/   # API Node + Express + TypeScript (@back-stage/backend)
-│   ├── frontend/  # React 19 + Vite + TypeScript (@back-stage/frontend)
-│   └── cli/       # CLI de operacao e scaffolding (@back-stage/cli)
-├── observability/ # Prometheus, Grafana, Loki, Promtail (configuracao)
+│   ├── shared/          # tipos, erros e utilitarios (@back-stage/shared)
+│   ├── backend/         # API Express + DDD + Knex/PostgreSQL (@back-stage/backend)
+│   │   └── src/
+│   │       ├── modules/
+│   │       │   ├── auth/            # JWT login, /me
+│   │       │   ├── servers/         # CRUD servidores (rede, discos, servicos)
+│   │       │   ├── applications/    # CRUD aplicacoes (deps, implantacoes)
+│   │       │   ├── service-catalog/ # Catalogo generico de entidades
+│   │       │   ├── catalog/         # Grafo de dependencias (ecossistema)
+│   │       │   ├── governance/      # Motor de politicas e compliance
+│   │       │   ├── search/          # Full Text Search (PostgreSQL)
+│   │       │   ├── audit/           # Trilha de auditoria
+│   │       │   ├── deployments/     # Deployment tracking + webhooks
+│   │       │   └── users/           # CRUD usuarios
+│   │       ├── database/
+│   │       │   ├── migrations/      # 23+ migrations Knex
+│   │       │   └── seeds/           # Seeds idempotentes
+│   │       └── shared/              # middlewares, erros, DI, audit-logger
+│   ├── frontend/        # React 19 + Vite + TailwindCSS (@back-stage/frontend)
+│   │   └── src/
+│   │       ├── features/            # feature modules (auth, servers, applications, audit...)
+│   │       ├── pages/               # paginas de rota
+│   │       ├── layouts/             # AppLayout (sidebar com icones, header)
+│   │       └── shared/              # componentes, hooks e constantes reutilizaveis
+│   └── cli/             # CLI de operacao e scaffolding (@back-stage/cli)
+├── observability/       # Prometheus, Grafana, Loki, Promtail
+├── helm/back-stage/     # Chart Helm para Kubernetes
+├── terraform/           # Infraestrutura AWS (VPC, EKS, RDS, ECR)
 ├── docker-compose.yml
-└── .github/workflows/ci.yml
+└── .github/workflows/   # CI/CD (ci, build, cd, security-scan)
 ```
 
-## Pre-requisitos
+---
 
-- Node.js >= 20
-- npm >= 10
-- Docker e Docker Compose (Postgres, Redis, Kafka, Prometheus, Grafana, Loki)
+## Pre-requisitos e inicio rapido
 
-## Como comecar
+**Requisitos:**
+- Node.js >= 20, npm >= 10
+- Docker e Docker Compose (PostgreSQL 16, Redis, Kafka, Prometheus, Grafana, Loki)
 
 ```bash
+# 1. Clonar e instalar dependencias
+git clone <repo>
+cd back-stage
 npm install
+
+# 2. Configurar variaveis de ambiente
 cp .env.example .env
+# Edite .env com suas credenciais (DATABASE_URL, JWT_SECRET, etc.)
+
+# 3. Subir infraestrutura local
 docker compose up -d postgres redis zookeeper kafka
+
+# 4. Migracoes e seeds
 npm run build:shared
 npm run db:migrate --workspace=@back-stage/backend
 npm run db:seed --workspace=@back-stage/backend
-npm run dev:backend
-npm run dev:frontend
+
+# 5. Iniciar backend e frontend
+npm run dev:backend     # http://localhost:4000
+npm run dev:frontend    # http://localhost:5200
 ```
 
-- Backend: http://localhost:4000/api/health
+**Acesso padrao:**
+- Frontend: http://localhost:5200
+- Backend/API: http://localhost:4000/api/health
 - Swagger/OpenAPI: http://localhost:4000/api/docs
 - Metricas Prometheus: http://localhost:4000/metrics
-- Frontend: http://localhost:5173 (login: codigo de usuario `admin` / senha `Tectrs123`)
+- Login: codigo `admin` / senha `Tectrs123`
 
-## Scripts principais
+---
 
-| Script                 | Descricao                                 |
-| ---------------------- | ----------------------------------------- |
-| `npm run build`        | Builda todos os pacotes (shared primeiro) |
-| `npm run lint`         | Lint em todo o monorepo                   |
-| `npm run format`       | Formata com Prettier                      |
-| `npm run typecheck`    | Verifica tipos em todos os pacotes        |
-| `npm test`             | Executa os testes de todos os pacotes     |
-| `npm run dev:backend`  | Sobe o backend em modo watch              |
-| `npm run dev:frontend` | Sobe o frontend em modo dev (Vite)        |
+## Modulos funcionais
 
-## Arquitetura
+### Servidores
 
-- **Backend**: Modular Monolith, DDD (domain / application / infrastructure / interfaces), Repository Pattern, Service Layer, injecao de dependencia manual via `Container`. Cada modulo em `src/modules/*` e autocontido (auth, service-catalog, governance, search, catalog, audit, deployments).
-- **Frontend**: Feature Based Architecture (`features/`, `shared/`, `layouts/`, `pages/`), React Router com rotas protegidas, React Query para estado de servidor, Zustand (persistido) para sessao/UI, TailwindCSS, Error Boundary.
+Cadastro e gestao do inventario de servidores com 4 abas:
 
-## Camada de persistencia (PostgreSQL 16 + Knex)
+| Aba | Campos |
+|-----|--------|
+| **Geral** | Hostname (validado no blur, RFC-1123), nome de exibicao, tipo (fisico/virtual/cloud/container/...), provedor, ambiente, status operacional, descricao |
+| **Rede** | Endereco IP, dominio, gateway, mascara de rede, VLAN, Nome FQDN |
+| **Discos** | Lista de discos (tipo, tamanho GB, ponto de montagem, filesystem) |
+| **Servicos** | Lista de servicos do servidor (nome, situacao, portas, cmd subir/parar/status) |
 
-| Script                                                        | Descricao                            |
-| ------------------------------------------------------------- | ------------------------------------ |
-| `npm run db:migrate --workspace=@back-stage/backend`          | Aplica todas as migrations pendentes |
-| `npm run db:migrate:rollback --workspace=@back-stage/backend` | Reverte o ultimo batch de migrations |
-| `npm run db:migrate:status --workspace=@back-stage/backend`   | Lista o status das migrations        |
-| `npm run db:seed --workspace=@back-stage/backend`             | Executa os seeds (idempotentes)      |
+**Funcionalidades:**
+- Listagem com filtros (status, tipo, provedor, ambiente, busca)
+- Detalhe do servidor com todas as abas
+- Duplicar servidor (abre formulario pre-preenchido)
+- Desativar/ativar (altera status)
+- Eliminar com protecao: nao permite exclusao se houver aplicacoes implantadas
+- Auditoria automatica de todas as operacoes
 
-Regras do schema: UUID (`gen_random_uuid()`), trigger `set_updated_at()` em todas as tabelas mutaveis (exceto `audit_logs`, imutavel), soft delete (`deleted_at` + indices unicos parciais), foreign keys obrigatorias, JSONB restrito a `metadata`, busca full-text via coluna gerada `search_vector` (GIN index).
+### Aplicacoes
 
-## API (visao geral)
+Catalogo de aplicacoes com:
+- Tipo (Web, API, Batch, Mobile, etc.), criticidade, status de ciclo de vida
+- Dependencias de outras aplicacoes (multi-select com checkboxes)
+- Implantacoes em servidores (deployment tracking)
+- Duplicar aplicacao
+- Botao de inativar e eliminar
 
-Todas as rotas sob `/api`. Autenticacao via JWT Bearer (`POST /api/auth/login`), RBAC por papel (`admin`, `maintainer`, `viewer`).
+### Ecossistema
 
-| Recurso            | Rotas                                                                                                                                                                                                                                        | Modulo                    |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| Auth               | `POST /auth/login`, `GET /auth/me`                                                                                                                                                                                                           | `modules/auth`            |
-| Service Catalog    | `GET/POST /services`, `GET/PUT/DELETE /services/:id`, `GET /services/search`                                                                                                                                                                 | `modules/service-catalog` |
-| Catalog (generico) | `GET /catalog-entities`, `GET /catalog-entities/:id`, `GET /catalog-entities/graph`                                                                                                                                                          | `modules/catalog`         |
-| Governance         | `GET/POST /governance/policies`, `POST /governance/policies/:id/evaluate[/:entityId]`, `GET /governance/violations`, `GET /governance/dashboard`, `GET/POST /governance/exemptions`, `PUT /governance/exemptions/:id/approve` (ou `/reject`) | `modules/governance`      |
-| Search             | `GET /search`, `GET /suggestions`                                                                                                                                                                                                            | `modules/search`          |
-| Audit              | `GET /audit-logs`                                                                                                                                                                                                                            | `modules/audit`           |
-| Deployments        | `GET/POST /deployments`, `GET /deployments/:id`                                                                                                                                                                                              | `modules/deployments`     |
-| Webhooks           | `POST /webhooks/github`, `POST /webhooks/gitlab`                                                                                                                                                                                             | `modules/deployments`     |
-| Observabilidade    | `GET /metrics` (fora de `/api`)                                                                                                                                                                                                              | `observability/`          |
+Grafo interativo (D3.js force simulation) mostrando servidores e aplicacoes:
+- **Servidores** — nos quadrados (rect) em ciano `#22d3ee`
+- **Aplicacoes** — nos redondos (circle) em verde-lima `#a3e635`
+- Labels posicionados acima dos nos (sem sobreposicao)
+- Zoom, pan, drag de nos
+- Clique: seleciona no e exibe nome/tipo na barra
+- Duplo clique: navega para a tela de detalhe do servidor ou aplicacao
+- Cor da borda indica ciclo de vida (verde=ativo, amarelo=manutencao, vermelho=desativado, etc.)
 
-Documentacao interativa completa (OpenAPI/Swagger): http://localhost:4000/api/docs
+### Auditoria
 
-## Webhooks (Deployment Tracking)
+Trilha completa de eventos com:
+- Filtro por acao (campo texto livre) e tipo de recurso (dropdown)
+- Multi-select por linha (checkbox) + selecionar todos
+- Botao "Eliminar (N)" com dialogo de confirmacao
+- Total de registros exibido no rodape
+- Papeis: leitura `admin`/`maintainer`, escrita `admin`
 
-- **GitHub**: configure um webhook para o evento `deployment_status` apontando para `POST /api/webhooks/github`, com `Content type: application/json` e o secret igual a `GITHUB_WEBHOOK_SECRET`. A assinatura e validada via HMAC-SHA256 (`X-Hub-Signature-256`).
-- **GitLab**: configure um Pipeline Hook apontando para `POST /api/webhooks/gitlab`, com o token igual a `GITLAB_WEBHOOK_SECRET` (header `X-Gitlab-Token`).
-- Eventos normalizados: `deployment.started`, `deployment.completed`, `deployment.failed`. O deployment e casado com uma entidade do catalogo pela `repository_url` e o historico e persistido em `deployments` + `audit_logs`.
+### Usuarios
+
+Gestao de acesso com:
+- Multi-select por checkbox (selecionar varios usuarios simultaneamente)
+- Bulk inativar/ativar — respeita usuarios inativos/ativos, exclui a propria conta automaticamente
+- Bulk eliminar com dialogo de confirmacao
+- Editar: habilitado apenas com exatamente 1 usuario selecionado
+- Aviso visual quando a propria conta esta na selecao
+
+### Governanca
+
+- Motor de politicas (equals/contains/greaterThan/lessThan) aplicado a entidades do catalogo
+- Painel de conformidade com violations e exemptions
+- Aprovacao/rejeicao de exempcoes por administradores
+
+---
+
+## Arquitetura — Backend
+
+Modular Monolith com **Domain-Driven Design**. Cada modulo em `src/modules/*` e autocontido:
+
+```
+modules/<nome>/
+├── domain/         # entidades, value objects, interfaces de repositorio
+├── application/    # servicos de aplicacao (use cases)
+├── infrastructure/ # repositorios Knex (PostgreSQL)
+└── interfaces/
+    └── http/       # controller, routes, validation (Zod)
+```
+
+**Tecnologias backend:**
+- Express 4 + TypeScript 5 (ESM)
+- Knex + PostgreSQL 16 (queries builder, migrations, seeds)
+- Zod (validacao de entrada)
+- JWT (autenticacao), RBAC por middleware
+- Winston + Morgan (logging estruturado JSON)
+- OpenTelemetry (tracing HTTP/Express/PG)
+- Prometheus (metricas via `prom-client`)
+- Injecao de dependencia manual via `Container` (sem framework IoC externo)
+
+**Padroes:**
+- Repository Pattern com interface + implementacao Knex
+- Service Layer (logica de negocio, auditoria, validacoes de dominio)
+- `asyncHandler` para captura uniforme de erros async
+- Global error handler com mapeamento de erros do dominio para HTTP (400/401/403/404/409/500)
+- Soft delete em todas as entidades (`deleted_at`, indices unicos parciais)
+
+---
+
+## Arquitetura — Frontend
+
+**Feature Based Architecture** com React 19 + Vite + TypeScript:
+
+```
+src/
+├── features/           # modulos por dominio
+│   ├── auth/           # store Zustand, hook de login
+│   ├── servers/        # hooks React Query + formulario com abas
+│   ├── applications/   # hooks + formulario
+│   ├── audit/          # hooks de listagem e exclusao
+│   └── users/          # hooks de CRUD de usuarios
+├── pages/              # ServersPage, ApplicationsPage, AuditPage, etc.
+├── layouts/            # AppLayout (sidebar com icones, header)
+└── shared/
+    ├── api/            # http-client (fetch + JWT + ApiError)
+    ├── components/     # Button, Modal, ConfirmDialog, DependencyGraph, icons, ...
+    └── constants/      # labels de traducao (PT-BR)
+```
+
+**Tecnologias frontend:**
+- React 19, React Router 6 (rotas protegidas)
+- TanStack Query v5 (React Query) — cache, invalidacao, mutacoes
+- Zustand v5 (sessao auth persistida no localStorage)
+- TailwindCSS 3 (design system slate/sky)
+- D3.js v7 (grafo do ecossistema)
+- Vitest + React Testing Library (testes de componentes)
+
+**Componentes reutilizaveis notaveis:**
+- `ConfirmDialog` — dialogo de confirmacao com suporte a erro embutido (substitui `window.confirm`)
+- `DependencyGraph` — grafo D3 force com zoom/pan/drag, nos quadrados (servidor) e redondos (aplicacao)
+- `Button` — variantes primary/secondary/danger/ghost com icone e tamanhos sm/md
+- `Modal` — portal React com Escape, backdrop e acessibilidade (role=dialog, aria-modal)
+- `PageHeader`, `EmptyState`, `ErrorMessage`, `Spinner`, `Badge` — UI atoms
+
+---
+
+## Banco de dados
+
+PostgreSQL 16 gerenciado via Knex.
+
+**Convencoes do schema:**
+- UUID via `gen_random_uuid()` como PK
+- Trigger `set_updated_at()` em todas as tabelas mutaveis (exceto `audit_logs`)
+- Soft delete: coluna `deleted_at` + indices unicos parciais (`WHERE deleted_at IS NULL`)
+- FKs obrigatorias com `ON DELETE RESTRICT` ou `CASCADE` conforme o dominio
+- Full Text Search via coluna gerada `search_vector` (GIN index) nas entidades pesquisaveis
+- `metadata` sempre JSONB
+
+**Tabelas principais:**
+
+| Tabela | Descricao |
+|--------|-----------|
+| `users` | Usuarios da plataforma (codigo, email, senha hash bcrypt, papeis JSONB) |
+| `servers` | Servidores (hostname, tipo, provedor, ambiente, status, rede, dominio) |
+| `server_disks` | Discos de cada servidor (N:1 com servers) |
+| `server_services` | Servicos de cada servidor (N:1 com servers) |
+| `applications` | Aplicacoes (tipo, criticidade, status, repositorio) |
+| `application_dependencies` | Dependencias entre aplicacoes (N:M) |
+| `application_deployments` | Implantacoes de aplicacoes em servidores (N:M) |
+| `catalog_entities` | Entidades genericas do catalogo (services, systems, domains...) |
+| `catalog_edges` | Arestas de relacionamento entre entidades do catalogo |
+| `governance_policies` | Politicas de conformidade (regras + campos alvo) |
+| `governance_violations` | Violacoes detectadas pelo motor de politicas |
+| `governance_exemptions` | Exempcoes aprovadas/rejeitadas |
+| `deployments` | Historico de deployments (GitHub Actions / GitLab CI) |
+| `audit_logs` | Trilha de auditoria (imutavel, sem updated_at, sem soft delete) |
+
+**Comandos de banco:**
+
+```bash
+npm run db:migrate --workspace=@back-stage/backend          # aplica migrations pendentes
+npm run db:migrate:rollback --workspace=@back-stage/backend # reverte ultimo batch
+npm run db:migrate:status --workspace=@back-stage/backend   # status das migrations
+npm run db:seed --workspace=@back-stage/backend             # executa seeds (idempotentes)
+```
+
+---
+
+## API
+
+Todas as rotas sob `/api`. Documentacao interativa em http://localhost:4000/api/docs
+
+### Auth
+
+| Metodo | Rota | Descricao |
+|--------|------|-----------|
+| POST | `/api/auth/login` | Login (retorna JWT, 7 dias) |
+| GET | `/api/auth/me` | Dados do usuario autenticado |
+
+### Servidores
+
+| Metodo | Rota | Descricao |
+|--------|------|-----------|
+| GET | `/api/servers` | Lista com paginacao e filtros |
+| POST | `/api/servers` | Cria servidor |
+| GET | `/api/servers/:id` | Detalhe do servidor |
+| PUT | `/api/servers/:id` | Atualiza servidor |
+| PUT | `/api/servers/:id/status` | Altera status operacional |
+| DELETE | `/api/servers/:id` | Remove servidor (soft delete; falha se tiver aplicacoes) |
+
+### Aplicacoes
+
+| Metodo | Rota | Descricao |
+|--------|------|-----------|
+| GET | `/api/applications` | Lista com paginacao e filtros |
+| POST | `/api/applications` | Cria aplicacao |
+| GET | `/api/applications/:id` | Detalhe da aplicacao |
+| PUT | `/api/applications/:id` | Atualiza aplicacao |
+| PUT | `/api/applications/:id/status` | Altera status |
+| DELETE | `/api/applications/:id` | Remove aplicacao (soft delete) |
+
+### Ecossistema
+
+| Metodo | Rota | Descricao |
+|--------|------|-----------|
+| GET | `/api/ecosystem/graph` | Grafo de nos (servidores + aplicacoes) e arestas |
+
+### Usuarios
+
+| Metodo | Rota | Descricao |
+|--------|------|-----------|
+| GET | `/api/users` | Lista usuarios |
+| POST | `/api/users` | Cria usuario |
+| PUT | `/api/users/:id` | Atualiza usuario |
+| PUT | `/api/users/:id/activate` | Ativa usuario |
+| PUT | `/api/users/:id/deactivate` | Desativa usuario |
+| DELETE | `/api/users/:id` | Remove usuario |
+
+### Auditoria
+
+| Metodo | Rota | Descricao |
+|--------|------|-----------|
+| GET | `/api/audit-logs` | Lista com filtros (action, resourceType, actorUserId, page, pageSize) |
+| DELETE | `/api/audit-logs` | Exclui registros por IDs (body: `{ ids: string[] }`) |
+
+### Catalogo e Governance
+
+| Metodo | Rota | Descricao |
+|--------|------|-----------|
+| GET/POST | `/api/services` | CRUD de servicos do catalogo |
+| GET/PUT/DELETE | `/api/services/:id` | Operacoes por ID |
+| GET | `/api/services/search` | Busca full-text |
+| GET | `/api/catalog-entities` | Lista entidades do catalogo |
+| GET | `/api/catalog-entities/graph` | Grafo de dependencias do catalogo |
+| GET/POST | `/api/governance/policies` | Politicas de conformidade |
+| POST | `/api/governance/policies/:id/evaluate` | Avalia politica contra todas as entidades |
+| GET | `/api/governance/violations` | Violacoes detectadas |
+| GET | `/api/governance/dashboard` | Painel de compliance |
+| GET/POST | `/api/governance/exemptions` | Exempcoes |
+| PUT | `/api/governance/exemptions/:id/approve` | Aprova exempcao |
+| PUT | `/api/governance/exemptions/:id/reject` | Rejeita exempcao |
+
+### Webhooks
+
+| Metodo | Rota | Descricao |
+|--------|------|-----------|
+| POST | `/api/webhooks/github` | Recebe deployment_status do GitHub (HMAC-SHA256) |
+| POST | `/api/webhooks/gitlab` | Recebe Pipeline Hook do GitLab (X-Gitlab-Token) |
+
+---
+
+## Autenticacao e RBAC
+
+**JWT Bearer Token** — expiracão: 7 dias.
+
+| Papel | Permissoes |
+|-------|-----------|
+| `admin` | Acesso total (leitura + escrita + exclusao + gestao de usuarios) |
+| `maintainer` | Leitura + escrita (sem exclusao de servidores nem gestao de usuarios) |
+| `viewer` | Somente leitura |
+
+O usuario pode ter multiplos papeis (array JSON).
+
+Rotas de exclusao de servidores e gestao de `audit-logs` (DELETE) requerem papel `admin`.
+
+---
+
+## Auditoria
+
+Todas as operacoes de criacao, edicao, exclusao e alteracao de status geram um registro em `audit_logs` com:
+- `actorUserId` — quem executou
+- `action` — ex.: `server.created`, `application.status_changed`, `user.deleted`
+- `resourceType` e `resourceId` — o que foi afetado
+- `ipAddress` e `userAgent` — contexto da requisicao
+- `metadata` — dados adicionais (JSONB)
+
+Os registros de auditoria sao **imutaveis** (sem `updated_at`, sem soft delete). A exclusao via `DELETE /api/audit-logs` e restrita ao papel `admin` e requer confirmacao explicita.
+
+---
+
+## Ecossistema — Grafo D3.js
+
+O componente `DependencyGraph` usa D3.js force simulation para visualizar a topologia:
+
+**Nos:**
+- `server` — **quadrado** (rect 36×36, rx=4), cor `#22d3ee` (ciano)
+- `application` e demais — **circulo** (r=18), cor `#a3e635` (verde-lima)
+- A cor da **borda** indica o ciclo de vida:
+  - Verde `#34d399` — ativo / production
+  - Amarelo `#fbbf24` — manutencao / experimental
+  - Azul `#38bdf8` — provisionando
+  - Roxo `#a78bfa` — em desenvolvimento
+  - Vermelho `#f87171` — desativado / deprecated
+- **Label** posicionado acima do no (y = -26, text-anchor: middle) — sem sobreposicao
+
+**Interacao:**
+- Zoom/pan na area do grafo
+- Drag de nos individuais
+- Clique simples: seleciona no
+- Duplo clique: navega para `/servers/:id` ou `/applications/:id`
+
+---
 
 ## Observabilidade
 
@@ -98,58 +436,82 @@ Documentacao interativa completa (OpenAPI/Swagger): http://localhost:4000/api/do
 docker compose up -d prometheus grafana loki promtail
 ```
 
-- **Prometheus**: http://localhost:9090 — scrape do backend em `/metrics` (config em `observability/prometheus/prometheus.yml`, alertas em `alerts.yml`).
-- **Grafana**: http://localhost:3000 (`admin`/`admin` por padrao) — dashboard "Back-Stage / Platform Overview" provisionado automaticamente, com datasources Prometheus, Loki e PostgreSQL.
-- **Loki + Promtail**: coletam logs estruturados (JSON, via Winston) dos containers Docker.
-- **Tracing**: instrumentado via OpenTelemetry SDK (auto-instrumentation HTTP/Express/PG), exportando OTLP para `OTEL_EXPORTER_OTLP_ENDPOINT` (aponte para um collector/backend compativel, ex. Tempo/Jaeger, quando disponivel).
+| Servico | URL | Descricao |
+|---------|-----|-----------|
+| Prometheus | http://localhost:9090 | Scrape do backend em `/metrics` |
+| Grafana | http://localhost:3000 | Dashboards (admin/admin por padrao) |
+| Loki | http://localhost:3100 | Agregacao de logs estruturados |
+| Promtail | — | Coleta logs dos containers Docker |
 
-KPIs no dashboard: **API latency** (p95 por rota), **DB latency** (p95 por operacao), **Error Rate**, **Deployment Success Rate**, **MTTR** (SQL sobre `deployments`), **Availability** (`up` do Prometheus).
+**Dashboard provisionado:** "Back-Stage / Platform Overview" — KPIs: API latency p95, DB latency p95, Error Rate, Deployment Success Rate, MTTR, Availability.
 
-## Infraestrutura e CI/CD
+**Tracing:** OpenTelemetry SDK (HTTP/Express/PG), exporte OTLP para `OTEL_EXPORTER_OTLP_ENDPOINT` (Tempo/Jaeger).
 
-```
-helm/back-stage/       # Chart Helm (Deployment/Service/ConfigMap/Secret/HPA/Ingress) para backend + frontend
-terraform/              # Infraestrutura base AWS (VPC, EKS, RDS, ElastiCache, ECR)
-.github/workflows/
-  ci.yml                # Lint, typecheck, testes, build, docker build
-  build.yml             # Build + push das imagens para GHCR
-  cd.yml                # Deploy via Helm (staging/production)
-  security-scan.yml     # npm audit, CodeQL, Trivy (filesystem + imagens)
-```
+**Alertas:** configurados em `observability/prometheus/alerts.yml` — API down, high error rate, high latency.
 
+---
+
+## CI/CD e infraestrutura
+
+**GitHub Actions:**
+
+| Workflow | Descricao |
+|----------|-----------|
+| `ci.yml` | Lint + typecheck + testes + build (em todo PR e push) |
+| `build.yml` | Build e push das imagens Docker para GHCR |
+| `cd.yml` | Deploy via Helm para staging/production |
+| `security-scan.yml` | `npm audit`, CodeQL, Trivy (filesystem + imagens) |
+
+**Kubernetes (Helm):**
 ```bash
-# Deploy manual (com um cluster/kubeconfig configurados)
 helm upgrade --install back-stage ./helm/back-stage \
   --namespace back-stage --create-namespace \
-  --set backend.image.tag=<tag> --set frontend.image.tag=<tag> \
-  --set secret.data.DATABASE_URL=<...> --set secret.data.JWT_SECRET=<...>
+  --set backend.image.tag=<tag> \
+  --set frontend.image.tag=<tag> \
+  --set secret.data.DATABASE_URL=<url> \
+  --set secret.data.JWT_SECRET=<secret>
 ```
 
-Ver `terraform/README.md` para provisionar a infraestrutura base na AWS.
+**Terraform (AWS):** VPC, EKS, RDS PostgreSQL, ElastiCache Redis, ECR. Ver `terraform/README.md`.
 
-## Testes e qualidade
+---
 
-| Suite                          | Comando                                                              | Ferramenta                     |
-| ------------------------------ | -------------------------------------------------------------------- | ------------------------------ |
-| Unidade (backend)              | `npm run test --workspace=@back-stage/backend`                       | Vitest                         |
-| Integracao HTTP (backend)      | `npm run test:integration --workspace=@back-stage/backend`           | Jest + Supertest               |
-| Componentes/paginas (frontend) | `npm run test --workspace=@back-stage/frontend`                      | Vitest + React Testing Library |
-| E2E                            | `npm run test:e2e --workspace=@back-stage/e2e`                       | Playwright                     |
-| Cobertura                      | `npm run test:coverage --workspace=@back-stage/backend` / `frontend` | Vitest coverage (v8)           |
+## Testes
 
-Documentos gerados na Fase 12 (Hardening): [`docs/COVERAGE_REPORT.md`](docs/COVERAGE_REPORT.md), [`docs/SECURITY_CHECKLIST.md`](docs/SECURITY_CHECKLIST.md), [`docs/PERFORMANCE_CHECKLIST.md`](docs/PERFORMANCE_CHECKLIST.md).
+| Suite | Comando | Ferramenta |
+|-------|---------|-----------|
+| Unidade backend | `npm run test --workspace=@back-stage/backend` | Vitest |
+| Integracao HTTP | `npm run test:integration --workspace=@back-stage/backend` | Vitest + Supertest |
+| Componentes frontend | `npm run test --workspace=@back-stage/frontend` | Vitest + React Testing Library |
+| E2E | `npm run test:e2e` | Playwright |
+| Cobertura backend | `npm run test:coverage --workspace=@back-stage/backend` | Vitest coverage v8 |
+| Cobertura frontend | `npm run test:coverage --workspace=@back-stage/frontend` | Vitest coverage v8 |
 
-## Fases
+---
 
-- **Fase 1 — Foundation**: monorepo, packages, CI basico, Docker local.
-- **Fase 2 — Database**: PostgreSQL 16, Knex, migrations, seeds.
-- **Fase 3 — Backend Core**: Express, JWT + RBAC, request-id, OpenAPI, validation (zod), error handler global, Winston + Morgan.
-- **Fase 4 — Service Catalog**: CRUD completo, paginacao, filtros, ordenacao, auditoria.
-- **Fase 5 — Governance**: Policy Engine (equals/contains/greaterThan/lessThan), compliance dashboard, violations, exemptions.
-- **Fase 6 — Search**: PostgreSQL Full Text Search (tsvector + GIN), autocomplete, facets, ranking.
-- **Fase 7 — Frontend**: 8 paginas, rotas protegidas, Error Boundary, React Query + Zustand + Tailwind.
-- **Fase 8 — Dependency Graph**: `DependencyGraph.tsx` com D3.js (zoom/pan/drag/selecao/navegacao).
-- **Fase 9 — Audit/Deployments/Webhooks**: deployment tracking, integracao GitHub Actions/GitLab CI.
-- **Fase 10 — Observabilidade**: OpenTelemetry, Prometheus, Grafana, Loki.
-- **Fase 11 — CI/CD**: Kubernetes (Helm), Terraform (AWS), GitHub Actions (build/deploy/security-scan).
-- **Fase 12 — Hardening**: Jest+Supertest, Vitest+RTL, Playwright E2E, relatorio de cobertura, checklist de seguranca (OWASP Top 10) e de performance, code-splitting do bundle. _(atual)_
+## Scripts
+
+| Script | Descricao |
+|--------|-----------|
+| `npm run build` | Build de todos os pacotes (shared primeiro) |
+| `npm run build:shared` | Build apenas do pacote shared |
+| `npm run dev:backend` | Backend em modo watch (tsx) |
+| `npm run dev:frontend` | Frontend com Vite HMR |
+| `npm run lint` | ESLint em todo o monorepo |
+| `npm run format` | Prettier em todo o monorepo |
+| `npm run typecheck` | tsc --noEmit em todos os pacotes |
+| `npm test` | Todos os testes |
+| `npm run db:migrate --workspace=@back-stage/backend` | Aplica migrations pendentes |
+| `npm run db:migrate:rollback --workspace=@back-stage/backend` | Reverte ultimo batch |
+| `npm run db:migrate:status --workspace=@back-stage/backend` | Status das migrations |
+| `npm run db:seed --workspace=@back-stage/backend` | Executa seeds (idempotentes) |
+
+---
+
+## Historico de versoes
+
+| Versao | Descricao |
+|--------|-----------|
+| 3.0 | Multi-cliente, formulario de servidores com abas (rede/discos/servicos), grafo ecossistema com formas distintas, auditoria com filtros e bulk delete, usuarios multi-select, sidebar com icones, protecao de exclusao de servidor com aplicacoes vinculadas |
+| 2.0 | Modulo de servidores e aplicacoes completo (DDD backend + frontend React), grafo D3.js, ConfirmDialog, botao Duplicar, validacao de hostname |
+| 1.0 | Foundation: auth JWT, service catalog, governance, search, audit, deployments, webhooks, observabilidade, CI/CD |

@@ -1,10 +1,4 @@
-export type ServerType =
-  | 'vm'
-  | 'bare_metal'
-  | 'container_host'
-  | 'kubernetes_node'
-  | 'serverless'
-  | 'managed_cloud';
+export type ServerType = 'vm' | 'bare_metal' | 'container_host';
 
 export type ServerProvider =
   | 'on_premise'
@@ -14,9 +8,22 @@ export type ServerProvider =
   | 'oracle_cloud'
   | 'own_datacenter';
 
-export type ServerStatus = 'active' | 'maintenance' | 'provisioning' | 'deactivated';
+export type ServerStatus = 'active' | 'deactivated';
 
-export type ServerEnvironment = 'production' | 'staging' | 'development' | 'dr' | 'sandbox';
+export type ServerEnvironment = 'production' | 'staging' | 'development' | 'sandbox';
+
+export type ServiceStatus = 'active' | 'inactive';
+
+export interface ServerService {
+  seq: number;
+  name: string;
+  commandStart: string | null;
+  commandStop: string | null;
+  commandStatus: string | null;
+  ports: number[];
+  status: ServiceStatus;
+  observations: string | null;
+}
 
 export type DiskType = 'ssd' | 'hdd' | 'nvme';
 
@@ -83,7 +90,10 @@ export interface ServerRow {
   vlan_subnet: string | null;
   gateway: string | null;
   dns_servers: string[];
+  domain: string | null;
+  fqdn: string | null;
   access_method: string | null;
+  access_user: string | null;
   security_group: string | null;
   data_classification: string | null;
   status: string;
@@ -96,6 +106,9 @@ export interface ServerRow {
   last_backup_at: Date | null;
   monthly_cost_estimate: string | null;
   monitoring_url: string | null;
+  observations: string | null;
+  tags: string[];
+  services: ServerService[];
   metadata: Record<string, unknown>;
   created_at: Date;
   updated_at: Date;
@@ -121,7 +134,10 @@ export class Server {
   public readonly vlanSubnet: string | null;
   public readonly gateway: string | null;
   public readonly dnsServers: string[];
+  public readonly domain: string | null;
+  public readonly fqdn: string | null;
   public readonly accessMethod: string | null;
+  public readonly accessUser: string | null;
   public readonly securityGroup: string | null;
   public readonly dataClassification: string | null;
   public readonly status: ServerStatus;
@@ -134,6 +150,9 @@ export class Server {
   public readonly lastBackupAt: Date | null;
   public readonly monthlyCostEstimate: number | null;
   public readonly monitoringUrl: string | null;
+  public readonly observations: string | null;
+  public readonly tags: string[];
+  public readonly services: ServerService[];
   public readonly metadata: Record<string, unknown>;
   public readonly disks: ServerDisk[];
   public readonly createdAt: Date;
@@ -159,7 +178,10 @@ export class Server {
     this.vlanSubnet = row.vlan_subnet;
     this.gateway = row.gateway;
     this.dnsServers = row.dns_servers;
+    this.domain = row.domain;
+    this.fqdn = row.fqdn;
     this.accessMethod = row.access_method;
+    this.accessUser = row.access_user;
     this.securityGroup = row.security_group;
     this.dataClassification = row.data_classification;
     this.status = row.status as ServerStatus;
@@ -172,6 +194,9 @@ export class Server {
     this.lastBackupAt = row.last_backup_at;
     this.monthlyCostEstimate = row.monthly_cost_estimate ? Number(row.monthly_cost_estimate) : null;
     this.monitoringUrl = row.monitoring_url;
+    this.observations = row.observations;
+    this.tags = row.tags ?? [];
+    this.services = (row.services as ServerService[]) ?? [];
     this.metadata = row.metadata;
     this.disks = disks;
     this.createdAt = row.created_at;
@@ -199,7 +224,10 @@ export class Server {
       vlanSubnet: this.vlanSubnet,
       gateway: this.gateway,
       dnsServers: this.dnsServers,
+      domain: this.domain,
+      fqdn: this.fqdn,
       accessMethod: this.accessMethod,
+      accessUser: this.accessUser,
       securityGroup: this.securityGroup,
       dataClassification: this.dataClassification,
       status: this.status,
@@ -212,6 +240,9 @@ export class Server {
       lastBackupAt: this.lastBackupAt,
       monthlyCostEstimate: this.monthlyCostEstimate,
       monitoringUrl: this.monitoringUrl,
+      observations: this.observations,
+      tags: this.tags,
+      services: this.services,
       metadata: this.metadata,
       disks: this.disks.map((disk) => disk.toJSON()),
       createdAt: this.createdAt,

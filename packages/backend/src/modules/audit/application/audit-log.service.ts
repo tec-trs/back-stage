@@ -46,4 +46,9 @@ export class AuditLogService {
     const { items, total } = await this.auditLogRepository.findMany(filters, pagination);
     return { items: items.map(toDto), pagination: { ...pagination, total } };
   }
+
+  public async deleteByIds(ids: string[]): Promise<{ deleted: number }> {
+    const deleted = await this.auditLogRepository.deleteByIds(ids);
+    return { deleted };
+  }
 }

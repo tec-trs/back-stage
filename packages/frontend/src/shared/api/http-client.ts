@@ -55,6 +55,11 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const payload: unknown = await response.json().catch(() => null);
 
   if (!response.ok) {
+    if (response.status === 401) {
+      useAuthStore.getState().logout();
+      window.location.href = '/login';
+      throw new ApiError(401, 'UNAUTHORIZED', 'Sessao expirada. Faca login novamente.');
+    }
     const errorPayload = payload as ApiErrorPayload | null;
     throw new ApiError(
       response.status,

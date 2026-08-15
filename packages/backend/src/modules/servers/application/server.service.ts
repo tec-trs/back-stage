@@ -110,6 +110,13 @@ export class ServerService {
   public async delete(id: string, audit: AuditContext): Promise<void> {
     await this.getById(id);
 
+    const hasApps = await this.serverRepository.hasLinkedApplications(id);
+    if (hasApps) {
+      throw new ConflictError(
+        'Nao e possivel eliminar o servidor pois existem aplicacoes implantadas nele. Remova as implantacoes antes de eliminar o servidor.',
+      );
+    }
+
     const deleted = await this.serverRepository.softDelete(id);
     if (!deleted) {
       throw new NotFoundError('Servidor', id);

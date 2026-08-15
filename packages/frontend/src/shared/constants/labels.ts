@@ -12,11 +12,8 @@ export const ROLE_LABELS: Record<string, string> = {
 
 export const SERVER_TYPE_LABELS: Record<string, string> = {
   vm: 'Maquina Virtual',
-  bare_metal: 'Bare Metal',
-  container_host: 'Container Host',
-  kubernetes_node: 'No Kubernetes',
-  serverless: 'Serverless',
-  managed_cloud: 'Nuvem Gerenciada',
+  bare_metal: 'Maquina Fisica',
+  container_host: 'Container',
 };
 
 export const PROVIDER_LABELS: Record<string, string> = {
@@ -30,17 +27,14 @@ export const PROVIDER_LABELS: Record<string, string> = {
 
 export const SERVER_STATUS_LABELS: Record<string, string> = {
   active: 'Ativo',
-  maintenance: 'Manutencao',
-  provisioning: 'Provisionando',
-  deactivated: 'Desativado',
+  deactivated: 'Inativo',
 };
 
 export const ENVIRONMENT_LABELS: Record<string, string> = {
   production: 'Producao',
-  staging: 'Staging',
+  staging: 'Homologacao',
   development: 'Desenvolvimento',
-  dr: 'DR',
-  sandbox: 'Sandbox',
+  sandbox: 'Outros',
 };
 
 export const DISK_TYPE_LABELS: Record<string, string> = {

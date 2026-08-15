@@ -8,9 +8,10 @@ import type { ServerSummary } from '../features/servers/use-servers';
 import { useSetServerStatus } from '../features/servers/use-set-server-status';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
+import { ConfirmDialog } from '../shared/components/ConfirmDialog';
 import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
-import { PencilIcon, PlusIcon, PowerIcon, TrashIcon } from '../shared/components/icons';
+import { CopyIcon, PencilIcon, PlusIcon, PowerIcon, TrashIcon } from '../shared/components/icons';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Spinner } from '../shared/components/Spinner';
 import {
@@ -34,7 +35,9 @@ export function ServersPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingServer, setEditingServer] = useState<ServerSummary | null>(null);
+  const [duplicatingServer, setDuplicatingServer] = useState<ServerSummary | null>(null);
   const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const selectedServer = data?.items.find((item) => item.id === selectedServerId) ?? null;
 
@@ -48,14 +51,27 @@ export function ServersPage() {
     setIsFormOpen(true);
   }
 
+  function openDuplicateDialog(server: ServerSummary): void {
+    setEditingServer(null);
+    setDuplicatingServer(server);
+    setIsFormOpen(true);
+  }
+
   function closeDialog(): void {
     setIsFormOpen(false);
     setEditingServer(null);
+    setDuplicatingServer(null);
   }
 
   function handleEditSelected(): void {
     if (selectedServer) {
       openEditDialog(selectedServer);
+    }
+  }
+
+  function handleDuplicateSelected(): void {
+    if (selectedServer) {
+      openDuplicateDialog(selectedServer);
     }
   }
 
@@ -69,22 +85,41 @@ export function ServersPage() {
   }
 
   function handleDeleteSelected(): void {
-    if (!selectedServer) {
-      return;
+    if (selectedServer) {
+      setConfirmDeleteOpen(true);
     }
-    const confirmed = window.confirm(
-      `Tem certeza que deseja eliminar o servidor "${selectedServer.hostname}"? Esta acao nao pode ser desfeita.`,
-    );
-    if (confirmed) {
-      deleteServer.mutate(selectedServer.id, { onSuccess: () => setSelectedServerId(null) });
-    }
+  }
+
+  function handleConfirmDelete(): void {
+    if (!selectedServer) return;
+    deleteServer.mutate(selectedServer.id, {
+      onSuccess: () => {
+        setSelectedServerId(null);
+        setConfirmDeleteOpen(false);
+      },
+    });
+  }
+
+  function closeConfirmDelete(): void {
+    setConfirmDeleteOpen(false);
+    deleteServer.reset();
   }
 
   return (
     <div>
       <PageHeader title="Servidores" description="Inventario de infraestrutura" />
 
-      <ServerFormDialog isOpen={isFormOpen} onClose={closeDialog} server={editingServer} />
+      <ServerFormDialog isOpen={isFormOpen} onClose={closeDialog} server={editingServer} duplicateFrom={duplicatingServer} />
+      <ConfirmDialog
+        isOpen={confirmDeleteOpen}
+        title="Eliminar servidor"
+        message={`Tem certeza que deseja eliminar o servidor "${selectedServer?.hostname}"? Esta acao nao pode ser desfeita.`}
+        confirmLabel="Eliminar"
+        onConfirm={handleConfirmDelete}
+        onCancel={closeConfirmDelete}
+        isPending={deleteServer.isPending}
+        error={deleteServer.isError ? (deleteServer.error?.message ?? 'Erro ao eliminar servidor') : null}
+      />
 
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
         <Button size="sm" icon={<PlusIcon />} onClick={openCreateDialog} title="Incluir um novo servidor">
@@ -100,6 +135,16 @@ export function ServersPage() {
           title={selectedServer ? `Editar ${selectedServer.hostname}` : 'Selecione um servidor para editar'}
         >
           Editar
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<CopyIcon />}
+          disabled={!selectedServer}
+          onClick={handleDuplicateSelected}
+          title={selectedServer ? `Duplicar ${selectedServer.hostname}` : 'Selecione um servidor para duplicar'}
+        >
+          Duplicar
         </Button>
         <Button
           size="sm"

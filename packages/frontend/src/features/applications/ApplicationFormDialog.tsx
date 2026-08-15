@@ -125,12 +125,15 @@ export function ApplicationFormDialog({
   isOpen,
   onClose,
   application,
+  duplicateFrom,
 }: {
   isOpen: boolean;
   onClose: () => void;
   application?: ApplicationSummary | null;
+  duplicateFrom?: ApplicationSummary | null;
 }) {
   const isEditMode = Boolean(application);
+  const isDuplicateMode = Boolean(duplicateFrom);
   const createApplication = useCreateApplication();
   const updateApplication = useUpdateApplication();
   const mutation = isEditMode ? updateApplication : createApplication;
@@ -146,10 +149,11 @@ export function ApplicationFormDialog({
 
   useEffect(() => {
     if (isOpen) {
+      const source = application ?? duplicateFrom ?? null;
       setActiveTab('identification');
-      setForm(application ? formFromApplication(application) : emptyForm());
+      setForm(source ? formFromApplication(source) : emptyForm());
       setDeployments(
-        application?.deployments.map((deployment) => ({
+        source?.deployments.map((deployment) => ({
           serverId: deployment.serverId,
           environment: deployment.environment,
           deployMethod: deployment.deployMethod,
@@ -157,13 +161,13 @@ export function ApplicationFormDialog({
           deployedVersion: deployment.deployedVersion,
         })) ?? [],
       );
-      setDependsOnIds(application?.dependsOn.map((dep) => dep.id) ?? []);
+      setDependsOnIds(source?.dependsOn.map((dep) => dep.id) ?? []);
       setCodeError(null);
       createApplication.reset();
       updateApplication.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, application]);
+  }, [isOpen, application, duplicateFrom]);
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]): void {
     setForm((current) => ({ ...current, [key]: value }));
@@ -244,13 +248,14 @@ export function ApplicationFormDialog({
     createApplication.mutate(payload, { onSuccess: handleClose });
   }
 
+  const sourceId = application?.id ?? duplicateFrom?.id;
   const availableApplications = (applications.data?.items ?? []).filter(
-    (item) => item.id !== application?.id,
+    (item) => item.id !== sourceId,
   );
 
   return (
     <Modal
-      title={isEditMode ? 'Editar Aplicacao' : 'Incluir Aplicacao'}
+      title={isEditMode ? 'Editar Aplicacao' : isDuplicateMode ? 'Duplicar Aplicacao' : 'Incluir Aplicacao'}
       isOpen={isOpen}
       onClose={handleClose}
       size="lg"
@@ -498,13 +503,15 @@ export function ApplicationFormDialog({
                 </div>
               </fieldset>
 
-              {availableApplications.length > 0 && (
-                <fieldset className="flex flex-col gap-2">
-                  <legend className="mb-1 text-sm font-medium text-slate-300">
-                    Dependencias (aplicacoes das quais esta depende)
-                  </legend>
-                  <div className="flex max-h-32 flex-col gap-1 overflow-y-auto rounded-md border border-slate-800 p-3">
-                    {availableApplications.map((item) => (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-1 text-sm font-medium text-slate-300">
+                  Dependencias (aplicacoes das quais esta depende)
+                </legend>
+                <div className="flex max-h-32 flex-col gap-1 overflow-y-auto rounded-md border border-slate-800 p-3">
+                  {availableApplications.length === 0 ? (
+                    <p className="text-xs text-slate-500">Nenhuma outra aplicacao cadastrada.</p>
+                  ) : (
+                    availableApplications.map((item) => (
                       <label key={item.id} className="flex items-center gap-2 text-sm text-slate-200">
                         <input
                           type="checkbox"
@@ -514,10 +521,10 @@ export function ApplicationFormDialog({
                         />
                         {item.displayName} ({item.code})
                       </label>
-                    ))}
-                  </div>
-                </fieldset>
-              )}
+                    ))
+                  )}
+                </div>
+              </fieldset>
             </div>
           )}
 

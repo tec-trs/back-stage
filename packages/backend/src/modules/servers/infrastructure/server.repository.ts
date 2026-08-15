@@ -24,6 +24,17 @@ export interface DiskInput {
   purpose: string;
 }
 
+export interface ServiceInput {
+  seq: number;
+  name: string;
+  commandStart?: string | null;
+  commandStop?: string | null;
+  commandStatus?: string | null;
+  ports?: number[];
+  status: string;
+  observations?: string | null;
+}
+
 export interface CreateServerInput {
   hostname: string;
   displayName?: string | null;
@@ -43,7 +54,10 @@ export interface CreateServerInput {
   vlanSubnet?: string | null;
   gateway?: string | null;
   dnsServers?: string[];
+  domain?: string | null;
+  fqdn?: string | null;
   accessMethod?: string | null;
+  accessUser?: string | null;
   securityGroup?: string | null;
   dataClassification?: string | null;
   status?: string;
@@ -55,6 +69,9 @@ export interface CreateServerInput {
   backupPolicy?: string | null;
   monthlyCostEstimate?: number | null;
   monitoringUrl?: string | null;
+  observations?: string | null;
+  tags?: string[];
+  services?: ServiceInput[];
   metadata?: Record<string, unknown>;
   disks?: DiskInput[];
 }
@@ -69,6 +86,7 @@ export interface IServerRepository {
   update(id: string, input: UpdateServerInput): Promise<Server | undefined>;
   setStatus(id: string, status: string): Promise<Server | undefined>;
   softDelete(id: string): Promise<boolean>;
+  hasLinkedApplications(id: string): Promise<boolean>;
 }
 
 export class ServerRepository implements IServerRepository {
@@ -192,7 +210,10 @@ export class ServerRepository implements IServerRepository {
         vlan_subnet: input.vlanSubnet ?? null,
         gateway: input.gateway ?? null,
         dns_servers: input.dnsServers ?? [],
+        domain: input.domain ?? null,
+        fqdn: input.fqdn ?? null,
         access_method: input.accessMethod ?? null,
+        access_user: input.accessUser ?? null,
         security_group: input.securityGroup ?? null,
         data_classification: input.dataClassification ?? null,
         status: input.status ?? 'active',
@@ -204,6 +225,9 @@ export class ServerRepository implements IServerRepository {
         backup_policy: input.backupPolicy ?? null,
         monthly_cost_estimate: input.monthlyCostEstimate ?? null,
         monitoring_url: input.monitoringUrl ?? null,
+        observations: input.observations ?? null,
+        tags: input.tags ?? [],
+        services: JSON.stringify(input.services ?? []),
         metadata: JSON.stringify(input.metadata ?? {}),
       })
       .returning('*')) as ServerRow[];
@@ -237,7 +261,10 @@ export class ServerRepository implements IServerRepository {
     if (input.vlanSubnet !== undefined) patch.vlan_subnet = input.vlanSubnet;
     if (input.gateway !== undefined) patch.gateway = input.gateway;
     if (input.dnsServers !== undefined) patch.dns_servers = input.dnsServers;
+    if (input.domain !== undefined) patch.domain = input.domain;
+    if (input.fqdn !== undefined) patch.fqdn = input.fqdn;
     if (input.accessMethod !== undefined) patch.access_method = input.accessMethod;
+    if (input.accessUser !== undefined) patch.access_user = input.accessUser;
     if (input.securityGroup !== undefined) patch.security_group = input.securityGroup;
     if (input.dataClassification !== undefined) patch.data_classification = input.dataClassification;
     if (input.status !== undefined) patch.status = input.status;
@@ -249,6 +276,9 @@ export class ServerRepository implements IServerRepository {
     if (input.backupPolicy !== undefined) patch.backup_policy = input.backupPolicy;
     if (input.monthlyCostEstimate !== undefined) patch.monthly_cost_estimate = input.monthlyCostEstimate;
     if (input.monitoringUrl !== undefined) patch.monitoring_url = input.monitoringUrl;
+    if (input.observations !== undefined) patch.observations = input.observations;
+    if (input.tags !== undefined) patch.tags = input.tags;
+    if (input.services !== undefined) patch.services = JSON.stringify(input.services);
     if (input.metadata !== undefined) patch.metadata = JSON.stringify(input.metadata);
 
     if (Object.keys(patch).length > 0) {
@@ -273,5 +303,10 @@ export class ServerRepository implements IServerRepository {
       .where('id', id)
       .update({ deleted_at: this.db.fn.now() })) as unknown as number;
     return affected > 0;
+  }
+
+  public async hasLinkedApplications(id: string): Promise<boolean> {
+    const rows = await this.db('application_deployments').where('server_id', id).limit(1);
+    return rows.length > 0;
   }
 }

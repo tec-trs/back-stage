@@ -40,10 +40,10 @@ export function EcosystemPage() {
         <>
           <div className="mb-3 flex flex-wrap gap-4 text-xs text-slate-400">
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#22d3ee]" /> Servidor
+              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-[#22d3ee]" /> Servidor
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#a3e635]" /> Aplicacao
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#a3e635]" /> Aplicacao
             </span>
             {selectedNode && (
               <span className="ml-auto text-slate-500">

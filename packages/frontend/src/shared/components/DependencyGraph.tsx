@@ -44,6 +44,8 @@ const WIDTH = 900;
 const HEIGHT = 520;
 const SELECTED_STROKE_WIDTH = 5;
 const DEFAULT_STROKE_WIDTH = 3;
+const NODE_RADIUS = 18;
+const SQUARE_SIZE = 36;
 
 export function DependencyGraph({
   nodes,
@@ -54,8 +56,8 @@ export function DependencyGraph({
   ariaLabel = 'Grafo de dependencias entre entidades do catalogo',
 }: DependencyGraphProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const nodeSelectionRef = useRef<d3.Selection<
-    SVGCircleElement,
+  const nodeGroupRef = useRef<d3.Selection<
+    SVGGElement,
     SimulationNode,
     SVGGElement,
     unknown
@@ -104,7 +106,7 @@ export function DependencyGraph({
       )
       .force('charge', d3.forceManyBody().strength(-260))
       .force('center', d3.forceCenter(WIDTH / 2, HEIGHT / 2))
-      .force('collide', d3.forceCollide(36));
+      .force('collide', d3.forceCollide(40));
 
     zoomGroup
       .append('defs')
@@ -160,22 +162,43 @@ export function DependencyGraph({
       .on('click', (_event, node) => onNodeSelect?.(node))
       .on('dblclick', (_event, node) => onNodeNavigate?.(node));
 
-    const circles = nodeGroup
-      .append('circle')
-      .attr('r', 18)
+    // Server nodes: square (rect)
+    nodeGroup
+      .filter((node) => node.kind === 'server')
+      .append('rect')
+      .attr('class', 'node-shape')
+      .attr('width', SQUARE_SIZE)
+      .attr('height', SQUARE_SIZE)
+      .attr('x', -SQUARE_SIZE / 2)
+      .attr('y', -SQUARE_SIZE / 2)
+      .attr('rx', 4)
       .attr('fill', (node) => KIND_FILL[node.kind] ?? '#64748b')
       .attr('stroke', (node) => LIFECYCLE_STROKE[node.lifecycle] ?? '#475569')
       .attr('stroke-width', (node) =>
         node.id === selectedNodeId ? SELECTED_STROKE_WIDTH : DEFAULT_STROKE_WIDTH,
       );
 
-    nodeSelectionRef.current = circles;
+    // Application and other nodes: circle
+    nodeGroup
+      .filter((node) => node.kind !== 'server')
+      .append('circle')
+      .attr('class', 'node-shape')
+      .attr('r', NODE_RADIUS)
+      .attr('fill', (node) => KIND_FILL[node.kind] ?? '#64748b')
+      .attr('stroke', (node) => LIFECYCLE_STROKE[node.lifecycle] ?? '#475569')
+      .attr('stroke-width', (node) =>
+        node.id === selectedNodeId ? SELECTED_STROKE_WIDTH : DEFAULT_STROKE_WIDTH,
+      );
 
+    nodeGroupRef.current = nodeGroup;
+
+    // Labels above nodes
     nodeGroup
       .append('text')
       .text((node) => node.title ?? node.name)
-      .attr('x', 24)
-      .attr('y', 4)
+      .attr('x', 0)
+      .attr('y', -NODE_RADIUS - 8)
+      .attr('text-anchor', 'middle')
       .attr('fill', '#e2e8f0')
       .attr('font-size', 12);
 
@@ -198,9 +221,11 @@ export function DependencyGraph({
   }, [simulationData]);
 
   useEffect(() => {
-    nodeSelectionRef.current?.attr('stroke-width', (node) =>
-      node.id === selectedNodeId ? SELECTED_STROKE_WIDTH : DEFAULT_STROKE_WIDTH,
-    );
+    nodeGroupRef.current
+      ?.select<SVGElement>('.node-shape')
+      .attr('stroke-width', (node) =>
+        node.id === selectedNodeId ? SELECTED_STROKE_WIDTH : DEFAULT_STROKE_WIDTH,
+      );
   }, [selectedNodeId]);
 
   return (

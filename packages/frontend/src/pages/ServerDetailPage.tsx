@@ -105,20 +105,72 @@ export function ServerDetailPage() {
             <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
               <Field label="IPs privados" value={data.privateIps.join(', ') || null} />
               <Field label="IP publico" value={data.publicIp} />
-              <Field label="VLAN/Subnet" value={data.vlanSubnet} />
-              <Field label="Gateway" value={data.gateway} />
+              <Field label="Dominio" value={data.domain} />
+              <Field label="Nome (FQDN)" value={data.fqdn} />
             </dl>
           </section>
 
+          {data.services.length > 0 && (
+            <section>
+              <h2 className="mb-2 text-lg font-medium text-slate-200">Servicos</h2>
+              <div className="flex flex-col gap-2">
+                {data.services.map((svc) => (
+                  <div key={svc.seq} className="rounded-lg border border-slate-800 text-sm">
+                    {/* Cabeçalho */}
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <span className="font-mono text-xs text-slate-500">
+                        #{String(svc.seq).padStart(3, '0')}
+                      </span>
+                      <span className="flex-1 font-medium text-slate-100">{svc.name}</span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          svc.status === 'active'
+                            ? 'bg-green-900/50 text-green-400'
+                            : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {svc.status === 'active' ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </div>
+
+                    {/* Detalhes */}
+                    <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 border-t border-slate-800 px-4 py-3">
+                      <dt className="text-slate-500">Portas</dt>
+                      <dd className="text-slate-300">
+                        {svc.ports.length > 0 ? svc.ports.join(', ') : '-'}
+                      </dd>
+
+                      <dt className="text-slate-500">Cmd subir</dt>
+                      <dd className="font-mono text-slate-300">
+                        {svc.commandStart ?? '-'}
+                      </dd>
+
+                      <dt className="text-slate-500">Cmd parar</dt>
+                      <dd className="font-mono text-slate-300">
+                        {svc.commandStop ?? '-'}
+                      </dd>
+
+                      <dt className="text-slate-500">Cmd status</dt>
+                      <dd className="font-mono text-slate-300">
+                        {svc.commandStatus ?? '-'}
+                      </dd>
+                    </dl>
+
+                    {svc.observations && (
+                      <p className="border-t border-slate-800 px-4 py-2 text-xs text-slate-400">
+                        {svc.observations}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           <section>
-            <h2 className="mb-2 text-lg font-medium text-slate-200">
-              Responsabilidade / Backup / Custos
-            </h2>
+            <h2 className="mb-2 text-lg font-medium text-slate-200">Responsabilidade</h2>
             <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
               <Field label="Time responsavel" value={data.ownerTeam} />
-              <Field label="Centro de custo" value={data.costCenter} />
-              <Field label="Possui backup" value={data.hasBackup ? 'Sim' : 'Nao'} />
-              <Field label="Custo mensal estimado" value={data.monthlyCostEstimate ?? null} />
             </dl>
           </section>
         </div>

@@ -30,6 +30,7 @@ export interface IAuditLogRepository {
     filters: AuditLogFilters,
     pagination: Pagination,
   ): Promise<{ items: AuditLogRow[]; total: number }>;
+  deleteByIds(ids: string[]): Promise<number>;
 }
 
 export class AuditLogRepository implements IAuditLogRepository {
@@ -56,5 +57,11 @@ export class AuditLogRepository implements IAuditLogRepository {
       items: rows as AuditLogRow[],
       total: Number(countResult[0]?.count ?? 0),
     };
+  }
+
+  public async deleteByIds(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const affected = (await this.db(TABLE_NAME).whereIn('id', ids).del()) as unknown as number;
+    return affected;
   }
 }

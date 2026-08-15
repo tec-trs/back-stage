@@ -8,9 +8,10 @@ import { useDeleteApplication } from '../features/applications/use-delete-applic
 import { useSetApplicationStatus } from '../features/applications/use-set-application-status';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
+import { ConfirmDialog } from '../shared/components/ConfirmDialog';
 import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
-import { PencilIcon, PlusIcon, PowerIcon, TrashIcon } from '../shared/components/icons';
+import { CopyIcon, PencilIcon, PlusIcon, PowerIcon, TrashIcon } from '../shared/components/icons';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Spinner } from '../shared/components/Spinner';
 import {
@@ -41,7 +42,9 @@ export function ApplicationsPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingApplication, setEditingApplication] = useState<ApplicationSummary | null>(null);
+  const [duplicatingApplication, setDuplicatingApplication] = useState<ApplicationSummary | null>(null);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const selectedApplication =
     data?.items.find((item) => item.id === selectedApplicationId) ?? null;
@@ -53,17 +56,31 @@ export function ApplicationsPage() {
 
   function openEditDialog(application: ApplicationSummary): void {
     setEditingApplication(application);
+    setDuplicatingApplication(null);
+    setIsFormOpen(true);
+  }
+
+  function openDuplicateDialog(application: ApplicationSummary): void {
+    setEditingApplication(null);
+    setDuplicatingApplication(application);
     setIsFormOpen(true);
   }
 
   function closeDialog(): void {
     setIsFormOpen(false);
     setEditingApplication(null);
+    setDuplicatingApplication(null);
   }
 
   function handleEditSelected(): void {
     if (selectedApplication) {
       openEditDialog(selectedApplication);
+    }
+  }
+
+  function handleDuplicateSelected(): void {
+    if (selectedApplication) {
+      openDuplicateDialog(selectedApplication);
     }
   }
 
@@ -77,24 +94,41 @@ export function ApplicationsPage() {
   }
 
   function handleDeleteSelected(): void {
-    if (!selectedApplication) {
-      return;
+    if (selectedApplication) {
+      setConfirmDeleteOpen(true);
     }
-    const confirmed = window.confirm(
-      `Tem certeza que deseja eliminar a aplicacao "${selectedApplication.displayName}"? Esta acao nao pode ser desfeita.`,
-    );
-    if (confirmed) {
-      deleteApplication.mutate(selectedApplication.id, {
-        onSuccess: () => setSelectedApplicationId(null),
-      });
-    }
+  }
+
+  function handleConfirmDelete(): void {
+    if (!selectedApplication) return;
+    deleteApplication.mutate(selectedApplication.id, {
+      onSuccess: () => {
+        setSelectedApplicationId(null);
+        setConfirmDeleteOpen(false);
+      },
+    });
+  }
+
+  function closeConfirmDelete(): void {
+    setConfirmDeleteOpen(false);
+    deleteApplication.reset();
   }
 
   return (
     <div>
       <PageHeader title="Aplicacoes" description="Catalogo de aplicacoes da plataforma" />
 
-      <ApplicationFormDialog isOpen={isFormOpen} onClose={closeDialog} application={editingApplication} />
+      <ApplicationFormDialog isOpen={isFormOpen} onClose={closeDialog} application={editingApplication} duplicateFrom={duplicatingApplication} />
+      <ConfirmDialog
+        isOpen={confirmDeleteOpen}
+        title="Eliminar aplicacao"
+        message={`Tem certeza que deseja eliminar a aplicacao "${selectedApplication?.displayName}"? Esta acao nao pode ser desfeita.`}
+        confirmLabel="Eliminar"
+        onConfirm={handleConfirmDelete}
+        onCancel={closeConfirmDelete}
+        isPending={deleteApplication.isPending}
+        error={deleteApplication.isError ? (deleteApplication.error?.message ?? 'Erro ao eliminar aplicacao') : null}
+      />
 
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
         <Button size="sm" icon={<PlusIcon />} onClick={openCreateDialog} title="Incluir uma nova aplicacao">
@@ -114,6 +148,20 @@ export function ApplicationsPage() {
           }
         >
           Editar
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<CopyIcon />}
+          disabled={!selectedApplication}
+          onClick={handleDuplicateSelected}
+          title={
+            selectedApplication
+              ? `Duplicar ${selectedApplication.displayName}`
+              : 'Selecione uma aplicacao para duplicar'
+          }
+        >
+          Duplicar
         </Button>
         <Button
           size="sm"
@@ -148,7 +196,7 @@ export function ApplicationsPage() {
         <span className="ml-auto text-xs text-slate-500">
           {selectedApplication
             ? `Selecionado: ${selectedApplication.displayName}`
-            : 'Selecione uma aplicacao na lista para editar, ativar/desativar ou eliminar.'}
+            : 'Selecione uma aplicacao na lista para editar, duplicar, ativar/desativar ou eliminar.'}
         </span>
       </div>
 

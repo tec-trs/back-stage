@@ -2,19 +2,36 @@ import { NavLink, Outlet } from 'react-router-dom';
 
 import { useAuthStore } from '../features/auth/auth.store';
 import { Button } from '../shared/components/Button';
+import {
+  BookIcon,
+  BoxIcon,
+  ClipboardIcon,
+  HomeIcon,
+  LayersIcon,
+  NetworkIcon,
+  ServerIcon,
+  SettingsIcon,
+  ShieldIcon,
+  UsersIcon,
+} from '../shared/components/icons';
 import { useAppStore } from '../store/app.store';
 
-const NAV_ITEMS: { to: string; label: string; adminOnly?: boolean }[] = [
-  { to: '/', label: 'Painel' },
-  { to: '/catalog', label: 'Catalogo' },
-  { to: '/infrastructure', label: 'Infraestrutura' },
-  { to: '/servers', label: 'Servidores' },
-  { to: '/applications', label: 'Aplicacoes' },
-  { to: '/ecosystem', label: 'Ecossistema' },
-  { to: '/governance', label: 'Governanca' },
-  { to: '/audit', label: 'Auditoria' },
-  { to: '/users', label: 'Usuarios', adminOnly: true },
-  { to: '/settings', label: 'Configuracoes' },
+const NAV_ITEMS: {
+  to: string;
+  label: string;
+  icon: React.ReactNode;
+  adminOnly?: boolean;
+}[] = [
+  { to: '/', label: 'Painel', icon: <HomeIcon /> },
+  { to: '/catalog', label: 'Catalogo', icon: <BookIcon /> },
+  { to: '/infrastructure', label: 'Infraestrutura', icon: <LayersIcon /> },
+  { to: '/servers', label: 'Servidores', icon: <ServerIcon /> },
+  { to: '/applications', label: 'Aplicacoes', icon: <BoxIcon /> },
+  { to: '/ecosystem', label: 'Ecossistema', icon: <NetworkIcon /> },
+  { to: '/governance', label: 'Governanca', icon: <ShieldIcon /> },
+  { to: '/audit', label: 'Auditoria', icon: <ClipboardIcon /> },
+  { to: '/users', label: 'Usuarios', icon: <UsersIcon />, adminOnly: true },
+  { to: '/settings', label: 'Configuracoes', icon: <SettingsIcon /> },
 ];
 
 export function AppLayout() {
@@ -37,11 +54,12 @@ export function AppLayout() {
                 to={item.to}
                 end={item.to === '/'}
                 className={({ isActive }) =>
-                  `rounded-md px-3 py-2 text-sm ${
+                  `flex items-center gap-2 rounded-md px-3 py-2 text-sm ${
                     isActive ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-900'
                   }`
                 }
               >
+                <span className="shrink-0 text-base leading-none">{item.icon}</span>
                 {item.label}
               </NavLink>
             ))}

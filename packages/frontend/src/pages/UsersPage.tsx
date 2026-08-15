@@ -8,6 +8,7 @@ import type { UserSummary } from '../features/users/use-users';
 import { UserFormDialog } from '../features/users/UserFormDialog';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
+import { ConfirmDialog } from '../shared/components/ConfirmDialog';
 import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { PencilIcon, PlusIcon, PowerIcon, TrashIcon } from '../shared/components/icons';
@@ -23,7 +24,9 @@ export function UsersPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserSummary | null>(null);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [isBulkPending, setIsBulkPending] = useState(false);
 
   if (!currentUser?.roles.includes('admin')) {
     return (
@@ -34,8 +37,29 @@ export function UsersPage() {
     );
   }
 
-  const selectedUser = data?.items.find((item) => item.id === selectedUserId) ?? null;
-  const isSelfSelected = selectedUser?.id === currentUser.id;
+  const users = data?.items ?? [];
+  const selectedUsers = users.filter((u) => selectedIds.has(u.id));
+  const singleSelected = selectedUsers.length === 1 ? selectedUsers[0] : null;
+  const selectionHasSelf = selectedUsers.some((u) => u.id === currentUser.id);
+  const nonSelfSelected = selectedUsers.filter((u) => u.id !== currentUser.id);
+  const allSelectedInactive = nonSelfSelected.length > 0 && nonSelfSelected.every((u) => !u.isActive);
+  const allVisible = users.length > 0 && users.every((u) => selectedIds.has(u.id));
+
+  function toggleAll() {
+    if (allVisible) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(users.map((u) => u.id)));
+    }
+  }
+
+  function toggleOne(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
 
   function openCreateDialog(): void {
     setEditingUser(null);
@@ -52,61 +76,64 @@ export function UsersPage() {
     setEditingUser(null);
   }
 
-  function handleEditSelected(): void {
-    if (selectedUser) {
-      openEditDialog(selectedUser);
+  async function handleBulkToggleActive(): Promise<void> {
+    if (nonSelfSelected.length === 0) return;
+    const targetActive = allSelectedInactive;
+    setIsBulkPending(true);
+    try {
+      for (const user of nonSelfSelected) {
+        await setUserActive.mutateAsync({ id: user.id, isActive: targetActive });
+      }
+      setSelectedIds(new Set());
+    } finally {
+      setIsBulkPending(false);
     }
   }
 
-  function handleToggleActiveSelected(): void {
-    if (selectedUser) {
-      setUserActive.mutate({ id: selectedUser.id, isActive: !selectedUser.isActive });
+  async function handleConfirmDelete(): Promise<void> {
+    if (nonSelfSelected.length === 0) return;
+    setIsBulkPending(true);
+    try {
+      for (const user of nonSelfSelected) {
+        await deleteUser.mutateAsync(user.id);
+      }
+      setSelectedIds(new Set());
+      setConfirmDeleteOpen(false);
+    } finally {
+      setIsBulkPending(false);
     }
   }
 
-  function handleDeleteSelected(): void {
-    if (!selectedUser) {
-      return;
-    }
-    const confirmed = window.confirm(
-      `Tem certeza que deseja eliminar o usuario "${selectedUser.fullName}"? Esta acao nao pode ser desfeita.`,
-    );
-    if (confirmed) {
-      deleteUser.mutate(selectedUser.id, { onSuccess: () => setSelectedUserId(null) });
-    }
-  }
+  const toggleActiveLabel = allSelectedInactive
+    ? `Ativar${nonSelfSelected.length > 1 ? ` (${nonSelfSelected.length})` : ''}`
+    : `Inativar${nonSelfSelected.length > 1 ? ` (${nonSelfSelected.length})` : ''}`;
 
-  const editTitle = selectedUser
-    ? `Editar ${selectedUser.fullName}`
-    : 'Selecione um usuario na lista para editar';
+  const deleteLabel =
+    nonSelfSelected.length > 1 ? `Eliminar (${nonSelfSelected.length})` : 'Eliminar';
 
-  const toggleActiveTitle = isSelfSelected
-    ? 'Voce nao pode inativar sua propria conta'
-    : selectedUser
-      ? selectedUser.isActive
-        ? `Inativar ${selectedUser.fullName}`
-        : `Ativar ${selectedUser.fullName}`
-      : 'Selecione um usuario na lista para ativar ou inativar';
-
-  const deleteTitle = isSelfSelected
-    ? 'Voce nao pode eliminar sua propria conta'
-    : selectedUser
-      ? `Eliminar ${selectedUser.fullName}`
-      : 'Selecione um usuario na lista para eliminar';
+  const deleteMessage =
+    nonSelfSelected.length === 1
+      ? `Tem certeza que deseja eliminar o usuario "${nonSelfSelected[0]?.fullName}"? Esta acao nao pode ser desfeita.`
+      : `Tem certeza que deseja eliminar ${nonSelfSelected.length} usuarios? Esta acao nao pode ser desfeita.`;
 
   return (
     <div>
       <PageHeader title="Usuarios" description="Gestao de acesso a aplicacao" />
 
       <UserFormDialog isOpen={isFormOpen} onClose={closeDialog} user={editingUser} />
+      <ConfirmDialog
+        isOpen={confirmDeleteOpen}
+        title="Eliminar usuario(s)"
+        message={deleteMessage}
+        confirmLabel="Eliminar"
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={() => { setConfirmDeleteOpen(false); deleteUser.reset(); }}
+        isPending={isBulkPending}
+        error={deleteUser.isError ? (deleteUser.error?.message ?? 'Erro ao eliminar usuario') : null}
+      />
 
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
-        <Button
-          size="sm"
-          icon={<PlusIcon />}
-          onClick={openCreateDialog}
-          title="Incluir um novo usuario"
-        >
+        <Button size="sm" icon={<PlusIcon />} onClick={openCreateDialog}>
           Incluir Usuario
         </Button>
         <div className="mx-1 h-6 w-px bg-slate-800" />
@@ -114,9 +141,9 @@ export function UsersPage() {
           size="sm"
           variant="secondary"
           icon={<PencilIcon />}
-          disabled={!selectedUser}
-          onClick={handleEditSelected}
-          title={editTitle}
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openEditDialog(singleSelected)}
+          title={singleSelected ? `Editar ${singleSelected.fullName}` : 'Selecione exatamente 1 usuario para editar'}
         >
           Editar
         </Button>
@@ -124,26 +151,26 @@ export function UsersPage() {
           size="sm"
           variant="secondary"
           icon={<PowerIcon />}
-          disabled={!selectedUser || isSelfSelected || setUserActive.isPending}
-          onClick={handleToggleActiveSelected}
-          title={toggleActiveTitle}
+          disabled={nonSelfSelected.length === 0 || isBulkPending}
+          onClick={() => void handleBulkToggleActive()}
+          title={selectionHasSelf ? 'Voce nao pode alterar sua propria conta' : ''}
         >
-          {selectedUser && !selectedUser.isActive ? 'Ativar' : 'Inativar'}
+          {toggleActiveLabel}
         </Button>
         <Button
           size="sm"
           variant="danger"
           icon={<TrashIcon />}
-          disabled={!selectedUser || isSelfSelected || deleteUser.isPending}
-          onClick={handleDeleteSelected}
-          title={deleteTitle}
+          disabled={nonSelfSelected.length === 0 || isBulkPending}
+          onClick={() => setConfirmDeleteOpen(true)}
+          title={selectionHasSelf ? 'Voce nao pode eliminar sua propria conta' : ''}
         >
-          Eliminar
+          {deleteLabel}
         </Button>
         <span className="ml-auto text-xs text-slate-500">
-          {selectedUser
-            ? `Selecionado: ${selectedUser.fullName}`
-            : 'Selecione um usuario na lista para editar, ativar/inativar ou eliminar.'}
+          {selectedIds.size > 0
+            ? `${selectedIds.size} selecionado(s)${selectionHasSelf ? ' · sua conta nao sera afetada' : ''}`
+            : 'Selecione usuarios na lista para editar, ativar/inativar ou eliminar.'}
         </span>
       </div>
 
@@ -171,7 +198,15 @@ export function UsersPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-900 text-slate-400">
               <tr>
-                <th className="w-10 px-4 py-2" />
+                <th className="w-10 px-4 py-2">
+                  <input
+                    type="checkbox"
+                    checked={allVisible}
+                    onChange={toggleAll}
+                    className="h-4 w-4 accent-sky-500"
+                    aria-label="Selecionar todos"
+                  />
+                </th>
                 <th className="px-4 py-2 font-medium">Nome</th>
                 <th className="px-4 py-2 font-medium">Codigo</th>
                 <th className="px-4 py-2 font-medium">Email</th>
@@ -183,19 +218,19 @@ export function UsersPage() {
               {data.items.map((user) => (
                 <tr
                   key={user.id}
-                  onClick={() => setSelectedUserId(user.id)}
+                  onClick={() => toggleOne(user.id)}
                   className={`cursor-pointer border-t border-slate-800 ${
-                    user.id === selectedUserId ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
+                    selectedIds.has(user.id) ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
                   }`}
                 >
                   <td className="px-4 py-2">
                     <input
-                      type="radio"
-                      name="selected-user"
-                      checked={user.id === selectedUserId}
-                      onChange={() => setSelectedUserId(user.id)}
-                      aria-label={`Selecionar ${user.fullName}`}
+                      type="checkbox"
+                      checked={selectedIds.has(user.id)}
+                      onChange={() => toggleOne(user.id)}
+                      onClick={(e) => e.stopPropagation()}
                       className="h-4 w-4 accent-sky-500"
+                      aria-label={`Selecionar ${user.fullName}`}
                     />
                   </td>
                   <td className="px-4 py-2 text-slate-100">{user.fullName}</td>

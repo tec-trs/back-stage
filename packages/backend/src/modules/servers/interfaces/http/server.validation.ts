@@ -1,13 +1,6 @@
 import { z } from 'zod';
 
-const serverTypeEnum = z.enum([
-  'vm',
-  'bare_metal',
-  'container_host',
-  'kubernetes_node',
-  'serverless',
-  'managed_cloud',
-]);
+const serverTypeEnum = z.enum(['vm', 'bare_metal', 'container_host']);
 const providerEnum = z.enum([
   'on_premise',
   'aws',
@@ -16,8 +9,8 @@ const providerEnum = z.enum([
   'oracle_cloud',
   'own_datacenter',
 ]);
-const statusEnum = z.enum(['active', 'maintenance', 'provisioning', 'deactivated']);
-const environmentEnum = z.enum(['production', 'staging', 'development', 'dr', 'sandbox']);
+const statusEnum = z.enum(['active', 'deactivated']);
+const environmentEnum = z.enum(['production', 'staging', 'development', 'sandbox']);
 const diskTypeEnum = z.enum(['ssd', 'hdd', 'nvme']);
 const diskPurposeEnum = z.enum(['system', 'data', 'log', 'backup']);
 
@@ -26,6 +19,17 @@ const hostnameSchema = z
   .min(1)
   .max(255)
   .regex(/^[a-z0-9.-]+$/, 'hostname deve conter apenas letras minusculas, numeros, ponto e hifen');
+
+const serverServiceSchema = z.object({
+  seq: z.coerce.number().int().positive(),
+  name: z.string().min(1).max(255),
+  commandStart: z.string().max(500).nullable().optional(),
+  commandStop: z.string().max(500).nullable().optional(),
+  commandStatus: z.string().max(500).nullable().optional(),
+  ports: z.array(z.coerce.number().int().min(1).max(65535)).optional(),
+  status: z.enum(['active', 'inactive']),
+  observations: z.string().nullable().optional(),
+});
 
 const diskSchema = z.object({
   mountPoint: z.string().min(1).max(255),
@@ -52,9 +56,15 @@ const baseFields = {
   vlanSubnet: z.string().max(100).nullable().optional(),
   gateway: z.string().max(100).nullable().optional(),
   dnsServers: z.array(z.string()).optional(),
+  domain: z.string().max(255).nullable().optional(),
+  fqdn: z.string().max(255).nullable().optional(),
   accessMethod: z.string().max(50).nullable().optional(),
+  accessUser: z.string().max(255).nullable().optional(),
   securityGroup: z.string().max(255).nullable().optional(),
   dataClassification: z.string().max(50).nullable().optional(),
+  observations: z.string().nullable().optional(),
+  tags: z.array(z.string()).optional(),
+  services: z.array(serverServiceSchema).optional(),
   status: statusEnum.optional(),
   environment: environmentEnum,
   ownerTeam: z.string().max(255).nullable().optional(),
