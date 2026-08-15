@@ -14,11 +14,13 @@ import {
 } from './user.validation.js';
 
 const ADMIN_ROLES = ['admin'];
+const adminOnly = authorizeMiddleware(...ADMIN_ROLES);
 
 export function createUserRouter(controller: UserController): Router {
   const router = Router();
 
-  router.use(authenticateMiddleware, authorizeMiddleware(...ADMIN_ROLES));
+  // Todas as rotas exigem autenticação; escrita exige role admin.
+  router.use(authenticateMiddleware);
 
   /**
    * @openapi
@@ -41,6 +43,7 @@ export function createUserRouter(controller: UserController): Router {
 
   router.post(
     '/',
+    adminOnly,
     validateMiddleware({ body: createUserBodySchema }),
     asyncHandler(controller.create),
   );
@@ -75,6 +78,7 @@ export function createUserRouter(controller: UserController): Router {
 
   router.put(
     '/:id',
+    adminOnly,
     validateMiddleware({ params: userIdParamsSchema, body: updateUserBodySchema }),
     asyncHandler(controller.update),
   );
@@ -91,6 +95,7 @@ export function createUserRouter(controller: UserController): Router {
    */
   router.put(
     '/:id/deactivate',
+    adminOnly,
     validateMiddleware({ params: userIdParamsSchema }),
     asyncHandler(controller.deactivate),
   );
@@ -107,6 +112,7 @@ export function createUserRouter(controller: UserController): Router {
    */
   router.put(
     '/:id/activate',
+    adminOnly,
     validateMiddleware({ params: userIdParamsSchema }),
     asyncHandler(controller.activate),
   );
@@ -123,6 +129,7 @@ export function createUserRouter(controller: UserController): Router {
    */
   router.delete(
     '/:id',
+    adminOnly,
     validateMiddleware({ params: userIdParamsSchema }),
     asyncHandler(controller.remove),
   );
