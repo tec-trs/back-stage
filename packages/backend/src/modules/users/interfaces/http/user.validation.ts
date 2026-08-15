@@ -29,7 +29,7 @@ export const userIdParamsSchema = z.object({
 
 export const listUsersQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  pageSize: z.coerce.number().int().min(1).max(500).default(20),
   isActive: z.coerce.boolean().optional(),
   search: z.string().optional(),
 });
