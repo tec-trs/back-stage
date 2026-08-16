@@ -1,0 +1,5 @@
+hostname,displayName,serverType,provider,environment,ipAddress,domain,fqdn,osName,osVersion,cpuCores,ramGb,ownerTeam,description
+web-01.empresa.com,Web Server Principal,vm,on_premise,production,10.0.1.10,empresa.com,web-01.empresa.com,Ubuntu,22.04,4,8,TI,Servidor web frontend producao
+db-01.empresa.com,Banco de Dados Primario,bare_metal,own_datacenter,production,10.0.2.10,empresa.com,db-01.empresa.com,RedHat,8.6,16,64,DBA,PostgreSQL primario replicacao sincrona
+api-staging.empresa.com,API Homologacao,vm,aws,staging,172.31.10.5,,,Ubuntu,20.04,2,4,TI,API REST para testes de integracao
+cache-01.empresa.com,Cache Redis,container_host,azure,development,192.168.10.20,,,Debian,12,2,2,TI,Servidor Redis para ambiente de desenvolvimento
