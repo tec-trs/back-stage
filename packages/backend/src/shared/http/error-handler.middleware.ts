@@ -1,4 +1,4 @@
-import { BaseError } from '@back-stage/shared';
+import { BaseError, ValidationError } from '@back-stage/shared';
 import type { NextFunction, Request, Response } from 'express';
 
 import { logger } from '../../config/logger.js';
@@ -14,12 +14,11 @@ export function errorHandlerMiddleware(
       path: request.path,
       method: request.method,
     });
-    response.status(error.statusCode).json({
-      error: {
-        code: error.code,
-        message: error.message,
-      },
-    });
+    const body: Record<string, unknown> = { code: error.code, message: error.message };
+    if (error instanceof ValidationError && Object.keys(error.details).length > 0) {
+      body.details = error.details;
+    }
+    response.status(error.statusCode).json({ error: body });
     return;
   }
 

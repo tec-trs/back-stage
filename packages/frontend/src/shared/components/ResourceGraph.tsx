@@ -31,6 +31,7 @@ const TYPE_STYLE = {
   application: { bg: '#160d36', border: '#8b5cf6', text: '#c4b5fd' },
   database:    { bg: '#250820', border: '#ec4899', text: '#f9a8d4' },
   url:         { bg: '#221100', border: '#f59e0b', text: '#fcd34d' },
+  'db-group':  { bg: '#1a0a1e', border: '#a855f7', text: '#d8b4fe' },
 } as const;
 
 // Impact palette — infra-manager view: red = offline, orange = direct hit, amber = downstream
@@ -86,6 +87,8 @@ interface NodeData extends Record<string, unknown> {
   /** depth=0 means this node is the offline source; undefined = not in blast radius */
   impactDepth: number | undefined;
   simulationActive: boolean;
+  /** Only on db-group nodes */
+  dbLabels?: string[];
 }
 
 /* ── Edge builder ───────────────────────────────────────────────────────── */
@@ -186,21 +189,27 @@ function ResourceNode({ data, selected, id }: NodeProps) {
 
       {/* Type badge / offline label */}
       <div className="flex items-center gap-1.5 mb-0.5">
-        <span
-          className="w-1.5 h-1.5 rounded-full shrink-0"
-          style={{ background: isOffline ? '#ef4444' : palette.border }}
-        />
-        {isOffline ? (
-          <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 animate-pulse">
-            OFFLINE
-          </span>
+        {d.resourceType === 'db-group' ? (
+          <>
+            <span className="text-[11px]">🗄</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: palette.text }}>
+              Bancos
+            </span>
+          </>
+        ) : isOffline ? (
+          <>
+            <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-red-500" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 animate-pulse">
+              OFFLINE
+            </span>
+          </>
         ) : (
-          <span
-            className="text-[10px] font-bold uppercase tracking-wider"
-            style={{ color: palette.text }}
-          >
-            {d.resourceType}
-          </span>
+          <>
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: palette.border }} />
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: palette.text }}>
+              {d.resourceType}
+            </span>
+          </>
         )}
       </div>
 
@@ -212,14 +221,26 @@ function ResourceNode({ data, selected, id }: NodeProps) {
         {d.label}
       </p>
 
+      {/* DB group: list of database names */}
+      {d.resourceType === 'db-group' && d.dbLabels && (
+        <div className="mt-1 flex flex-col gap-0.5">
+          {d.dbLabels.slice(0, 3).map((name, i) => (
+            <span key={i} className="text-[10px] text-slate-400 truncate">• {name}</span>
+          ))}
+          {d.dbLabels.length > 3 && (
+            <span className="text-[10px] text-slate-500">+{d.dbLabels.length - 3} mais</span>
+          )}
+        </div>
+      )}
+
       {/* Impact depth hint */}
-      {isDirect && (
+      {isDirect && d.resourceType !== 'db-group' && (
         <p className="text-[10px] mt-0.5 font-medium text-orange-400">impacto direto</p>
       )}
-      {isIndirect && (
+      {isIndirect && d.resourceType !== 'db-group' && (
         <p className="text-[10px] mt-0.5 text-amber-500">{d.impactDepth}° nivel</p>
       )}
-      {!isOffline && !isImpacted && d.status && (
+      {!isOffline && !isImpacted && d.status && d.resourceType !== 'db-group' && (
         <p className="text-[10px] text-slate-500 mt-0.5 capitalize">{d.status}</p>
       )}
 
@@ -239,10 +260,11 @@ const NODE_TYPES = { resource: ResourceNode };
 interface ResourceGraphProps {
   nodes: Array<{
     id: string;
-    resourceType: 'server' | 'application' | 'database' | 'url';
+    resourceType: 'server' | 'application' | 'database' | 'url' | 'db-group';
     label: string;
     status?: string;
     criticality?: string;
+    dbLabels?: string[];
   }>;
   edges: Array<{
     id: string;
@@ -307,6 +329,7 @@ export function ResourceGraph({
           status:          n.status,
           impactDepth:     n.id === simulationSourceId ? 0 : impactedByDepth?.get(n.id),
           simulationActive: !!simulationSourceId,
+          dbLabels:        n.dbLabels,
         },
       })),
     );
@@ -324,6 +347,7 @@ export function ResourceGraph({
           ...n.data,
           impactDepth:      n.id === simulationSourceId ? 0 : impactedByDepth?.get(n.id),
           simulationActive: !!simulationSourceId,
+          // dbLabels preserved from spread above
         } as NodeData,
       })),
     );

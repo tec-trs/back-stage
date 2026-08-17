@@ -164,6 +164,7 @@ export function UrlsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/60">
+                <th className="w-10 px-4 py-3" />
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Label</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">URL</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Tipo</th>
@@ -180,9 +181,19 @@ export function UrlsPage() {
                     key={url.id}
                     onClick={() => setSelectedId(isSelected ? null : url.id)}
                     className={`cursor-pointer border-b border-slate-800/50 transition-colors last:border-0 ${
-                      isSelected ? 'bg-slate-800' : 'hover:bg-slate-900/60'
+                      isSelected ? 'bg-sky-950/40' : 'hover:bg-slate-900/60'
                     }`}
                   >
+                    <td className="px-4 py-3">
+                      <input
+                        type="radio"
+                        name="selected-url"
+                        checked={isSelected}
+                        onChange={() => setSelectedId(isSelected ? null : url.id)}
+                        aria-label={`Selecionar ${url.label}`}
+                        className="h-4 w-4 accent-sky-500"
+                      />
+                    </td>
                     <td className="px-4 py-3 font-medium text-slate-100">
                       <Link
                         to={`/urls/${url.id}`}

@@ -34,7 +34,7 @@ function buildUrl(path: string, query?: RequestOptions['query']): string {
 }
 
 interface ApiErrorPayload {
-  error?: { code?: string; message?: string };
+  error?: { code?: string; message?: string; details?: Record<string, string[]> };
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -62,10 +62,14 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       throw new ApiError(401, 'UNAUTHORIZED', 'Sessão expirada. Faca login novamente.');
     }
     const errorPayload = payload as ApiErrorPayload | null;
+    const details = errorPayload?.error?.details;
+    const detailSuffix = details && Object.keys(details).length > 0
+      ? ` (${Object.entries(details).map(([f, msgs]) => `${f}: ${msgs.join(', ')}`).join(' | ')})`
+      : '';
     throw new ApiError(
       response.status,
       errorPayload?.error?.code ?? 'UNKNOWN_ERROR',
-      errorPayload?.error?.message ?? 'Erro ao comunicar com o servidor',
+      (errorPayload?.error?.message ?? 'Erro ao comunicar com o servidor') + detailSuffix,
     );
   }
 

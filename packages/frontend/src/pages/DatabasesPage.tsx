@@ -160,6 +160,7 @@ export function DatabasesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/60">
+                <th className="w-10 px-4 py-3" />
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Nome</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Engine</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Servidor</th>
@@ -176,9 +177,19 @@ export function DatabasesPage() {
                     key={db.id}
                     onClick={() => setSelectedId(isSelected ? null : db.id)}
                     className={`cursor-pointer border-b border-slate-800/50 transition-colors last:border-0 ${
-                      isSelected ? 'bg-slate-800' : 'hover:bg-slate-900/60'
+                      isSelected ? 'bg-sky-950/40' : 'hover:bg-slate-900/60'
                     }`}
                   >
+                    <td className="px-4 py-3">
+                      <input
+                        type="radio"
+                        name="selected-db"
+                        checked={isSelected}
+                        onChange={() => setSelectedId(isSelected ? null : db.id)}
+                        aria-label={`Selecionar ${db.displayName ?? db.name}`}
+                        className="h-4 w-4 accent-sky-500"
+                      />
+                    </td>
                     <td className="px-4 py-3 font-medium text-slate-100">
                       <Link
                         to={`/databases/${db.id}`}

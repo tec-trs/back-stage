@@ -174,6 +174,7 @@ export function EnvironmentsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/60">
+                <th className="w-10 px-4 py-3" />
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Nome</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Slug</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Descricao</th>
@@ -189,9 +190,19 @@ export function EnvironmentsPage() {
                     key={env.id}
                     onClick={() => setSelectedId(isSelected ? null : env.id)}
                     className={`cursor-pointer border-b border-slate-800/50 transition-colors last:border-0 ${
-                      isSelected ? 'bg-slate-800' : 'hover:bg-slate-900/60'
+                      isSelected ? 'bg-sky-950/40' : 'hover:bg-slate-900/60'
                     }`}
                   >
+                    <td className="px-4 py-3">
+                      <input
+                        type="radio"
+                        name="selected-env"
+                        checked={isSelected}
+                        onChange={() => setSelectedId(isSelected ? null : env.id)}
+                        aria-label={`Selecionar ${env.name}`}
+                        className="h-4 w-4 accent-sky-500"
+                      />
+                    </td>
                     <td className="px-4 py-3 font-medium text-slate-100">{env.name}</td>
                     <td className="px-4 py-3 font-mono text-slate-400">{env.slug}</td>
                     <td className="px-4 py-3 text-slate-400">

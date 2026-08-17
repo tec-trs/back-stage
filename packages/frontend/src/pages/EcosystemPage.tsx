@@ -15,11 +15,26 @@ type ResourceType = 'server' | 'application' | 'database' | 'url';
 
 const VALID_RESOURCE_TYPES = new Set<string>(['server', 'application', 'database', 'url']);
 
+interface DbGroup {
+  id: string;
+  dbIds: string[];
+  dbLabels: string[];
+}
+
 const NODE_COLORS: Record<string, string> = {
   server:      '#3b82f6',
   application: '#8b5cf6',
   database:    '#ec4899',
+  'db-group':  '#a855f7',
   url:         '#f59e0b',
+};
+
+const NODE_LABELS: Record<string, string> = {
+  server:      'Servidor',
+  application: 'Aplicacao',
+  database:    'Banco de Dados',
+  'db-group':  'Bancos (agrupado)',
+  url:         'URL',
 };
 
 export function EcosystemPage() {
@@ -35,7 +50,73 @@ export function EcosystemPage() {
 
   const impactedNodeIds = useMemo(() => new Set(impactedByDepth.keys()), [impactedByDepth]);
 
-  const selectedNode = data?.nodes.find((n) => n.id === selectedNodeId);
+  const selectedNode = graphNodes.find((n) => n.id === selectedNodeId);
+
+  // ── Opção A: agrupar bancos quando aplicação tem ≥ 2 ──────────────────────
+  const { graphNodes, graphEdges, dbGroups } = useMemo(() => {
+    if (!data) return { graphNodes: [], graphEdges: [], dbGroups: [] };
+
+    // Mapa appId → edges de banco (sourceId=app, targetId=db)
+    const appDbEdgeMap = new Map<string, typeof data.edges>();
+    for (const edge of data.edges) {
+      const src = data.nodes.find((n) => n.id === edge.sourceId);
+      const tgt = data.nodes.find((n) => n.id === edge.targetId);
+      if (src?.resourceType === 'application' && tgt?.resourceType === 'database') {
+        if (!appDbEdgeMap.has(edge.sourceId)) appDbEdgeMap.set(edge.sourceId, []);
+        appDbEdgeMap.get(edge.sourceId)!.push(edge);
+      }
+    }
+
+    const groups: DbGroup[] = [];
+    const hiddenNodeIds = new Set<string>();
+    const hiddenEdgeIds = new Set<string>();
+    const syntheticNodes: typeof data.nodes = [];
+    const syntheticEdges: typeof data.edges = [];
+
+    for (const [appId, dbEdges] of appDbEdgeMap) {
+      if (dbEdges.length < 2) continue;
+
+      const groupId = `db-group-${appId}`;
+      const dbIds = dbEdges.map((e) => e.targetId);
+      const dbLabels = dbIds.map((id) => {
+        const n = data.nodes.find((nn) => nn.id === id);
+        return n?.label ?? id;
+      });
+
+      groups.push({ id: groupId, dbIds, dbLabels });
+
+      syntheticNodes.push({
+        id: groupId,
+        resourceType: 'db-group' as ResourceType,
+        label: `${dbEdges.length} bancos`,
+        dbLabels,
+      });
+
+      syntheticEdges.push({
+        id: `edge-${appId}-${groupId}`,
+        sourceType: 'application',
+        sourceId: appId,
+        targetType: 'db-group',
+        targetId: groupId,
+        relationType: 'connects_to',
+      });
+
+      for (const id of dbIds) hiddenNodeIds.add(id);
+      for (const e of dbEdges) hiddenEdgeIds.add(e.id);
+    }
+
+    return {
+      graphNodes: [
+        ...data.nodes.filter((n) => !hiddenNodeIds.has(n.id)),
+        ...syntheticNodes,
+      ],
+      graphEdges: [
+        ...data.edges.filter((e) => !hiddenEdgeIds.has(e.id)),
+        ...syntheticEdges,
+      ],
+      dbGroups: groups,
+    };
+  }, [data]);
 
   const handleNodeSelect = useCallback((nodeId: string, resourceType: string) => {
     setSelectedNodeId(nodeId);
@@ -44,6 +125,7 @@ export function EcosystemPage() {
 
   const handleNodeNavigate = useCallback(
     (nodeId: string, resourceType: string) => {
+      if (resourceType === 'db-group') return; // grupo virtual — sem pagina de detalhe
       const pathMap: Record<string, string> = {
         server:      'servers',
         application: 'applications',
@@ -60,9 +142,16 @@ export function EcosystemPage() {
     for (const node of result.impactedResources) {
       byDepth.set(node.resourceId, node.depth);
     }
+    // Propaga impacto para nós db-group: usa o menor depth entre seus bancos
+    for (const group of dbGroups) {
+      const depths = group.dbIds
+        .map((id) => byDepth.get(id))
+        .filter((d): d is number => d !== undefined);
+      if (depths.length > 0) byDepth.set(group.id, Math.min(...depths));
+    }
     setImpactedByDepth(byDepth);
     setSimulationSourceId(sourceId);
-  }, []);
+  }, [dbGroups]);
 
   const handleImpactReset = useCallback(() => {
     setImpactedByDepth(new Map());
@@ -114,8 +203,8 @@ export function EcosystemPage() {
           )}
           <div style={{ height: '600px' }} className="overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
             <ResourceGraph
-              nodes={data.nodes}
-              edges={data.edges}
+              nodes={graphNodes}
+              edges={graphEdges}
               mode="overview"
               impactedNodeIds={impactedNodeIds}
               impactedByDepth={impactedByDepth}
@@ -136,7 +225,7 @@ export function EcosystemPage() {
               {Object.entries(NODE_COLORS).map(([type, color]) => (
                 <div key={type} className="flex items-center gap-2">
                   <div className="h-3 w-3 rounded" style={{ backgroundColor: color }} />
-                  <span className="capitalize text-slate-400">{type}</span>
+                  <span className="text-slate-400">{NODE_LABELS[type] ?? type}</span>
                 </div>
               ))}
               {simulationSourceId && (
@@ -200,8 +289,23 @@ export function EcosystemPage() {
             </div>
           )}
 
+          {/* Lista de bancos para nó db-group */}
+          {selectedNode?.resourceType === 'db-group' && selectedNode.dbLabels && (
+            <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
+              <h3 className="mb-2 text-sm font-semibold text-slate-300">Bancos agrupados</h3>
+              <ul className="flex flex-col gap-1">
+                {selectedNode.dbLabels.map((name, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-slate-300">
+                    <span className="text-pink-400">🗄</span>
+                    {name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Analise de impacto */}
-          {selectedNodeId && selectedNodeType && (
+          {selectedNodeId && selectedNodeType && selectedNode?.resourceType !== 'db-group' && (
             <ImpactAnalysisPanel
               resourceType={selectedNodeType}
               resourceId={selectedNodeId}

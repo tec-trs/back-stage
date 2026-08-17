@@ -1,5 +1,8 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 
+import { useApplications } from '../applications/use-applications';
+import { useDatabases } from '../databases/use-databases';
+import { useServers } from '../servers/use-servers';
 import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
@@ -90,8 +93,25 @@ export function UrlFormDialog({
   const updateUrl = useUpdateUrl();
   const mutation = isEditMode ? updateUrl : createUrl;
 
+  const { data: serversData } = useServers();
+  const { data: applicationsData } = useApplications();
+  const { data: databasesData } = useDatabases({ page: 1, pageSize: 500 });
+
   const [form, setForm] = useState<FormState>(emptyForm());
   const [tags, setTags] = useState<string[]>([]);
+
+  const resourceOptions = useMemo(() => {
+    switch (form.ownerResourceType) {
+      case 'server':
+        return (serversData?.items ?? []).map((s) => ({ id: s.id, label: s.displayName ?? s.hostname }));
+      case 'application':
+        return (applicationsData?.items ?? []).map((a) => ({ id: a.id, label: a.displayName ?? a.code }));
+      case 'database':
+        return (databasesData?.items ?? []).map((d) => ({ id: d.id, label: d.displayName ?? d.name }));
+      default:
+        return [];
+    }
+  }, [form.ownerResourceType, serversData, applicationsData, databasesData]);
 
   useEffect(() => {
     if (isOpen) {
@@ -222,7 +242,10 @@ export function UrlFormDialog({
                 <span className="text-slate-400">Tipo do recurso *</span>
                 <select
                   value={form.ownerResourceType}
-                  onChange={(e) => setField('ownerResourceType', e.target.value as UrlOwnerResourceType)}
+                  onChange={(e) => {
+                    setField('ownerResourceType', e.target.value as UrlOwnerResourceType);
+                    setField('ownerResourceId', '');
+                  }}
                   className={inputClass}
                 >
                   {OWNER_RESOURCE_TYPES.map((t) => (
@@ -233,14 +256,18 @@ export function UrlFormDialog({
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-slate-400">ID do recurso (UUID) *</span>
-                <input
+                <span className="text-slate-400">Recurso proprietario *</span>
+                <select
                   required
                   value={form.ownerResourceId}
                   onChange={(e) => setField('ownerResourceId', e.target.value)}
-                  placeholder="xxxxxxxx-xxxx-..."
                   className={inputClass}
-                />
+                >
+                  <option value="">Selecione...</option>
+                  {resourceOptions.map((r) => (
+                    <option key={r.id} value={r.id}>{r.label}</option>
+                  ))}
+                </select>
               </label>
             </div>
           </fieldset>
