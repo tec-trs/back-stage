@@ -306,7 +306,12 @@ export class ServerRepository implements IServerRepository {
   }
 
   public async hasLinkedApplications(id: string): Promise<boolean> {
-    const rows = await this.db('application_deployments').where('server_id', id).limit(1);
+    const rows = await this.db('application_deployments')
+      .join('applications', 'applications.id', 'application_deployments.application_id')
+      .whereNull('application_deployments.deleted_at')
+      .whereNull('applications.deleted_at')
+      .where('application_deployments.server_id', id)
+      .limit(1);
     return rows.length > 0;
   }
 }
