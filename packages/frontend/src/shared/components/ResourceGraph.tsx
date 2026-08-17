@@ -64,8 +64,8 @@ function layoutGraph(
   g.setGraph({ rankdir: 'LR', nodesep: 60, ranksep: 100 });
 
   nodeIds.forEach((id) => g.setNode(id, { width: NODE_W, height: NODE_H }));
-  // Reverse direction so foundational nodes (servers) rank left
-  edgePairs.forEach(({ source, target }) => g.setEdge(target, source));
+  // Natural direction: server→application→url, so servers rank leftmost in LR layout
+  edgePairs.forEach(({ source, target }) => g.setEdge(source, target));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (dagre as any).layout(g);

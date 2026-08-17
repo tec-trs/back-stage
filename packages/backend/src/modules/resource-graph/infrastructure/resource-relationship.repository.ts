@@ -334,7 +334,7 @@ export class ResourceRelationshipRepository {
     //     source provides to target → if SOURCE goes down, TARGET is affected
     //     → initial seed: WHERE source = root  → collect target
     const { rows } = await this.db.raw<{ rows: ImpactRow[] }>(`
-      WITH
+      WITH RECURSIVE
       all_edges(source_type, source_id, target_type, target_id, relation_type) AS (
         SELECT source_type::text, source_id::text, target_type::text, target_id::text, relation_type
         FROM ${TABLE_NAME}
