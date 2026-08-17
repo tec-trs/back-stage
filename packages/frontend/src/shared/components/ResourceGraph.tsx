@@ -4,7 +4,6 @@ import {
   BackgroundVariant,
   Handle,
   MarkerType,
-  MiniMap,
   Position,
   ReactFlow,
   applyEdgeChanges,
@@ -387,17 +386,6 @@ export function ResourceGraph({
       proOptions={{ hideAttribution: true }}
     >
       <Background color="#1e293b" variant={BackgroundVariant.Dots} gap={20} size={1.5} />
-      <MiniMap
-        nodeColor={(node) => {
-          const d = node.data as NodeData;
-          if (d.impactDepth === 0)                          return '#ef4444';
-          if (d.impactDepth === 1)                          return '#f97316';
-          if (d.impactDepth !== undefined && d.impactDepth >= 2) return '#f59e0b';
-          return TYPE_STYLE[d.resourceType]?.border ?? '#475569';
-        }}
-        maskColor="#0f172acc"
-        style={{ background: '#1e293b', border: '1px solid #334155' }}
-      />
     </ReactFlow>
   );
 }
