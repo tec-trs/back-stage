@@ -1,32 +1,38 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useFullGraph, useSimulateImpact } from '../features/resource-graph/use-resource-graph.js';
-import { Badge } from '../shared/components/Badge.js';
-import { Button } from '../shared/components/Button.js';
-import { ErrorMessage } from '../shared/components/ErrorMessage.js';
-import { PageHeader } from '../shared/components/PageHeader.js';
-import { ResourceGraph } from '../shared/components/ResourceGraph.js';
-import { Spinner } from '../shared/components/Spinner.js';
+import { ImpactAnalysisPanel } from '../features/resource-graph/ImpactAnalysisPanel';
+import { useFullGraph } from '../features/resource-graph/use-resource-graph';
+import { Badge } from '../shared/components/Badge';
+import { Button } from '../shared/components/Button';
+import { ErrorMessage } from '../shared/components/ErrorMessage';
+import { PageHeader } from '../shared/components/PageHeader';
+import { ResourceGraph } from '../shared/components/ResourceGraph';
+import { Spinner } from '../shared/components/Spinner';
+
+type ResourceType = 'server' | 'application' | 'database' | 'url';
+
+const VALID_RESOURCE_TYPES = new Set<string>(['server', 'application', 'database', 'url']);
+
+const NODE_COLORS: Record<string, string> = {
+  server: '#3b82f6',
+  application: '#8b5cf6',
+  database: '#ec4899',
+  url: '#f59e0b',
+};
 
 export function EcosystemPage() {
-  const { data, isLoading, isError, error } = useFullGraph({
-    page: 1,
-    pageSize: 500,
-  });
+  const { data, isLoading, isError, error } = useFullGraph({ page: 1, pageSize: 500 });
   const navigate = useNavigate();
-  const simulateImpact = useSimulateImpact();
+
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [selectedNodeType, setSelectedNodeType] = useState<string | null>(null);
-  const [showImpact, setShowImpact] = useState(false);
-  const [impactData, setImpactData] = useState<any>(null);
+  const [selectedNodeType, setSelectedNodeType] = useState<ResourceType | null>(null);
 
   const selectedNode = data?.nodes.find((n) => n.id === selectedNodeId);
 
   const handleNodeSelect = useCallback((nodeId: string, resourceType: string) => {
     setSelectedNodeId(nodeId);
-    setSelectedNodeType(resourceType);
-    setShowImpact(false);
+    if (VALID_RESOURCE_TYPES.has(resourceType)) setSelectedNodeType(resourceType as ResourceType);
   }, []);
 
   const handleNodeNavigate = useCallback(
@@ -37,59 +43,43 @@ export function EcosystemPage() {
         database: 'databases',
         url: 'urls',
       };
-      const path = pathMap[resourceType] || resourceType + 's';
-      navigate(`/${path}/${nodeId}`);
+      navigate(`/${pathMap[resourceType] ?? resourceType + 's'}/${nodeId}`);
     },
     [navigate],
   );
 
-  const handleSimulateImpact = async () => {
-    if (!selectedNodeId || !selectedNodeType) return;
-    try {
-      const result = await simulateImpact.mutateAsync({
-        resourceType: selectedNodeType as any,
-        resourceId: selectedNodeId,
-      });
-      setImpactData(result);
-      setShowImpact(true);
-    } catch (err) {
-      console.error('Erro ao simular impacto:', err);
-    }
-  };
-
-  const impactedNodeIds = impactData
-    ? new Set(impactData.impactedResources.map((r: any) => r.resourceId)) as Set<string>
-    : new Set();
-
-  if (isError) return <ErrorMessage message={error instanceof Error ? error.message : "Erro ao carregar ecosistema"} />;
+  if (isError)
+    return (
+      <ErrorMessage message={error instanceof Error ? error.message : 'Erro ao carregar ecossistema'} />
+    );
   if (isLoading) return <Spinner />;
   if (!data || data.nodes.length === 0) {
     return (
       <div>
         <PageHeader
           title="Ecossistema"
-          description="Grafo completo de recursos: servidores, aplicações, bancos de dados e URLs"
+          description="Grafo completo de recursos: servidores, aplicacoes, bancos de dados e URLs"
         />
-        <ErrorMessage message="Nenhum recurso encontrado. Comece adicionando servidores ou aplicações." />
+        <ErrorMessage message="Nenhum recurso encontrado. Comece adicionando servidores ou aplicacoes." />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Ecossistema"
-        description="Grafo completo de recursos: servidores, aplicações, bancos de dados e URLs"
+        description="Grafo completo de recursos: servidores, aplicacoes, bancos de dados e URLs"
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
         <div className="lg:col-span-3">
-          <div className="bg-white rounded-lg shadow h-[600px] overflow-hidden">
+          <div className="h-[600px] overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
             <ResourceGraph
               nodes={data.nodes}
               edges={data.edges}
-              mode={showImpact ? 'impact' : 'overview'}
-              impactedNodeIds={impactedNodeIds}
+              mode="overview"
+              impactedNodeIds={new Set<string>()}
               onNodeSelect={handleNodeSelect}
               onNodeNavigate={handleNodeNavigate}
               isLoading={isLoading}
@@ -97,62 +87,44 @@ export function EcosystemPage() {
           </div>
         </div>
 
-        <div className="lg:col-span-1 space-y-4">
-          <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="font-semibold text-gray-800 mb-2">Legenda</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
-                <span>Servidor</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: '#8b5cf6' }}></div>
-                <span>Aplicação</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: '#ec4899' }}></div>
-                <span>Banco de Dados</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: '#f59e0b' }}></div>
-                <span>URL</span>
-              </div>
+        <div className="flex flex-col gap-4 lg:col-span-1">
+          {/* Legenda */}
+          <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-slate-300">Legenda</h3>
+            <div className="flex flex-col gap-2 text-sm">
+              {Object.entries(NODE_COLORS).map(([type, color]) => (
+                <div key={type} className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded" style={{ backgroundColor: color }} />
+                  <span className="capitalize text-slate-400">{type}</span>
+                </div>
+              ))}
             </div>
           </div>
 
+          {/* Node selecionado */}
           {selectedNode && (
-            <div className="bg-white rounded-lg shadow p-4 space-y-3">
+            <div className="flex flex-col gap-3 rounded-lg border border-slate-800 bg-slate-900/50 p-4">
               <div>
-                <h3 className="font-semibold text-gray-800">{selectedNode.label}</h3>
-                <Badge tone="default" className="inline-block mt-1">
+                <h3 className="font-semibold text-slate-100">{selectedNode.label}</h3>
+                <Badge tone="default" className="mt-1 inline-block">
                   {selectedNode.resourceType}
                 </Badge>
               </div>
 
-              <div className="text-sm space-y-2">
+              <dl className="flex flex-col gap-1 text-sm">
                 {selectedNode.status && (
-                  <div>
-                    <span className="text-gray-600">Status:</span>
-                    <p className="font-medium">{selectedNode.status}</p>
-                  </div>
+                  <>
+                    <dt className="text-slate-500">Status</dt>
+                    <dd className="text-slate-200">{selectedNode.status}</dd>
+                  </>
                 )}
                 {selectedNode.environment && (
-                  <div>
-                    <span className="text-gray-600">Ambiente:</span>
-                    <p className="font-medium">{selectedNode.environment}</p>
-                  </div>
+                  <>
+                    <dt className="text-slate-500">Ambiente</dt>
+                    <dd className="text-slate-200">{selectedNode.environment}</dd>
+                  </>
                 )}
-              </div>
-
-              <Button
-                variant="primary"
-                size="sm"
-                className="w-full"
-                onClick={handleSimulateImpact}
-                disabled={simulateImpact.isPending}
-              >
-                {simulateImpact.isPending ? 'Simulando...' : 'Simular Impacto'}
-              </Button>
+              </dl>
 
               <Button
                 variant="secondary"
@@ -165,26 +137,13 @@ export function EcosystemPage() {
             </div>
           )}
 
-          {showImpact && impactData && (
-            <div className="bg-red-50 rounded-lg shadow p-4 space-y-3 border border-red-200">
-              <h3 className="font-semibold text-red-900">Análise de Impacto</h3>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-red-700">Total Afetado:</span>
-                  <p className="font-bold text-lg text-red-900">{impactData.totalImpacted}</p>
-                </div>
-                <div className="border-t border-red-200 pt-2">
-                  {Object.entries(impactData.byType).map(([type, count]: any) => (
-                    count > 0 && (
-                      <div key={type}>
-                        <span className="text-red-700 capitalize">{type}:</span>
-                        <p className="font-medium text-red-900">{count}</p>
-                      </div>
-                    )
-                  ))}
-                </div>
-              </div>
-            </div>
+          {/* Analise de impacto do node selecionado */}
+          {selectedNodeId && selectedNodeType && (
+            <ImpactAnalysisPanel
+              resourceType={selectedNodeType}
+              resourceId={selectedNodeId}
+              resourceLabel={selectedNode?.label ?? selectedNodeId}
+            />
           )}
         </div>
       </div>

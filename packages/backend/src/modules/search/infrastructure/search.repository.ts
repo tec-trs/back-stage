@@ -156,17 +156,33 @@ export class SearchRepository implements ISearchRepository {
       return [];
     }
 
-    const rows = await this.matchingRows(tsQuery)
-      .select(
-        'id',
-        'kind',
-        this.db.raw('coalesce(title, name) as label'),
-        this.db.raw(`ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank`, [tsQuery]),
-      )
-      .orderBy('rank', 'desc')
-      .limit(limit);
+    const [servers, applications, databases, urls] = await Promise.all([
+      this.db.raw<{ rows: SuggestionRow[] }>(
+        `SELECT id, 'server' AS kind, coalesce(display_name, hostname) AS label, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) AS rank FROM servers WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ORDER BY rank DESC LIMIT ?`,
+        [tsQuery, tsQuery, limit],
+      ),
+      this.db.raw<{ rows: SuggestionRow[] }>(
+        `SELECT id, 'application' AS kind, display_name AS label, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) AS rank FROM applications WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ORDER BY rank DESC LIMIT ?`,
+        [tsQuery, tsQuery, limit],
+      ),
+      this.db.raw<{ rows: SuggestionRow[] }>(
+        `SELECT id, 'database' AS kind, coalesce(display_name, name) AS label, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) AS rank FROM databases WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ORDER BY rank DESC LIMIT ?`,
+        [tsQuery, tsQuery, limit],
+      ),
+      this.db.raw<{ rows: SuggestionRow[] }>(
+        `SELECT id, 'url' AS kind, label, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) AS rank FROM urls WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ORDER BY rank DESC LIMIT ?`,
+        [tsQuery, tsQuery, limit],
+      ),
+    ]);
 
-    return rows as unknown as SuggestionRow[];
+    const allRows = [
+      ...(servers.rows ?? []),
+      ...(applications.rows ?? []),
+      ...(databases.rows ?? []),
+      ...(urls.rows ?? []),
+    ].sort((a, b) => ((b as { rank?: number }).rank ?? 0) - ((a as { rank?: number }).rank ?? 0));
+
+    return allRows.slice(0, limit);
   }
 
   public async unifiedSearch(

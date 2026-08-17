@@ -14,14 +14,6 @@ interface SearchResult {
   status?: string;
 }
 
-const RESOURCE_TYPE_COLORS: Record<string, string> = {
-  server: 'bg-blue-100 text-blue-900',
-  application: 'bg-purple-100 text-purple-900',
-  database: 'bg-pink-100 text-pink-900',
-  url: 'bg-amber-100 text-amber-900',
-  catalog_entity: 'bg-gray-100 text-gray-900',
-};
-
 const RESOURCE_TYPE_LABELS: Record<string, string> = {
   server: 'Servidor',
   application: 'Aplicação',

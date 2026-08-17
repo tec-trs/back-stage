@@ -3,6 +3,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
+import { TagInput } from '../../shared/components/TagInput';
 import { Tabs, type TabItem } from '../../shared/components/Tabs';
 import {
   DISK_PURPOSE_LABELS,
@@ -247,20 +248,6 @@ export function ServerFormDialog({
 
   function removeService(index: number): void {
     setServices((current) => current.filter((_, i) => i !== index));
-  }
-
-  // ── Tags ──────────────────────────────────────────────────────────────────
-
-  function addTag(): void {
-    setTags((current) => [...current, '']);
-  }
-
-  function updateTag(index: number, value: string): void {
-    setTags((current) => current.map((t, i) => (i === index ? value : t)));
-  }
-
-  function removeTag(index: number): void {
-    setTags((current) => current.filter((_, i) => i !== index));
   }
 
   // ── Submit ────────────────────────────────────────────────────────────────
@@ -789,35 +776,9 @@ export function ServerFormDialog({
                 />
               </label>
 
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-400">Tags</span>
-                  <Button type="button" variant="secondary" size="sm" onClick={addTag}>
-                    + Tag
-                  </Button>
-                </div>
-                {tags.length === 0 && (
-                  <p className="text-xs text-slate-500">Nenhuma tag adicionada.</p>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag, index) => (
-                    <div key={index} className="flex items-center gap-1">
-                      <input
-                        value={tag}
-                        onChange={(event) => updateTag(index, event.target.value)}
-                        placeholder="linux, prod..."
-                        className={`${inputClass} w-32 py-1.5 text-sm`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeTag(index)}
-                        className="text-slate-500 hover:text-red-400"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="text-slate-400">Tags</span>
+                <TagInput tags={tags} onChange={setTags} placeholder="linux, prod..." />
               </div>
             </fieldset>
           )}
