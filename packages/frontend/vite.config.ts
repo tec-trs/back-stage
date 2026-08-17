@@ -7,6 +7,13 @@ export default defineConfig({
     port: parseInt(process.env.FRONTEND_PORT ?? process.env.PORT ?? '5173'),
     host: true,
     strictPort: false,
+    allowedHosts: 'all',
+    proxy: {
+      '/api': {
+        target: `http://localhost:${process.env.BACKEND_PORT ?? '4000'}`,
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     port: parseInt(process.env.FRONTEND_PORT ?? process.env.PORT ?? '5173'),

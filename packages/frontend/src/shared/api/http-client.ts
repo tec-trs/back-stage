@@ -1,6 +1,7 @@
 import { useAuthStore } from '../../features/auth/auth.store';
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
+// Chamadas relativas: o proxy do Vite (dev) e o servidor de produção encaminham para o backend
+const API_URL = import.meta.env.VITE_API_URL ?? '';
 
 export class ApiError extends Error {
   public readonly status: number;
