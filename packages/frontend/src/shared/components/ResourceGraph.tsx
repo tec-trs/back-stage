@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
+  Controls,
   Handle,
   MarkerType,
+  MiniMap,
   Position,
   ReactFlow,
   applyEdgeChanges,
@@ -355,7 +357,7 @@ export function ResourceGraph({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [impactedKey, simulationSourceId]);
 
-  // Controlled mode handlers — we disable dragging but keep selection/pan
+  // Controlled mode handlers — dragging and pan both enabled
   const onNodesChange = useCallback(
     (changes: NodeChange<RFNode<NodeData>>[]) =>
       setRfNodes((prev) => applyNodeChanges(changes, prev)),
@@ -401,7 +403,6 @@ export function ResourceGraph({
       onNodeClick={onNodeClick}
       onNodeDoubleClick={onNodeDoubleClick}
       nodeTypes={NODE_TYPES}
-      nodesDraggable={false}
       fitView
       fitViewOptions={{ padding: 0.2, maxZoom: 1.2 }}
       minZoom={0.15}
@@ -410,6 +411,18 @@ export function ResourceGraph({
       proOptions={{ hideAttribution: true }}
     >
       <Background color="#1e293b" variant={BackgroundVariant.Dots} gap={20} size={1.5} />
+      <Controls
+        showInteractive={false}
+        style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 6 }}
+      />
+      <MiniMap
+        nodeColor={(n) => {
+          const type = (n.data as NodeData).resourceType as RType;
+          return TYPE_STYLE[type]?.border ?? '#64748b';
+        }}
+        maskColor="rgba(15,23,42,0.7)"
+        style={{ background: '#0f172a', border: '1px solid #1e293b' }}
+      />
     </ReactFlow>
   );
 }
