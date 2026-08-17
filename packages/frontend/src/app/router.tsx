@@ -54,6 +54,21 @@ const ApplicationTypesPage = lazy(() =>
 const TeamsPage = lazy(() =>
   import('../pages/TeamsPage').then((m) => ({ default: m.TeamsPage })),
 );
+const DatabasesPage = lazy(() =>
+  import('../pages/DatabasesPage').then((m) => ({ default: m.DatabasesPage })),
+);
+const DatabaseDetailPage = lazy(() =>
+  import('../pages/DatabaseDetailPage').then((m) => ({ default: m.DatabaseDetailPage })),
+);
+const UrlsPage = lazy(() =>
+  import('../pages/UrlsPage').then((m) => ({ default: m.UrlsPage })),
+);
+const UrlDetailPage = lazy(() =>
+  import('../pages/UrlDetailPage').then((m) => ({ default: m.UrlDetailPage })),
+);
+const SearchResultsPage = lazy(() =>
+  import('../pages/SearchResultsPage').then((m) => ({ default: m.SearchResultsPage })),
+);
 
 function withSuspense(element: ReactNode) {
   return <Suspense fallback={<Spinner />}>{element}</Suspense>;
@@ -81,6 +96,11 @@ export const router = createBrowserRouter([
           { path: '/servers/:id', element: withSuspense(<ServerDetailPage />) },
           { path: '/applications', element: withSuspense(<ApplicationsPage />) },
           { path: '/applications/:id', element: withSuspense(<ApplicationDetailPage />) },
+          { path: '/databases', element: withSuspense(<DatabasesPage />) },
+          { path: '/databases/:id', element: withSuspense(<DatabaseDetailPage />) },
+          { path: '/urls', element: withSuspense(<UrlsPage />) },
+          { path: '/urls/:id', element: withSuspense(<UrlDetailPage />) },
+          { path: '/search', element: withSuspense(<SearchResultsPage />) },
           { path: '/ecosystem', element: withSuspense(<EcosystemPage />) },
           { path: '/environments', element: withSuspense(<EnvironmentsPage />) },
           { path: '/teams', element: withSuspense(<TeamsPage />) },

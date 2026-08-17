@@ -10,8 +10,8 @@ import { useUpdateEnvironment } from './use-update-environment';
 import type { EnvironmentColor, EnvironmentSummary } from './use-environments';
 
 const COLOR_OPTIONS: { value: EnvironmentColor; label: string }[] = [
-  { value: 'danger', label: 'Vermelho (Producao)' },
-  { value: 'warning', label: 'Amarelo (Homologacao)' },
+  { value: 'danger', label: 'Vermelho (Produção)' },
+  { value: 'warning', label: 'Amarelo (Homologação)' },
   { value: 'success', label: 'Verde (Seguro)' },
   { value: 'default', label: 'Cinza (Outros)' },
 ];
@@ -147,7 +147,7 @@ export function EnvironmentFormDialog({ isOpen, onClose, environment }: Environm
             type="text"
             value={form.name}
             onChange={(e) => setField('name', e.target.value)}
-            placeholder="ex: Producao, Homologacao"
+            placeholder="ex: Produção, Homologação"
             required
             maxLength={100}
             className={inputClass}

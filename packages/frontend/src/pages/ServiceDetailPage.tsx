@@ -47,7 +47,7 @@ export function ServiceDetailPage() {
             <h1 className="text-2xl font-semibold text-slate-100">{data.title ?? data.name}</h1>
             <Badge>{translateLifecycle(data.lifecycle)}</Badge>
           </div>
-          <p className="mt-2 text-slate-400">{data.description ?? 'Sem descricao.'}</p>
+          <p className="mt-2 text-slate-400">{data.description ?? 'Sem descrição.'}</p>
 
           <dl className="mt-6 grid grid-cols-2 gap-4 rounded-lg border border-slate-800 p-4 text-sm">
             <dt className="text-slate-500">Nome</dt>

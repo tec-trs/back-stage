@@ -5,6 +5,7 @@ type BadgeTone = 'default' | 'success' | 'warning' | 'danger';
 interface BadgeProps {
   children: ReactNode;
   tone?: BadgeTone;
+  className?: string;
 }
 
 const TONE_CLASSES: Record<BadgeTone, string> = {
@@ -14,10 +15,10 @@ const TONE_CLASSES: Record<BadgeTone, string> = {
   danger: 'bg-red-900/50 text-red-300',
 };
 
-export function Badge({ children, tone = 'default' }: BadgeProps) {
+export function Badge({ children, tone = 'default', className = '' }: BadgeProps) {
   return (
     <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${TONE_CLASSES[tone]}`}
+      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${TONE_CLASSES[tone]} ${className}`}
     >
       {children}
     </span>

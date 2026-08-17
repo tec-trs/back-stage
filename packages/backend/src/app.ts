@@ -10,6 +10,9 @@ import { openapiSpec } from './docs/openapi.js';
 import { registerApplicationsModule } from './modules/applications/applications.module.js';
 import { registerAuditModule } from './modules/audit/audit.module.js';
 import { registerApplicationTypesModule } from './modules/application-types/application-types.module.js';
+import { registerDatabasesModule } from './modules/databases/databases.module.js';
+import { registerUrlsModule } from './modules/urls/urls.module.js';
+import { registerResourceGraphModule } from './modules/resource-graph/resource-graph.module.js';
 import { registerEnvironmentsModule } from './modules/environments/environments.module.js';
 import { registerServerTypesModule } from './modules/server-types/server-types.module.js';
 import { registerTeamsModule } from './modules/teams/teams.module.js';
@@ -86,6 +89,9 @@ export function createApp(): Express {
   app.use('/api/application-types', registerApplicationTypesModule());
   app.use('/api/servers', registerServersModule());
   app.use('/api/applications', registerApplicationsModule());
+  app.use('/api/databases', registerDatabasesModule());
+  app.use('/api/urls', registerUrlsModule());
+  app.use('/api/resource-graph', registerResourceGraphModule());
   app.use('/api/ecosystem', registerEcosystemModule());
   app.use(registerDeploymentsModule());
 

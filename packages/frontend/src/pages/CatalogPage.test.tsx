@@ -58,7 +58,7 @@ describe('CatalogPage', () => {
     renderCatalogPage();
 
     expect(await screen.findByText('Backend API')).toBeInTheDocument();
-    expect(screen.getByText('Producao')).toBeInTheDocument();
+    expect(screen.getByText('Produção')).toBeInTheDocument();
   });
 
   it('abre o dialogo de criacao ao clicar em "+ Novo Servico"', async () => {

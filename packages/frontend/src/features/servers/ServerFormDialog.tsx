@@ -826,7 +826,7 @@ export function ServerFormDialog({
           {activeTab === 'responsible' && (
             <fieldset className="flex flex-col gap-3">
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-slate-400">Equipe responsavel</span>
+                <span className="text-slate-400">Equipe responsável</span>
                 <input
                   value={form.ownerTeam}
                   onChange={(event) => setField('ownerTeam', event.target.value)}

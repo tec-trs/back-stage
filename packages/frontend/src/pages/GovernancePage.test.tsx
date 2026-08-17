@@ -41,7 +41,7 @@ describe('GovernancePage', () => {
               policyId: 'policy-1',
               entityId: 'entity-1',
               status: 'fail',
-              policyName: 'Producao exige owner',
+              policyName: 'Produção exige owner',
               entityName: 'backend-api',
               evaluatedAt: '2026-01-01T00:00:00.000Z',
             },
@@ -55,7 +55,7 @@ describe('GovernancePage', () => {
     renderGovernancePage();
 
     expect(await screen.findByText('4')).toBeInTheDocument();
-    expect(await screen.findByText('Producao exige owner')).toBeInTheDocument();
+    expect(await screen.findByText('Produção exige owner')).toBeInTheDocument();
     expect(screen.getByText('backend-api')).toBeInTheDocument();
   });
 

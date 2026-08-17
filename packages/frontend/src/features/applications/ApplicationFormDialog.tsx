@@ -408,7 +408,7 @@ export function ApplicationFormDialog({
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-slate-400">Classificacao de dados</span>
+                  <span className="text-slate-400">Classificação de dados</span>
                   <input
                     value={form.dataClassification}
                     onChange={(event) => setField('dataClassification', event.target.value)}
@@ -417,7 +417,7 @@ export function ApplicationFormDialog({
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-slate-400">Metodo de autenticacao</span>
+                  <span className="text-slate-400">Método de autenticação</span>
                   <input
                     value={form.authMethod}
                     onChange={(event) => setField('authMethod', event.target.value)}
@@ -532,7 +532,7 @@ export function ApplicationFormDialog({
             <fieldset className="flex flex-col gap-3">
               <div className="grid grid-cols-2 gap-3">
                 <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-slate-400">Time responsavel</span>
+                  <span className="text-slate-400">Time responsável</span>
                   <input
                     value={form.ownerTeam}
                     onChange={(event) => setField('ownerTeam', event.target.value)}

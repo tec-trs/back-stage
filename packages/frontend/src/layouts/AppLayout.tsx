@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { useAuthStore } from '../features/auth/auth.store';
 import { Button } from '../shared/components/Button';
+import { GlobalSearch } from '../shared/components/GlobalSearch';
 import {
   AppWindowIcon,
   BookIcon,
@@ -71,6 +72,8 @@ const NAV_ITEMS: NavItem[] = [
   { kind: 'link', to: '/infrastructure', label: 'Infraestrutura', icon: <LayersIcon /> },
   { kind: 'link', to: '/servers', label: 'Servidores', icon: <ServerIcon /> },
   { kind: 'link', to: '/applications', label: 'Aplicacoes', icon: <BoxIcon /> },
+  { kind: 'link', to: '/databases', label: 'Bancos de Dados', icon: <BoxIcon /> },
+  { kind: 'link', to: '/urls', label: 'URLs', icon: <NetworkIcon /> },
   { kind: 'link', to: '/ecosystem', label: 'Ecossistema', icon: <NetworkIcon /> },
   { kind: 'link', to: '/settings', label: 'Configuracoes', icon: <SettingsIcon /> },
 ];
@@ -187,10 +190,11 @@ export function AppLayout() {
       )}
 
       <div className="flex flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-slate-800 px-6 py-3">
+        <header className="flex items-center justify-between border-b border-slate-800 px-6 py-3 gap-4">
           <Button variant="secondary" size="sm" onClick={toggleSidebar}>
             {isSidebarOpen ? 'Ocultar menu' : 'Exibir menu'}
           </Button>
+          <GlobalSearch />
           <div className="flex items-center gap-3">
             <span className="font-mono text-sm text-slate-400">{user?.code}</span>
             <Button variant="secondary" size="sm" onClick={logout}>

@@ -1,7 +1,11 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useState } from 'react';
 
 import { useApplication } from '../features/applications/use-application';
+import { useSubgraph, useSimulateImpact } from '../features/resource-graph/use-resource-graph.js';
 import { Badge } from '../shared/components/Badge';
+import { Button } from '../shared/components/Button.js';
+import { ResourceGraph } from '../shared/components/ResourceGraph.js';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Spinner } from '../shared/components/Spinner';
 import {
@@ -22,7 +26,30 @@ function Field({ label, value }: { label: string; value: string | number | null 
 
 export function ApplicationDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { data, isLoading, isError, error } = useApplication(id);
+  const { data: subgraph, isLoading: isSubgraphLoading } = useSubgraph('application', id || null, 2);
+  const simulateImpact = useSimulateImpact();
+  const [showImpact, setShowImpact] = useState(false);
+  const [impactData, setImpactData] = useState<any>(null);
+
+  const handleSimulateImpact = async () => {
+    if (!id) return;
+    try {
+      const result = await simulateImpact.mutateAsync({
+        resourceType: 'application',
+        resourceId: id,
+      });
+      setImpactData(result);
+      setShowImpact(true);
+    } catch (err) {
+      console.error('Erro ao simular impacto:', err);
+    }
+  };
+
+  const impactedNodeIds = impactData
+    ? new Set(impactData.impactedResources.map((r: any) => r.resourceId)) as Set<string>
+    : new Set();
 
   return (
     <div>
@@ -44,7 +71,7 @@ export function ApplicationDetailPage() {
             <Badge>{translateApplicationStatus(data.status)}</Badge>
             <Badge tone="warning">{translateCriticality(data.criticality)}</Badge>
           </div>
-          <p className="text-slate-400">{data.description ?? 'Sem descricao.'}</p>
+          <p className="text-slate-400">{data.description ?? 'Sem descrição.'}</p>
 
           <section>
             <h2 className="mb-2 text-lg font-medium text-slate-200">Identificacao</h2>
@@ -123,9 +150,46 @@ export function ApplicationDetailPage() {
           )}
 
           <section>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-medium text-slate-200">Grafo de Dependências</h2>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleSimulateImpact}
+                disabled={simulateImpact.isPending}
+              >
+                {simulateImpact.isPending ? 'Simulando...' : 'Simular Impacto'}
+              </Button>
+            </div>
+            {isSubgraphLoading ? (
+              <div className="text-center py-8 text-slate-400">Carregando dependências...</div>
+            ) : subgraph ? (
+              <div className="border border-slate-800 rounded-lg h-96 overflow-hidden">
+                <ResourceGraph
+                  nodes={subgraph.nodes}
+                  edges={subgraph.edges}
+                  mode={showImpact ? 'impact' : 'subgraph'}
+                  impactedNodeIds={impactedNodeIds}
+                  onNodeNavigate={(nodeId, resourceType) => {
+                    navigate(`/${resourceType === 'server' ? 'servers' : resourceType + 's'}/${nodeId}`);
+                  }}
+                />
+              </div>
+            ) : null}
+            {showImpact && impactData && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm">
+                <h3 className="font-semibold text-red-900 mb-2">Análise de Impacto</h3>
+                <p className="text-red-700">
+                  <span className="font-bold">{impactData.totalImpacted}</span> recurso(s) seria(m) afetado(s)
+                </p>
+              </div>
+            )}
+          </section>
+
+          <section>
             <h2 className="mb-2 text-lg font-medium text-slate-200">Governanca</h2>
             <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
-              <Field label="Time responsavel" value={data.ownerTeam} />
+              <Field label="Time responsável" value={data.ownerTeam} />
               <Field label="Centro de custo" value={data.costCenter} />
               <Field label="SLA" value={data.sla} />
               <Field label="Custo mensal estimado" value={data.monthlyCostEstimate ?? null} />

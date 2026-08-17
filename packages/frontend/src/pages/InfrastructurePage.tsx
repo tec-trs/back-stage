@@ -37,7 +37,7 @@ export function InfrastructurePage() {
                 <Badge>{resource.type}</Badge>
               </div>
               <p className="mt-1 text-sm text-slate-500">
-                {resource.description ?? 'Sem descricao.'}
+                {resource.description ?? 'Sem descrição.'}
               </p>
             </div>
           ))}

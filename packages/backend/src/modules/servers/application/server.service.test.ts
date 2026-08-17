@@ -59,6 +59,7 @@ function buildRepositoryMock(overrides: Partial<IServerRepository> = {}): IServe
     update: vi.fn(),
     setStatus: vi.fn(),
     softDelete: vi.fn(),
+    hasLinkedApplications: vi.fn().mockResolvedValue(false),
     ...overrides,
   };
 }

@@ -49,5 +49,34 @@ export function createSearchRouter(controller: SearchController): Router {
     asyncHandler(controller.suggest),
   );
 
+  /**
+   * @openapi
+   * /unified-search:
+   *   get:
+   *     summary: Busca unificada em servers, applications, databases, urls e catalog_entities
+   *     tags: [Search]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         required: true
+   *         schema: { type: string }
+   *       - in: query
+   *         name: tags
+   *         schema: { type: string }
+   *         description: Comma-separated tags to filter results
+   *       - in: query
+   *         name: page
+   *         schema: { type: integer, default: 1 }
+   *       - in: query
+   *         name: pageSize
+   *         schema: { type: integer, default: 20 }
+   *     responses:
+   *       200: { description: Resultado da busca unificada em todas as fontes }
+   */
+  router.get(
+    '/unified-search',
+    asyncHandler(controller.unifiedSearch),
+  );
+
   return router;
 }

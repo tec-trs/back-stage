@@ -1,5 +1,5 @@
 export const LIFECYCLE_LABELS: Record<string, string> = {
-  production: 'Producao',
+  production: 'Produção',
   experimental: 'Experimental',
   deprecated: 'Descontinuado',
 };
@@ -31,8 +31,8 @@ export const SERVER_STATUS_LABELS: Record<string, string> = {
 };
 
 export const ENVIRONMENT_LABELS: Record<string, string> = {
-  production: 'Producao',
-  staging: 'Homologacao',
+  production: 'Produção',
+  staging: 'Homologação',
   development: 'Desenvolvimento',
   sandbox: 'Outros',
 };

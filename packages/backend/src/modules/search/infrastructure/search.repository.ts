@@ -22,6 +22,16 @@ export interface SearchResultRow {
   rank: number;
 }
 
+export interface UnifiedSearchResultRow {
+  id: string;
+  resourceType: string;
+  label: string;
+  description: string | null;
+  environment?: string;
+  status?: string;
+  rank: number;
+}
+
 export interface FacetCount {
   value: string;
   count: number;
@@ -60,6 +70,7 @@ export interface ISearchRepository {
     pagination: Pagination,
   ): Promise<{ items: SearchResultRow[]; total: number; facets: SearchFacets }>;
   suggest(query: string, limit: number): Promise<SuggestionRow[]>;
+  unifiedSearch(query: string, tags?: string[], pagination?: Pagination): Promise<{ items: UnifiedSearchResultRow[]; total: number }>;
 }
 
 export class SearchRepository implements ISearchRepository {
@@ -156,5 +167,54 @@ export class SearchRepository implements ISearchRepository {
       .limit(limit);
 
     return rows as unknown as SuggestionRow[];
+  }
+
+  public async unifiedSearch(
+    query: string,
+    tags?: string[],
+    pagination?: Pagination,
+  ): Promise<{ items: UnifiedSearchResultRow[]; total: number }> {
+    const tsQuery = buildPrefixTsQuery(query);
+    if (!tsQuery) {
+      return { items: [], total: 0 };
+    }
+
+    const pageSize = pagination?.pageSize ?? 20;
+    const page = pagination?.page ?? 1;
+
+    const tagsFilter = tags?.length ? `AND tags && ARRAY[${tags.map((t) => `'${t}'`).join(',')}]` : '';
+
+    const searchResults = await Promise.all([
+      this.db.raw<{ rows: UnifiedSearchResultRow[] }>(
+        `SELECT id, 'server' as resource_type, coalesce(display_name, hostname) as label, description, environment, status, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank FROM servers WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ${tagsFilter} ORDER BY rank DESC`,
+        [tsQuery, tsQuery],
+      ),
+      this.db.raw<{ rows: UnifiedSearchResultRow[] }>(
+        `SELECT id, 'application' as resource_type, display_name as label, description, null::text as environment, status, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank FROM applications WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ${tagsFilter} ORDER BY rank DESC`,
+        [tsQuery, tsQuery],
+      ),
+      this.db.raw<{ rows: UnifiedSearchResultRow[] }>(
+        `SELECT id, 'database' as resource_type, display_name as label, description, environment, status, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank FROM databases WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ${tagsFilter} ORDER BY rank DESC`,
+        [tsQuery, tsQuery],
+      ),
+      this.db.raw<{ rows: UnifiedSearchResultRow[] }>(
+        `SELECT id, 'url' as resource_type, label, description, null::text as environment, status, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank FROM urls WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ${tagsFilter} ORDER BY rank DESC`,
+        [tsQuery, tsQuery],
+      ),
+      this.db.raw<{ rows: UnifiedSearchResultRow[] }>(
+        `SELECT id, 'catalog_entity' as resource_type, coalesce(title, name) as label, description, null::text as environment, null::text as status, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank FROM catalog_entities WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ${tagsFilter} ORDER BY rank DESC`,
+        [tsQuery, tsQuery],
+      ),
+    ]);
+
+    const allItems = searchResults.flatMap(r => (Array.isArray(r) ? r : r.rows ?? [])).sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
+
+    const startIdx = (page - 1) * pageSize;
+    const items = allItems.slice(startIdx, startIdx + pageSize);
+
+    return {
+      items,
+      total: allItems.length,
+    };
   }
 }

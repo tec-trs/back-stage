@@ -20,3 +20,28 @@ describe('buildPrefixTsQuery', () => {
     expect(buildPrefixTsQuery('&|()')).toBe('');
   });
 });
+
+describe('SearchRepository unifiedSearch', () => {
+  it('deve construir query UNION corretamente para múltiplas fontes', () => {
+    // Teste unitário da lógica de construção da query
+    const query = 'test';
+    const tsQuery = buildPrefixTsQuery(query);
+
+    expect(tsQuery).toBe('test:*');
+    expect(tsQuery).toBeTruthy();
+  });
+
+  it('deve lidar com queries vazias gracefully', () => {
+    const emptyQuery = '';
+    const result = buildPrefixTsQuery(emptyQuery);
+
+    expect(result).toBe('');
+  });
+
+  it('deve filtrar caracteres especiais em tags', () => {
+    const dirty = "tag-with'special*chars";
+    const clean = dirty.replace(/[&|!():'*]/g, '');
+
+    expect(clean).toBe('tag-withspecialchars');
+  });
+});

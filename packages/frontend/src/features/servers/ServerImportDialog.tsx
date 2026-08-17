@@ -17,7 +17,7 @@ const HOSTNAME_RE = /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/;
 const CSV_TEMPLATE = [
   'hostname,displayName,serverType,provider,environment,ipAddress,domain,fqdn,osName,osVersion,cpuCores,ramGb,ownerTeam,description',
   'web-01.empresa.com,Web Server 01,vm,on_premise,production,10.0.0.1,empresa.com,web-01.empresa.com,Ubuntu,22.04,4,8,TI,Servidor web principal',
-  'db-01.empresa.com,BD Producao,bare_metal,own_datacenter,production,192.168.1.10,,,RedHat,8.6,16,64,DBA,Banco de dados primario',
+  'db-01.empresa.com,BD Produção,bare_metal,own_datacenter,production,192.168.1.10,,,RedHat,8.6,16,64,DBA,Banco de dados primário',
   'api-staging.empresa.com,,vm,aws,staging,,,,,,,,,API de homologacao',
 ].join('\n');
 
@@ -371,7 +371,7 @@ export function ServerImportDialog({ isOpen, onClose }: ServerImportDialogProps)
       {step === 'preview' && (
         <div className="space-y-4">
           {parsedRows.length === 0 ? (
-            <p className="text-sm text-slate-400">Nenhuma linha encontrada. Verifique se o arquivo possui cabecalho e ao menos uma linha de dados.</p>
+            <p className="text-sm text-slate-400">Nenhuma linha encontrada. Verifique se o arquivo possui cabeçalho e ao menos uma linha de dados.</p>
           ) : (
             <>
               <div className="flex gap-4 text-sm">
