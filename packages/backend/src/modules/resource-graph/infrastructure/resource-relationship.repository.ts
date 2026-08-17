@@ -207,9 +207,24 @@ export class ResourceRelationshipRepository {
   public async getSubgraph(
     rootType: ResourceType,
     rootId: string,
-    depth: number = 2,
+    options: { depth?: number; direction?: 'upstream' | 'downstream' | 'both'; relationType?: string } = {},
   ): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }> {
+    const { depth = 2, direction = 'both', relationType } = options;
     const maxDepth = Math.min(depth, MAX_DEPTH_DEFAULT);
+
+    const relationFilter = relationType ? `AND relation_type = :relationType` : '';
+
+    const baseWhere = direction === 'downstream'
+      ? `source_type = :rootType AND source_id = :rootId`
+      : direction === 'upstream'
+        ? `target_type = :rootType AND target_id = :rootId`
+        : `(source_type = :rootType AND source_id = :rootId) OR (target_type = :rootType AND target_id = :rootId)`;
+
+    const recursiveJoin = direction === 'downstream'
+      ? `rr.source_type = t.target_type AND rr.source_id = t.target_id`
+      : direction === 'upstream'
+        ? `rr.target_type = t.source_type AND rr.target_id = t.source_id`
+        : `(rr.source_type = t.target_type AND rr.source_id = t.target_id) OR (rr.target_type = t.source_type AND rr.target_id = t.source_id)`;
 
     const rows = await this.db.raw<TraversalRow[]>(`
       WITH RECURSIVE traversal(source_type, source_id, target_type, target_id, relation_type, depth, path) AS (
@@ -217,19 +232,20 @@ export class ResourceRelationshipRepository {
                ARRAY[source_type || ':' || source_id]
         FROM ${TABLE_NAME}
         WHERE deleted_at IS NULL
-          AND ((source_type = :rootType AND source_id = :rootId) OR (target_type = :rootType AND target_id = :rootId))
+          AND (${baseWhere})
+          ${relationFilter}
         UNION ALL
         SELECT rr.source_type, rr.source_id, rr.target_type, rr.target_id, rr.relation_type, t.depth + 1,
                t.path || (rr.source_type || ':' || rr.source_id)
         FROM ${TABLE_NAME} rr
-        JOIN traversal t ON (rr.source_type = t.target_type AND rr.source_id = t.target_id)
-                         OR (rr.target_type = t.source_type AND rr.target_id = t.source_id)
+        JOIN traversal t ON ${recursiveJoin}
         WHERE rr.deleted_at IS NULL
           AND t.depth < :maxDepth
+          ${relationFilter}
           AND NOT ((rr.source_type || ':' || rr.source_id) = ANY(t.path))
       )
       SELECT DISTINCT source_type, source_id, target_type, target_id, relation_type, depth FROM traversal
-    `, { rootType, rootId, maxDepth });
+    `, { rootType, rootId, maxDepth, ...(relationType ? { relationType } : {}) });
 
     const uniqueResourceIds = new Set<string>();
     uniqueResourceIds.add(`${rootType}:${rootId}`);
@@ -359,5 +375,27 @@ export class ResourceRelationshipRepository {
   public async deleteRelationship(id: string): Promise<boolean> {
     const result = await this.db(TABLE_NAME).where({ id }).delete();
     return result > 0;
+  }
+
+  public async syncHostRelationship(
+    serverId: string | null,
+    targetType: ResourceType,
+    targetId: string,
+  ): Promise<void> {
+    await this.db(TABLE_NAME)
+      .where({ target_type: targetType, target_id: targetId, relation_type: 'hosts' })
+      .whereNull('deleted_at')
+      .update({ deleted_at: this.db.fn.now() });
+
+    if (serverId) {
+      await this.db(TABLE_NAME).insert({
+        source_type: 'server',
+        source_id: serverId,
+        target_type: targetType,
+        target_id: targetId,
+        relation_type: 'hosts',
+        metadata: {},
+      });
+    }
   }
 }

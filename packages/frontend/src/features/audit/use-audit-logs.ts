@@ -14,6 +14,7 @@ export interface AuditLogEntry {
 export interface AuditLogFilters {
   action?: string;
   resourceType?: string;
+  resourceId?: string;
   page?: number;
   pageSize?: number;
 }
@@ -31,6 +32,7 @@ export function useAuditLogs(filters: AuditLogFilters = {}): UseQueryResult<List
         query: {
           ...(filters.action ? { action: filters.action } : {}),
           ...(filters.resourceType ? { resourceType: filters.resourceType } : {}),
+          ...(filters.resourceId ? { resourceId: filters.resourceId } : {}),
           page: filters.page ?? 1,
           pageSize: filters.pageSize ?? 50,
         },

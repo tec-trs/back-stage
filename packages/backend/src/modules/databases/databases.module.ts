@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { db } from '../../database/connection.js';
 import { container } from '../../shared/container.js';
+import { ResourceRelationshipRepository } from '../resource-graph/infrastructure/resource-relationship.repository.js';
 
 import { DatabaseService } from './application/database.service.js';
 import { DatabaseRepository } from './infrastructure/database.repository.js';
@@ -10,9 +11,13 @@ import { createDatabaseRouter } from './interfaces/http/database.routes.js';
 
 export function registerDatabasesModule(): Router {
   container.register('DatabaseRepository', () => new DatabaseRepository(db));
+  container.register('ResourceRelationshipRepository', () => new ResourceRelationshipRepository(db));
   container.register(
     'DatabaseService',
-    () => new DatabaseService(container.resolve('DatabaseRepository')),
+    () => new DatabaseService(
+      container.resolve('DatabaseRepository'),
+      container.resolve('ResourceRelationshipRepository'),
+    ),
   );
   container.register(
     'DatabaseController',

@@ -1,91 +1,98 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useUrls } from '../features/urls/use-urls.js';
-import { Badge } from '../shared/components/Badge.js';
-import { Button } from '../shared/components/Button.js';
-import { ConfirmDialog } from '../shared/components/ConfirmDialog.js';
-import { CreateUrlModal } from '../shared/components/CreateUrlModal.js';
-import { EmptyState } from '../shared/components/EmptyState.js';
-import { ErrorMessage } from '../shared/components/ErrorMessage.js';
-import { PlusIcon, PencilIcon, TrashIcon, CopyIcon } from '../shared/components/icons.js';
-import { PageHeader } from '../shared/components/PageHeader.js';
-import { Spinner } from '../shared/components/Spinner.js';
+
+import { useDeleteUrl } from '../features/urls/use-delete-url';
+import { useUrls } from '../features/urls/use-urls';
+import type { Url } from '../features/urls/use-urls';
+import { UrlFormDialog } from '../features/urls/UrlFormDialog';
+import { Badge } from '../shared/components/Badge';
+import { Button } from '../shared/components/Button';
+import { ConfirmDialog } from '../shared/components/ConfirmDialog';
+import { EmptyState } from '../shared/components/EmptyState';
+import { ErrorMessage } from '../shared/components/ErrorMessage';
+import { PencilIcon, PlusIcon, TrashIcon } from '../shared/components/icons';
+import { exportToCsv } from '../shared/utils/export-csv';
+import { PageHeader } from '../shared/components/PageHeader';
+import { Spinner } from '../shared/components/Spinner';
+
+const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
+  active: 'success',
+  inactive: 'warning',
+  deprecated: 'warning',
+  error: 'danger',
+};
+
+const HEALTHCHECK_TONE: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
+  ok: 'success',
+  error: 'danger',
+  timeout: 'warning',
+};
 
 export function UrlsPage() {
-  const [selectedUrlId, setSelectedUrlId] = useState<string | null>(null);
+  const { data, isLoading, isError, error } = useUrls({ page: 1, pageSize: 100 });
+  const deleteUrl = useDeleteUrl();
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Url | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
 
-  const { data, isLoading, isError, error } = useUrls({
-    page: 1,
-    pageSize: 100,
-  });
+  const items = data?.items ?? [];
+  const selected = items.find((u) => u.id === selectedId) ?? null;
 
-  if (isLoading) return <Spinner />;
-  if (isError) return <ErrorMessage message="Erro ao carregar URLs" />;
+  function openCreate(): void {
+    setEditing(null);
+    setIsFormOpen(true);
+  }
 
-  const selectedUrl = data?.items.find((item) => item.id === selectedUrlId) ?? null;
+  function openEdit(url: Url): void {
+    setEditing(url);
+    setIsFormOpen(true);
+  }
 
-  const handleEdit = () => {
-    if (selectedUrl) {
-      alert(`Editar: ${selectedUrl.label}\n\n(Funcionalidade em desenvolvimento)`);
-    }
-  };
+  function closeForm(): void {
+    setIsFormOpen(false);
+    setEditing(null);
+  }
 
-  const handleDuplicate = () => {
-    if (selectedUrl) {
-      alert(`Duplicar: ${selectedUrl.label}\n\n(Funcionalidade em desenvolvimento)`);
-    }
-  };
+  function handleConfirmDelete(): void {
+    if (!selected) return;
+    deleteUrl.mutate(selected.id, {
+      onSuccess: () => {
+        setSelectedId(null);
+        setConfirmDeleteOpen(false);
+      },
+    });
+  }
 
-  const handleDelete = () => {
-    setConfirmDeleteOpen(true);
-  };
-
-  const handleConfirmDelete = () => {
-    if (selectedUrl) {
-      alert(`Deletar: ${selectedUrl.label}\n\n(Funcionalidade em desenvolvimento)`);
-      setConfirmDeleteOpen(false);
-      setSelectedUrlId(null);
-    }
-  };
-
-  const handleCreateUrl = async (formData: any) => {
-    setIsCreating(true);
-    try {
-      // TODO: Implementar chamada à API
-      console.log('Criando URL:', formData);
-      alert(`URL "${formData.label}" criada com sucesso!`);
-      setCreateModalOpen(false);
-    } catch (err) {
-      console.error('Erro ao criar URL:', err);
-      alert('Erro ao criar URL');
-    } finally {
-      setIsCreating(false);
-    }
-  };
+  function closeConfirmDelete(): void {
+    setConfirmDeleteOpen(false);
+    deleteUrl.reset();
+  }
 
   return (
     <div>
-      <PageHeader title="URLs e Endpoints" description="Gerencie URLs, endpoints e webhooks" />
+      <PageHeader
+        title="URLs e Endpoints"
+        description="Gerencie URLs, endpoints e webhooks dos seus recursos"
+      />
+
+      <UrlFormDialog isOpen={isFormOpen} onClose={closeForm} url={editing} />
 
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
         title="Eliminar URL"
-        message={`Tem certeza que deseja eliminar a URL "${selectedUrl?.label}"? Esta ação não pode ser desfeita.`}
+        message={`Tem certeza que deseja eliminar a URL "${selected?.label}"? Esta acao nao pode ser desfeita.`}
         confirmLabel="Eliminar"
         onConfirm={handleConfirmDelete}
-        onCancel={() => setConfirmDeleteOpen(false)}
+        onCancel={closeConfirmDelete}
+        isPending={deleteUrl.isPending}
+        error={deleteUrl.isError ? (deleteUrl.error?.message ?? 'Erro ao eliminar') : null}
       />
 
+      {/* Toolbar */}
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
-        <Button
-          size="sm"
-          icon={<PlusIcon />}
-          onClick={() => setCreateModalOpen(true)}
-          title="Incluir uma nova URL"
-        >
+        <Button size="sm" icon={<PlusIcon />} onClick={openCreate}>
           Incluir URL
         </Button>
         <div className="mx-1 h-6 w-px bg-slate-800" />
@@ -93,101 +100,136 @@ export function UrlsPage() {
           size="sm"
           variant="secondary"
           icon={<PencilIcon />}
-          disabled={!selectedUrl}
-          onClick={handleEdit}
-          title={selectedUrl ? `Editar ${selectedUrl.label}` : 'Selecione uma URL para editar'}
+          disabled={!selected}
+          onClick={() => selected && openEdit(selected)}
         >
           Editar
         </Button>
         <Button
           size="sm"
-          variant="secondary"
-          icon={<CopyIcon />}
-          disabled={!selectedUrl}
-          onClick={handleDuplicate}
-          title={selectedUrl ? `Duplicar ${selectedUrl.label}` : 'Selecione uma URL para duplicar'}
-        >
-          Duplicar
-        </Button>
-        <Button
-          size="sm"
           variant="danger"
           icon={<TrashIcon />}
-          disabled={!selectedUrl}
-          onClick={handleDelete}
-          title={selectedUrl ? `Eliminar ${selectedUrl.label}` : 'Selecione uma URL para eliminar'}
+          disabled={!selected || deleteUrl.isPending}
+          onClick={() => setConfirmDeleteOpen(true)}
         >
           Eliminar
         </Button>
         <span className="ml-auto text-xs text-slate-500">
-          {selectedUrl ? `Selecionado: ${selectedUrl.label}` : 'Selecione uma URL na lista para editar ou eliminar.'}
+          {selected
+            ? `Selecionado: ${selected.label}`
+            : 'Selecione uma URL para editar ou eliminar.'}
         </span>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={items.length === 0}
+          onClick={() =>
+            exportToCsv(
+              'urls.csv',
+              items.map((url) => ({
+                Label: url.label,
+                URL: url.url,
+                Tipo: url.urlType,
+                RecursoTipo: url.ownerResourceType,
+                RecursoId: url.ownerResourceId,
+                Healthcheck: url.healthcheckEnabled ? 'Sim' : 'Nao',
+                UltimoCheck: url.lastCheckStatus ?? '',
+                Status: url.status,
+              })),
+            )
+          }
+        >
+          Exportar CSV
+        </Button>
       </div>
 
-      {isLoading && <Spinner />}
-      {isError && <ErrorMessage message={(error as Error)?.message || 'Erro ao carregar URLs'} />}
-      {data && data.items.length === 0 && <EmptyState title="Nenhuma URL encontrada" description="Cadastre a primeira URL." />}
+      {/* Content */}
+      {isLoading && (
+        <div className="flex justify-center py-12">
+          <Spinner />
+        </div>
+      )}
 
-      {data && data.items.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-slate-800">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900 text-slate-400">
-              <tr>
-                <th className="w-10 px-4 py-2" />
-                <th className="px-4 py-2 font-medium">Label</th>
-                <th className="px-4 py-2 font-medium">URL</th>
-                <th className="px-4 py-2 font-medium">Tipo</th>
-                <th className="px-4 py-2 font-medium">Status</th>
+      {isError && <ErrorMessage message={error?.message ?? 'Erro ao carregar URLs'} />}
+
+      {!isLoading && !isError && items.length === 0 && (
+        <EmptyState
+          title="Nenhuma URL cadastrada"
+          description="Cadastre a primeira URL para comecar a monitorar seus endpoints."
+        />
+      )}
+
+      {!isLoading && !isError && items.length > 0 && (
+        <div className="overflow-x-auto rounded-lg border border-slate-800">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-800 bg-slate-900/60">
+                <th className="px-4 py-3 text-left font-medium text-slate-400">Label</th>
+                <th className="px-4 py-3 text-left font-medium text-slate-400">URL</th>
+                <th className="px-4 py-3 text-left font-medium text-slate-400">Tipo</th>
+                <th className="px-4 py-3 text-left font-medium text-slate-400">Recurso</th>
+                <th className="px-4 py-3 text-left font-medium text-slate-400">Healthcheck</th>
+                <th className="px-4 py-3 text-left font-medium text-slate-400">Status</th>
               </tr>
             </thead>
             <tbody>
-              {data.items.map((url) => (
-                <tr
-                  key={url.id}
-                  onClick={() => setSelectedUrlId(url.id)}
-                  className={`cursor-pointer border-t border-slate-800 ${
-                    url.id === selectedUrlId ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
-                  }`}
-                >
-                  <td className="px-4 py-2">
-                    <input
-                      type="radio"
-                      name="selected-url"
-                      checked={url.id === selectedUrlId}
-                      onChange={() => setSelectedUrlId(url.id)}
-                      aria-label={`Selecionar ${url.label}`}
-                      className="h-4 w-4 accent-sky-500"
-                    />
-                  </td>
-                  <td className="px-4 py-2">
-                    <Link
-                      to={`/urls/${url.id}`}
-                      onClick={(event) => event.stopPropagation()}
-                      className="text-slate-100 hover:underline"
-                    >
-                      {url.label}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2 text-slate-400 truncate max-w-xs">{url.url}</td>
-                  <td className="px-4 py-2">
-                    <Badge tone="default">{url.urlType}</Badge>
-                  </td>
-                  <td className="px-4 py-2">
-                    <Badge tone={url.status === 'active' ? 'success' : 'warning'}>{url.status}</Badge>
-                  </td>
-                </tr>
-              ))}
+              {items.map((url) => {
+                const isSelected = url.id === selectedId;
+                return (
+                  <tr
+                    key={url.id}
+                    onClick={() => setSelectedId(isSelected ? null : url.id)}
+                    className={`cursor-pointer border-b border-slate-800/50 transition-colors last:border-0 ${
+                      isSelected ? 'bg-slate-800' : 'hover:bg-slate-900/60'
+                    }`}
+                  >
+                    <td className="px-4 py-3 font-medium text-slate-100">
+                      <Link
+                        to={`/urls/${url.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="hover:underline"
+                      >
+                        {url.label}
+                      </Link>
+                    </td>
+                    <td className="max-w-xs truncate px-4 py-3 text-slate-400">
+                      <a
+                        href={url.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-mono text-xs hover:text-sky-400"
+                      >
+                        {url.url}
+                      </a>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge tone="default">{url.urlType}</Badge>
+                    </td>
+                    <td className="px-4 py-3 text-slate-400">
+                      <span className="capitalize">{url.ownerResourceType}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {url.healthcheckEnabled && url.lastCheckStatus ? (
+                        <Badge tone={HEALTHCHECK_TONE[url.lastCheckStatus] ?? 'default'}>
+                          {url.lastCheckStatus}
+                        </Badge>
+                      ) : url.healthcheckEnabled ? (
+                        <span className="text-xs text-slate-500">pendente</span>
+                      ) : (
+                        <span className="text-slate-600">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge tone={STATUS_TONE[url.status] ?? 'default'}>{url.status}</Badge>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
-
-      <CreateUrlModal
-        isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onSubmit={handleCreateUrl}
-        isLoading={isCreating}
-      />
     </div>
   );
 }

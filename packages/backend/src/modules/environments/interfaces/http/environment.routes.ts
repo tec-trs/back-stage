@@ -17,6 +17,7 @@ const DELETE_ROLES = ['admin'];
 
 export function createEnvironmentRouter(controller: EnvironmentController): Router {
   const router = Router();
+  router.use(authenticateMiddleware);
 
   /**
    * @openapi
@@ -38,7 +39,6 @@ export function createEnvironmentRouter(controller: EnvironmentController): Rout
 
   router.post(
     '/',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ body: createEnvironmentBodySchema }),
     asyncHandler(controller.create),
@@ -67,7 +67,6 @@ export function createEnvironmentRouter(controller: EnvironmentController): Rout
 
   router.put(
     '/:id',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ params: environmentIdParamsSchema, body: updateEnvironmentBodySchema }),
     asyncHandler(controller.update),
@@ -75,7 +74,6 @@ export function createEnvironmentRouter(controller: EnvironmentController): Rout
 
   router.delete(
     '/:id',
-    authenticateMiddleware,
     authorizeMiddleware(...DELETE_ROLES),
     validateMiddleware({ params: environmentIdParamsSchema }),
     asyncHandler(controller.remove),

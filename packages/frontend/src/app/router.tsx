@@ -69,6 +69,12 @@ const UrlDetailPage = lazy(() =>
 const SearchResultsPage = lazy(() =>
   import('../pages/SearchResultsPage').then((m) => ({ default: m.SearchResultsPage })),
 );
+const InventoryPage = lazy(() =>
+  import('../pages/InventoryPage').then((m) => ({ default: m.InventoryPage })),
+);
+const ImpactPage = lazy(() =>
+  import('../pages/ImpactPage').then((m) => ({ default: m.ImpactPage })),
+);
 
 function withSuspense(element: ReactNode) {
   return <Suspense fallback={<Spinner />}>{element}</Suspense>;
@@ -106,6 +112,8 @@ export const router = createBrowserRouter([
           { path: '/teams', element: withSuspense(<TeamsPage />) },
           { path: '/server-types', element: withSuspense(<ServerTypesPage />) },
           { path: '/application-types', element: withSuspense(<ApplicationTypesPage />) },
+          { path: '/inventory', element: withSuspense(<InventoryPage />) },
+          { path: '/impact/:resourceType/:resourceId', element: withSuspense(<ImpactPage />) },
           { path: '/settings', element: withSuspense(<SettingsPage />) },
         ],
       },

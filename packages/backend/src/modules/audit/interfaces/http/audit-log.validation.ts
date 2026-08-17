@@ -5,6 +5,7 @@ export const listAuditLogsQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(50),
   action: z.string().optional(),
   resourceType: z.string().optional(),
+  resourceId: z.string().uuid().optional(),
   actorUserId: z.string().uuid().optional(),
 });
 

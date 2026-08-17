@@ -20,6 +20,8 @@ export const getSubgraphParamsSchema = z.object({
 
 export const getSubgraphQuerySchema = z.object({
   depth: z.coerce.number().int().min(1).max(10).default(2),
+  direction: z.enum(['upstream', 'downstream', 'both']).default('both'),
+  relationType: relationTypeEnum.optional(),
 });
 
 export const simulateImpactBodySchema = z.object({

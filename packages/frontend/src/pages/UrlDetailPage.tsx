@@ -1,9 +1,15 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { useUrl } from '../features/urls/use-urls.js';
-import { Badge } from '../shared/components/Badge.js';
-import { ErrorMessage } from '../shared/components/ErrorMessage.js';
-import { ChevronLeftIcon } from '../shared/components/icons.js';
-import { Spinner } from '../shared/components/Spinner.js';
+import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+
+import { useUrl } from '../features/urls/use-urls';
+import { AuditTimeline } from '../features/audit/AuditTimeline';
+import { AddRelationshipDialog } from '../features/resource-graph/AddRelationshipDialog';
+import { ImpactAnalysisPanel } from '../features/resource-graph/ImpactAnalysisPanel';
+import { Badge } from '../shared/components/Badge';
+import { Button } from '../shared/components/Button';
+import { ErrorMessage } from '../shared/components/ErrorMessage';
+import { ChevronLeftIcon } from '../shared/components/icons';
+import { Spinner } from '../shared/components/Spinner';
 
 function Field({ label, value }: { label: string; value: string | number | null | undefined }) {
   return (
@@ -14,38 +20,68 @@ function Field({ label, value }: { label: string; value: string | number | null 
   );
 }
 
+const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
+  active: 'success',
+  inactive: 'warning',
+  deprecated: 'warning',
+  error: 'danger',
+};
+
+const HEALTHCHECK_TONE: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
+  ok: 'success',
+  error: 'danger',
+  timeout: 'warning',
+};
+
 export function UrlDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: url, isLoading, isError, error } = useUrl(id || '');
+  const { data: url, isLoading, isError, error } = useUrl(id ?? '');
+  const [isRelationshipDialogOpen, setIsRelationshipDialogOpen] = useState(false);
 
   if (isLoading) return <Spinner />;
-  if (isError) return <ErrorMessage message={(error as Error)?.message || 'Erro ao carregar URL'} />;
-  if (!url) return <ErrorMessage message="URL não encontrada" />;
+  if (isError)
+    return <ErrorMessage message={(error as Error)?.message ?? 'Erro ao carregar URL'} />;
+  if (!url) return <ErrorMessage message="URL nao encontrada" />;
 
   return (
     <div>
       <button
         onClick={() => navigate('/urls')}
-        className="text-sm text-slate-400 hover:underline flex items-center gap-2 mb-4"
+        className="mb-4 flex items-center gap-2 text-sm text-slate-400 hover:underline"
       >
-        <ChevronLeftIcon className="w-4 h-4" />
-        Voltar às URLs
+        <ChevronLeftIcon className="h-4 w-4" />
+        Voltar as URLs
       </button>
 
       <div className="mt-4 flex flex-col gap-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold text-slate-100">
-            {url.label}
-          </h1>
-          <Badge tone={url.status === 'active' ? 'success' : 'warning'}>
-            {url.status}
-          </Badge>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-semibold text-slate-100">{url.label}</h1>
+              <Badge tone={STATUS_TONE[url.status] ?? 'default'}>{url.status}</Badge>
+            </div>
+            <p className="mt-1 text-slate-400">{url.description ?? 'Sem descricao.'}</p>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsRelationshipDialogOpen(true)}
+          >
+            + Relacionamento
+          </Button>
         </div>
-        <p className="text-slate-400">{url.description ?? 'Sem descrição.'}</p>
+
+        <AddRelationshipDialog
+          isOpen={isRelationshipDialogOpen}
+          onClose={() => setIsRelationshipDialogOpen(false)}
+          defaultSourceType="url"
+          defaultSourceId={url.id}
+          defaultSourceLabel={url.label}
+        />
 
         <section>
-          <h2 className="mb-2 text-lg font-medium text-slate-200">URL e Configuração</h2>
+          <h2 className="mb-2 text-lg font-medium text-slate-200">URL e Configuracao</h2>
           <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
             <div className="col-span-2">
               <dt className="text-slate-500">URL</dt>
@@ -54,18 +90,18 @@ export function UrlDetailPage() {
                   href={url.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline break-all mt-1 block"
+                  className="mt-1 block break-all text-blue-400 hover:underline"
                 >
                   {url.url}
                 </a>
               </dd>
             </div>
             <Field label="Tipo" value={url.urlType} />
-            <Field label="Método HTTP" value={url.method} />
+            <Field label="Metodo HTTP" value={url.method} />
             <div>
               <dt className="text-slate-500">Status</dt>
               <dd>
-                <Badge tone={url.status === 'active' ? 'success' : 'warning'} className="inline-block mt-1">
+                <Badge tone={STATUS_TONE[url.status] ?? 'default'} className="mt-1 inline-block">
                   {url.status}
                 </Badge>
               </dd>
@@ -74,36 +110,58 @@ export function UrlDetailPage() {
         </section>
 
         <section>
-          <h2 className="mb-2 text-lg font-medium text-slate-200">Segurança</h2>
+          <h2 className="mb-2 text-lg font-medium text-slate-200">Seguranca</h2>
           <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
-            <Field label="Autenticação Requerida" value={url.authRequired ? 'Sim' : 'Não'} />
-            <Field label="Método de Auth" value={url.authMethod} />
+            <Field label="Autenticacao Requerida" value={url.authRequired ? 'Sim' : 'Nao'} />
+            <Field label="Metodo de Auth" value={url.authMethod} />
           </dl>
         </section>
 
         <section>
           <h2 className="mb-2 text-lg font-medium text-slate-200">Monitoramento</h2>
           <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
-            <Field label="Healthcheck Habilitado" value={url.healthcheckEnabled ? 'Sim' : 'Não'} />
-            <Field label="Status do Último Check" value={url.lastCheckStatus} />
             <Field
-              label="Última Verificação"
+              label="Healthcheck Habilitado"
+              value={url.healthcheckEnabled ? 'Sim' : 'Nao'}
+            />
+            <div>
+              <dt className="text-slate-500">Status do check</dt>
+              <dd className="mt-0.5">
+                {url.lastCheckStatus ? (
+                  <Badge tone={HEALTHCHECK_TONE[url.lastCheckStatus] ?? 'default'}>
+                    {url.lastCheckStatus}
+                  </Badge>
+                ) : (
+                  <span className="text-slate-600">—</span>
+                )}
+              </dd>
+            </div>
+            <Field
+              label="Ultima verificacao"
               value={
                 url.lastCheckedAt
                   ? new Date(url.lastCheckedAt).toLocaleDateString('pt-BR')
-                  : '-'
+                  : null
               }
             />
           </dl>
         </section>
 
         <section>
-          <h2 className="mb-2 text-lg font-medium text-slate-200">Proprietário</h2>
+          <h2 className="mb-2 text-lg font-medium text-slate-200">Proprietario</h2>
           <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
-            <Field label="Tipo" value={url.ownerResourceType} />
-            <Field label="ID" value={url.ownerResourceId} />
+            <Field label="Tipo de recurso" value={url.ownerResourceType} />
+            <Field label="ID do recurso" value={url.ownerResourceId} />
           </dl>
         </section>
+
+        <ImpactAnalysisPanel
+          resourceType="url"
+          resourceId={url.id}
+          resourceLabel={url.label}
+        />
+
+        <AuditTimeline resourceId={url.id} resourceType="url" />
       </div>
     </div>
   );

@@ -19,6 +19,7 @@ const DELETE_ROLES = ['admin'];
 
 export function createDatabaseRouter(controller: DatabaseController): Router {
   const router = Router();
+  router.use(authenticateMiddleware);
 
   /**
    * @openapi
@@ -44,7 +45,6 @@ export function createDatabaseRouter(controller: DatabaseController): Router {
 
   router.post(
     '/',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ body: createDatabaseBodySchema }),
     asyncHandler(controller.create),
@@ -85,7 +85,6 @@ export function createDatabaseRouter(controller: DatabaseController): Router {
 
   router.put(
     '/:id',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ params: databaseIdParamsSchema, body: updateDatabaseBodySchema }),
     asyncHandler(controller.update),
@@ -103,7 +102,6 @@ export function createDatabaseRouter(controller: DatabaseController): Router {
    */
   router.put(
     '/:id/status',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ params: databaseIdParamsSchema, body: setDatabaseStatusBodySchema }),
     asyncHandler(controller.setStatus),
@@ -111,7 +109,6 @@ export function createDatabaseRouter(controller: DatabaseController): Router {
 
   router.delete(
     '/:id',
-    authenticateMiddleware,
     authorizeMiddleware(...DELETE_ROLES),
     validateMiddleware({ params: databaseIdParamsSchema }),
     asyncHandler(controller.remove),

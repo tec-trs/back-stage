@@ -19,6 +19,7 @@ const DELETE_ROLES = ['admin'];
 
 export function createApplicationRouter(controller: ApplicationController): Router {
   const router = Router();
+  router.use(authenticateMiddleware);
 
   /**
    * @openapi
@@ -44,7 +45,6 @@ export function createApplicationRouter(controller: ApplicationController): Rout
 
   router.post(
     '/',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ body: createApplicationBodySchema }),
     asyncHandler(controller.create),
@@ -85,7 +85,6 @@ export function createApplicationRouter(controller: ApplicationController): Rout
 
   router.put(
     '/:id',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ params: applicationIdParamsSchema, body: updateApplicationBodySchema }),
     asyncHandler(controller.update),
@@ -103,7 +102,6 @@ export function createApplicationRouter(controller: ApplicationController): Rout
    */
   router.put(
     '/:id/status',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ params: applicationIdParamsSchema, body: setApplicationStatusBodySchema }),
     asyncHandler(controller.setStatus),
@@ -111,7 +109,6 @@ export function createApplicationRouter(controller: ApplicationController): Rout
 
   router.delete(
     '/:id',
-    authenticateMiddleware,
     authorizeMiddleware(...DELETE_ROLES),
     validateMiddleware({ params: applicationIdParamsSchema }),
     asyncHandler(controller.remove),

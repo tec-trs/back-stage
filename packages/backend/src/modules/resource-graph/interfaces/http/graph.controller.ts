@@ -46,7 +46,11 @@ export class GraphController {
     const params = request.params as unknown as GetSubgraphParams;
     const query = request.query as unknown as GetSubgraphQuery;
 
-    const result = await this.graphService.getSubgraph(params.type, params.id, query.depth);
+    const result = await this.graphService.getSubgraph(params.type, params.id, {
+      depth: query.depth,
+      direction: query.direction,
+      relationType: query.relationType,
+    });
 
     response.status(200).json({
       nodes: result.nodes,

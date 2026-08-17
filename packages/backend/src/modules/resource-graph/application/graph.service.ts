@@ -51,9 +51,9 @@ export class GraphService {
   public async getSubgraph(
     resourceType: ResourceType,
     resourceId: string,
-    depth: number = 2,
+    options: { depth?: number; direction?: 'upstream' | 'downstream' | 'both'; relationType?: string } = {},
   ): Promise<GetSubgraphResult> {
-    return this.repository.getSubgraph(resourceType, resourceId, depth);
+    return this.repository.getSubgraph(resourceType, resourceId, options);
   }
 
   public async simulateImpact(resourceType: ResourceType, resourceId: string): Promise<ImpactResult> {

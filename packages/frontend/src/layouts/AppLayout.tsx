@@ -54,6 +54,7 @@ type NavItem = NavLinkItem | NavGroupItem;
 
 const NAV_ITEMS: NavItem[] = [
   { kind: 'link', to: '/', label: 'Painel', icon: <HomeIcon /> },
+  { kind: 'link', to: '/inventory', label: 'Inventario', icon: <ClipboardIcon /> },
   {
     kind: 'group',
     id: 'governance',

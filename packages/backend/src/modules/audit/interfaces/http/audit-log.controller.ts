@@ -17,6 +17,7 @@ export class AuditLogController {
       {
         action: query.action,
         resourceType: query.resourceType,
+        resourceId: query.resourceId,
         actorUserId: query.actorUserId,
       },
       { page: query.page, pageSize: query.pageSize },

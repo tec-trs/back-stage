@@ -1,6 +1,11 @@
+import { Link } from 'react-router-dom';
+
+import { useApplications } from '../features/applications/use-applications';
+import { useDatabases } from '../features/databases/use-databases';
 import { useGovernanceDashboard } from '../features/governance/use-governance-dashboard';
 import { useHealthStatus } from '../features/health/use-health-status';
-import { useServices } from '../features/services/use-services';
+import { useServers } from '../features/servers/use-servers';
+import { useUrls } from '../features/urls/use-urls';
 import { Badge } from '../shared/components/Badge';
 import { PageHeader } from '../shared/components/PageHeader';
 
@@ -8,9 +13,10 @@ interface StatCardProps {
   label: string;
   value: string | number;
   tone?: 'danger' | 'warning' | 'success';
+  href?: string;
 }
 
-function StatCard({ label, value, tone }: StatCardProps) {
+function StatCard({ label, value, tone, href }: StatCardProps) {
   const toneClass =
     tone === 'danger'
       ? 'text-red-400'
@@ -20,24 +26,39 @@ function StatCard({ label, value, tone }: StatCardProps) {
           ? 'text-emerald-400'
           : 'text-slate-100';
 
-  return (
-    <div className="rounded-lg border border-slate-800 p-4">
+  const content = (
+    <div className="rounded-lg border border-slate-800 p-4 transition-colors hover:border-slate-700">
       <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
       <p className={`mt-1 text-2xl font-semibold ${toneClass}`}>{value}</p>
     </div>
   );
+
+  if (href) {
+    return <Link to={href}>{content}</Link>;
+  }
+  return content;
 }
 
 export function DashboardPage() {
   const health = useHealthStatus();
   const governance = useGovernanceDashboard();
-  const services = useServices();
+  const servers = useServers();
+  const applications = useApplications();
+  const databases = useDatabases({ pageSize: 1 });
+  const urls = useUrls({ pageSize: 1 });
+
+  const activeServers =
+    servers.data?.items.filter((s) => s.status === 'active').length ?? null;
+  const activeApplications =
+    applications.data?.items.filter((a) => a.status === 'active').length ?? null;
+  const criticalApplications =
+    applications.data?.items.filter((a) => a.criticality === 'critical').length ?? null;
 
   return (
     <div>
       <PageHeader
-        title="Painel"
-        description="Visao geral da plataforma"
+        title="Painel CMDB"
+        description="Visao geral da infraestrutura e governanca"
         actions={
           health.data && (
             <Badge tone={health.data.status === 'ok' ? 'success' : 'warning'}>
@@ -47,23 +68,99 @@ export function DashboardPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        <StatCard label="Servicos" value={services.data?.pagination.total ?? '-'} />
-        <StatCard label="Politicas ativas" value={governance.data?.activePolicies ?? '-'} />
-        <StatCard
-          label="Violacoes"
-          value={governance.data?.failCount ?? '-'}
-          tone={governance.data && governance.data.failCount > 0 ? 'danger' : 'success'}
-        />
-        <StatCard
-          label="Exemptions pendentes"
-          value={governance.data?.openExemptions ?? '-'}
-          tone="warning"
-        />
-      </div>
+      {/* CMDB Inventory */}
+      <section className="mb-6">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">
+          Inventario
+        </h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <StatCard
+            label="Servidores"
+            value={servers.data?.pagination.total ?? '…'}
+            href="/servers"
+          />
+          <StatCard
+            label="Aplicacoes"
+            value={applications.data?.pagination.total ?? '…'}
+            href="/applications"
+          />
+          <StatCard
+            label="Bancos de dados"
+            value={databases.data?.pagination.total ?? '…'}
+            href="/databases"
+          />
+          <StatCard
+            label="URLs / Endpoints"
+            value={urls.data?.pagination.total ?? '…'}
+            href="/urls"
+          />
+        </div>
+      </section>
+
+      {/* Health Highlights */}
+      <section className="mb-6">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">
+          Saude
+        </h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <StatCard
+            label="Servidores ativos"
+            value={activeServers ?? '…'}
+            tone={activeServers !== null && activeServers > 0 ? 'success' : undefined}
+          />
+          <StatCard
+            label="Aplicacoes ativas"
+            value={activeApplications ?? '…'}
+            tone={activeApplications !== null && activeApplications > 0 ? 'success' : undefined}
+          />
+          <StatCard
+            label="Apps criticas"
+            value={criticalApplications ?? '…'}
+            tone={criticalApplications !== null && criticalApplications > 0 ? 'danger' : 'success'}
+          />
+          <StatCard
+            label="Violacoes"
+            value={governance.data?.failCount ?? '…'}
+            tone={
+              governance.data && governance.data.failCount > 0
+                ? 'danger'
+                : governance.data
+                  ? 'success'
+                  : undefined
+            }
+            href="/governance"
+          />
+        </div>
+      </section>
+
+      {/* Quick links */}
+      <section className="mb-6">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">
+          Acesso rapido
+        </h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {[
+            { label: 'Inventario CMDB', href: '/inventory', desc: 'Todos os recursos em uma tela' },
+            { label: 'Ecossistema', href: '/ecosystem', desc: 'Grafo completo de dependencias' },
+            { label: 'Governanca', href: '/governance', desc: 'Politicas e violacoes' },
+            { label: 'Auditoria', href: '/audit', desc: 'Historico de mudancas' },
+            { label: 'Ambientes', href: '/environments', desc: 'Gerenciar ambientes' },
+            { label: 'Times', href: '/teams', desc: 'Times responsaveis' },
+          ].map((link) => (
+            <Link
+              key={link.href}
+              to={link.href}
+              className="rounded-lg border border-slate-800 p-4 transition-colors hover:border-slate-600"
+            >
+              <p className="font-medium text-slate-200">{link.label}</p>
+              <p className="mt-0.5 text-xs text-slate-500">{link.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {health.data && (
-        <div className="mt-6 rounded-lg border border-slate-800 p-4 text-sm text-slate-400">
+        <div className="rounded-lg border border-slate-800 p-4 text-sm text-slate-400">
           <p>Uptime do backend: {health.data.uptimeSeconds.toFixed(0)}s</p>
           <p>Versao: {health.data.version}</p>
         </div>

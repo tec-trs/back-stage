@@ -1,11 +1,13 @@
 import { Router } from 'express';
 
 import { asyncHandler } from '../../../../shared/http/async-handler.js';
+import { authenticateMiddleware } from '../../../../shared/http/authenticate.middleware.js';
 
 import type { EcosystemGraphController } from './ecosystem-graph.controller.js';
 
 export function createEcosystemGraphRouter(controller: EcosystemGraphController): Router {
   const router = Router();
+  router.use(authenticateMiddleware);
 
   /**
    * @openapi

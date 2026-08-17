@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../shared/api/http-client.js';
 
 export interface GraphNode {
@@ -75,7 +75,7 @@ export function useFullGraph(filters: GraphFilters = {}) {
       if (filters.page) params.append('page', String(filters.page));
       if (filters.pageSize) params.append('pageSize', String(filters.pageSize));
 
-      return apiRequest<FullGraphResponse>(`/resource-graph?${params}`, { method: 'GET' });
+      return apiRequest<FullGraphResponse>(`/api/resource-graph?${params}`, { method: 'GET' });
     },
   });
 }
@@ -89,7 +89,7 @@ export function useSubgraph(
     queryKey: ['resource-graph-subgraph', resourceType, resourceId, depth],
     queryFn: () =>
       apiRequest<SubgraphResponse>(
-        `/resource-graph/${resourceType}/${resourceId}/subgraph?depth=${depth}`,
+        `/api/resource-graph/${resourceType}/${resourceId}/subgraph?depth=${depth}`,
         { method: 'GET' },
       ),
     enabled: !!resourceType && !!resourceId,
@@ -103,38 +103,50 @@ export function useSimulateImpact() {
       resourceId: string;
       maxDepth?: number;
     }) => {
-      return apiRequest<ImpactResult>('/resource-graph/simulate-impact', {
+      return apiRequest<ImpactResult>('/api/resource-graph/simulate-impact', {
         method: 'POST',
-        body: JSON.stringify(params),
+        body: params,
       });
     },
   });
 }
 
+export interface CreateRelationshipInput {
+  sourceType: string;
+  sourceId: string;
+  targetType: string;
+  targetId: string;
+  relationType: string;
+  metadata?: Record<string, unknown>;
+}
+
 export function useCreateRelationship() {
+  const queryClient = useQueryClient();
+
   return useMutation({
-    mutationFn: async (params: {
-      sourceType: string;
-      sourceId: string;
-      targetType: string;
-      targetId: string;
-      relationType: string;
-      metadata?: Record<string, unknown>;
-    }) => {
-      return apiRequest<GraphEdge>('/resource-graph/relationships', {
+    mutationFn: (params: CreateRelationshipInput) =>
+      apiRequest<GraphEdge>('/api/resource-graph/relationships', {
         method: 'POST',
-        body: JSON.stringify(params),
-      });
+        body: params,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['resource-graph'] });
+      void queryClient.invalidateQueries({ queryKey: ['resource-graph-subgraph'] });
     },
   });
 }
 
 export function useDeleteRelationship() {
+  const queryClient = useQueryClient();
+
   return useMutation({
-    mutationFn: async (relationshipId: string) => {
-      return apiRequest<void>(`/resource-graph/relationships/${relationshipId}`, {
+    mutationFn: (relationshipId: string) =>
+      apiRequest<void>(`/api/resource-graph/relationships/${relationshipId}`, {
         method: 'DELETE',
-      });
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['resource-graph'] });
+      void queryClient.invalidateQueries({ queryKey: ['resource-graph-subgraph'] });
     },
   });
 }

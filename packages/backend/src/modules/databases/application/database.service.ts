@@ -1,6 +1,7 @@
 import { ConflictError, NotFoundError } from '@back-stage/shared';
 
 import { auditLogger } from '../../../shared/audit/audit-logger.js';
+import { ResourceRelationshipRepository } from '../../resource-graph/infrastructure/resource-relationship.repository.js';
 import type { Database } from '../domain/database.entity.js';
 import type {
   CreateDatabaseInput,
@@ -22,7 +23,10 @@ export interface AuditContext {
 }
 
 export class DatabaseService {
-  public constructor(private readonly databaseRepository: IDatabaseRepository) {}
+  public constructor(
+    private readonly databaseRepository: IDatabaseRepository,
+    private readonly graphRepository: ResourceRelationshipRepository,
+  ) {}
 
   public async list(filters: DatabaseFilters, pagination: Pagination): Promise<ListDatabasesResult> {
     const { items, total } = await this.databaseRepository.findMany(filters, pagination);
@@ -44,6 +48,10 @@ export class DatabaseService {
     }
 
     const database = await this.databaseRepository.create(input);
+
+    if (input.hostedOnServerId) {
+      await this.graphRepository.syncHostRelationship(input.hostedOnServerId, 'database', database.id);
+    }
 
     await auditLogger.record({
       actorUserId: audit.actorUserId,
@@ -71,6 +79,10 @@ export class DatabaseService {
     const updated = await this.databaseRepository.update(id, input);
     if (!updated) {
       throw new NotFoundError('Banco de dados', id);
+    }
+
+    if ('hostedOnServerId' in input) {
+      await this.graphRepository.syncHostRelationship(input.hostedOnServerId ?? null, 'database', id);
     }
 
     await auditLogger.record({

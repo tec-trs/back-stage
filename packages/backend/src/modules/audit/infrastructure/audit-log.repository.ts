@@ -17,6 +17,7 @@ export interface AuditLogRow {
 export interface AuditLogFilters {
   action?: string;
   resourceType?: string;
+  resourceId?: string;
   actorUserId?: string;
 }
 
@@ -43,6 +44,7 @@ export class AuditLogRepository implements IAuditLogRepository {
     const query = this.db(TABLE_NAME);
     if (filters.action) query.where('action', filters.action);
     if (filters.resourceType) query.where('resource_type', filters.resourceType);
+    if (filters.resourceId) query.where('resource_id', filters.resourceId);
     if (filters.actorUserId) query.where('actor_user_id', filters.actorUserId);
 
     const countQuery = query.clone().clearSelect().count<{ count: string }[]>('* as count');

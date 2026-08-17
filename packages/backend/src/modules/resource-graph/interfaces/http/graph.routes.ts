@@ -20,6 +20,7 @@ const DELETE_ROLES = ['admin'];
 
 export function createGraphRouter(controller: GraphController): Router {
   const router = Router();
+  router.use(authenticateMiddleware);
 
   /**
    * @openapi
@@ -87,7 +88,6 @@ export function createGraphRouter(controller: GraphController): Router {
    */
   router.post(
     '/relationships',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ body: createRelationshipBodySchema }),
     asyncHandler(controller.createRelationship),
@@ -105,7 +105,6 @@ export function createGraphRouter(controller: GraphController): Router {
    */
   router.delete(
     '/relationships/:relationshipId',
-    authenticateMiddleware,
     authorizeMiddleware(...DELETE_ROLES),
     validateMiddleware({ params: deleteRelationshipParamsSchema }),
     asyncHandler(controller.deleteRelationship),
