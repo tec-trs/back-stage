@@ -226,7 +226,7 @@ export class ResourceRelationshipRepository {
         ? `rr.target_type = t.source_type AND rr.target_id = t.source_id`
         : `(rr.source_type = t.target_type AND rr.source_id = t.target_id) OR (rr.target_type = t.source_type AND rr.target_id = t.source_id)`;
 
-    const rows = await this.db.raw<TraversalRow[]>(`
+    const { rows } = await this.db.raw<{ rows: TraversalRow[] }>(`
       WITH RECURSIVE traversal(source_type, source_id, target_type, target_id, relation_type, depth, path) AS (
         SELECT source_type, source_id, target_type, target_id, relation_type, 1,
                ARRAY[source_type || ':' || source_id]
@@ -285,7 +285,7 @@ export class ResourceRelationshipRepository {
   ): Promise<ImpactResult> {
     const effectiveMaxDepth = Math.min(maxDepth, MAX_DEPTH_DEFAULT);
 
-    const rows = await this.db.raw<ImpactRow[]>(`
+    const { rows } = await this.db.raw<{ rows: ImpactRow[] }>(`
       WITH RECURSIVE impact(resource_type, resource_id, depth, path) AS (
         SELECT source_type, source_id, 1,
                ARRAY[target_type || ':' || target_id]

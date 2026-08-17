@@ -6,7 +6,7 @@ const criticality = z.enum(['critical', 'high', 'medium', 'low']);
 
 export const getFullGraphQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  pageSize: z.coerce.number().int().min(1).max(500).default(20),
   resourceTypes: z.string().transform((s) => s.split(',')).optional(),
   environment: z.string().optional(),
   criticality: criticality.optional(),
