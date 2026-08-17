@@ -151,35 +151,37 @@ export class DatabaseRepository implements IDatabaseRepository {
   }
 
   public async create(input: CreateDatabaseInput): Promise<Database> {
-    const [id] = await this.db(TABLE_NAME).insert({
-      name: input.name,
-      display_name: input.displayName,
-      description: input.description,
-      engine: input.engine,
-      version: input.version,
-      port: input.port,
-      hosted_on_server_id: input.hostedOnServerId,
-      connection_host: input.connectionHost,
-      connection_string_template: input.connectionStringTemplate,
-      is_managed_service: input.isManagedService ?? false,
-      data_classification: input.dataClassification,
-      criticality: input.criticality ?? 'medium',
-      owner_team: input.ownerTeam,
-      owner_user_id: input.ownerUserId,
-      cost_center: input.costCenter,
-      storage_gb: input.storageGb,
-      replication_mode: input.replicationMode,
-      has_backup: input.hasBackup ?? false,
-      backup_policy: input.backupPolicy,
-      last_backup_at: input.lastBackupAt,
-      status: input.status ?? 'active',
-      environment: input.environment,
-      monitoring_url: input.monitoringUrl,
-      tags: input.tags ?? [],
-      metadata: input.metadata ?? {},
-    });
+    const [row] = (await this.db(TABLE_NAME)
+      .insert({
+        name: input.name,
+        display_name: input.displayName,
+        description: input.description,
+        engine: input.engine,
+        version: input.version,
+        port: input.port,
+        hosted_on_server_id: input.hostedOnServerId,
+        connection_host: input.connectionHost,
+        connection_string_template: input.connectionStringTemplate,
+        is_managed_service: input.isManagedService ?? false,
+        data_classification: input.dataClassification,
+        criticality: input.criticality ?? 'medium',
+        owner_team: input.ownerTeam,
+        owner_user_id: input.ownerUserId,
+        cost_center: input.costCenter,
+        storage_gb: input.storageGb,
+        replication_mode: input.replicationMode,
+        has_backup: input.hasBackup ?? false,
+        backup_policy: input.backupPolicy,
+        last_backup_at: input.lastBackupAt,
+        status: input.status ?? 'active',
+        environment: input.environment,
+        monitoring_url: input.monitoringUrl,
+        tags: input.tags ?? [],
+        metadata: input.metadata ?? {},
+      })
+      .returning('id')) as { id: string }[];
 
-    const created = await this.findById(String(id));
+    const created = await this.findById(row.id);
     if (!created) {
       throw new Error('Falha ao criar banco de dados');
     }

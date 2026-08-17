@@ -122,25 +122,27 @@ export class UrlRepository implements IUrlRepository {
   }
 
   public async create(input: CreateUrlInput): Promise<Url> {
-    const [id] = await this.db(TABLE_NAME).insert({
-      label: input.label,
-      url: input.url,
-      url_type: input.urlType,
-      description: input.description,
-      owner_resource_type: input.ownerResourceType,
-      owner_resource_id: input.ownerResourceId,
-      method: input.method,
-      auth_required: input.authRequired ?? false,
-      auth_method: input.authMethod,
-      status: input.status ?? 'active',
-      healthcheck_enabled: input.healthcheckEnabled ?? false,
-      last_check_status: input.lastCheckStatus,
-      last_checked_at: input.lastCheckedAt,
-      tags: input.tags ?? [],
-      metadata: input.metadata ?? {},
-    });
+    const [row] = (await this.db(TABLE_NAME)
+      .insert({
+        label: input.label,
+        url: input.url,
+        url_type: input.urlType,
+        description: input.description,
+        owner_resource_type: input.ownerResourceType,
+        owner_resource_id: input.ownerResourceId,
+        method: input.method,
+        auth_required: input.authRequired ?? false,
+        auth_method: input.authMethod,
+        status: input.status ?? 'active',
+        healthcheck_enabled: input.healthcheckEnabled ?? false,
+        last_check_status: input.lastCheckStatus,
+        last_checked_at: input.lastCheckedAt,
+        tags: input.tags ?? [],
+        metadata: input.metadata ?? {},
+      })
+      .returning('id')) as { id: string }[];
 
-    const created = await this.findById(String(id));
+    const created = await this.findById(row.id);
     if (!created) {
       throw new Error('Falha ao criar URL');
     }
