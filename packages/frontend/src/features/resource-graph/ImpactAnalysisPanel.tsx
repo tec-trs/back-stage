@@ -12,20 +12,20 @@ import { useSimulateImpact } from './use-resource-graph';
 type ResourceType = 'server' | 'application' | 'database' | 'url';
 
 const RESOURCE_TYPE_LABELS: Record<ResourceType, string> = {
-  server: 'Servidores',
+  server:      'Servidores',
   application: 'Aplicacoes',
-  database: 'Bancos de dados',
-  url: 'URLs',
+  database:    'Bancos de dados',
+  url:         'URLs',
 };
 
 const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
-  active: 'success',
-  maintenance: 'warning',
+  active:       'success',
+  maintenance:  'warning',
   provisioning: 'default',
-  deactivated: 'danger',
-  deprecated: 'warning',
-  inactive: 'warning',
-  error: 'danger',
+  deactivated:  'danger',
+  deprecated:   'warning',
+  inactive:     'warning',
+  error:        'danger',
 };
 
 function ImpactSummary({ result }: { result: ImpactResult }) {
@@ -106,10 +106,14 @@ export function ImpactAnalysisPanel({
   resourceType,
   resourceId,
   resourceLabel,
+  onResult,
+  onReset,
 }: {
   resourceType: ResourceType;
   resourceId: string;
   resourceLabel: string;
+  onResult?: (result: ImpactResult, sourceId: string) => void;
+  onReset?: () => void;
 }) {
   const simulateImpact = useSimulateImpact();
   const [result, setResult] = useState<ImpactResult | null>(null);
@@ -122,6 +126,7 @@ export function ImpactAnalysisPanel({
         onSuccess: (data) => {
           setResult(data);
           setHasRun(true);
+          onResult?.(data, resourceId);
         },
       },
     );
@@ -131,6 +136,7 @@ export function ImpactAnalysisPanel({
     setResult(null);
     setHasRun(false);
     simulateImpact.reset();
+    onReset?.();
   }
 
   return (
@@ -139,8 +145,8 @@ export function ImpactAnalysisPanel({
         <div>
           <h3 className="text-sm font-semibold text-slate-200">Analise de Impacto</h3>
           <p className="mt-0.5 text-xs text-slate-500">
-            Simule o que acontece se <span className="text-slate-300">{resourceLabel}</span> for
-            desligado
+            Simule o que acontece se{' '}
+            <span className="text-slate-300">{resourceLabel}</span> for desligado
           </p>
         </div>
         <div className="flex gap-2">

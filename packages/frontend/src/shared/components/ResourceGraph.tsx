@@ -1,16 +1,19 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
-  Controls,
   Handle,
   MarkerType,
   MiniMap,
   Position,
   ReactFlow,
+  applyEdgeChanges,
+  applyNodeChanges,
   useUpdateNodeInternals,
   type Edge as RFEdge,
+  type EdgeChange,
   type Node as RFNode,
+  type NodeChange,
   type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -22,7 +25,7 @@ import dagre from 'dagre';
 /* ── Constants ─────────────────────────────────────────────────────────── */
 
 const NODE_W = 180;
-const NODE_H = 64;
+const NODE_H = 68;
 
 const TYPE_STYLE = {
   server:      { bg: '#0d1f33', border: '#3b82f6', text: '#93c5fd' },
@@ -31,13 +34,20 @@ const TYPE_STYLE = {
   url:         { bg: '#221100', border: '#f59e0b', text: '#fcd34d' },
 } as const;
 
+// Impact palette — infra-manager view: red = offline, orange = direct hit, amber = downstream
+const IMPACT_STYLE = {
+  source:   { bg: '#450a0a', border: '#ef4444', text: '#fca5a5' },
+  direct:   { bg: '#431407', border: '#f97316', text: '#fed7aa' },
+  indirect: { bg: '#1c1003', border: '#f59e0b', text: '#fcd34d' },
+} as const;
+
 type RType = keyof typeof TYPE_STYLE;
 
 const EDGE_LABEL: Record<string, string> = {
   hosts:       'hospeda',
   depends_on:  'depende',
   connects_to: 'conecta',
-  exposes:     'expõe',
+  exposes:     'expos',
   consumes:    'consome',
   part_of:     'parte de',
 };
@@ -51,11 +61,10 @@ function layoutGraph(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g = new (dagre as any).graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: 'LR', nodesep: 55, ranksep: 90 });
+  g.setGraph({ rankdir: 'LR', nodesep: 60, ranksep: 100 });
 
   nodeIds.forEach((id) => g.setNode(id, { width: NODE_W, height: NODE_H }));
-
-  // Foundational nodes (servers that others depend_on) go LEFT; dependents RIGHT
+  // Reverse direction so foundational nodes (servers) rank left
   edgePairs.forEach(({ source, target }) => g.setEdge(target, source));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,29 +78,104 @@ function layoutGraph(
   return posMap;
 }
 
-/* ── Custom node component ──────────────────────────────────────────────── */
+/* ── Node data ──────────────────────────────────────────────────────────── */
 
 interface NodeData extends Record<string, unknown> {
   label: string;
   resourceType: RType;
   status?: string;
-  isImpacted: boolean;
+  /** depth=0 means this node is the offline source; undefined = not in blast radius */
+  impactDepth: number | undefined;
+  simulationActive: boolean;
 }
+
+/* ── Edge builder ───────────────────────────────────────────────────────── */
+
+interface PropEdge {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  relationType: string;
+}
+
+function buildEdge(
+  e: PropEdge,
+  impactedNodeIds: Set<string>,
+  simulationSourceId?: string,
+): RFEdge {
+  const touchesSource = e.sourceId === simulationSourceId || e.targetId === simulationSourceId;
+  const touchesImpact = impactedNodeIds.has(e.sourceId) || impactedNodeIds.has(e.targetId);
+  const simulationActive = !!simulationSourceId;
+
+  let stroke: string;
+  let animated: boolean;
+  if (touchesSource) {
+    stroke = '#ef4444';
+    animated = true;
+  } else if (touchesImpact) {
+    stroke = '#f59e0b';
+    animated = true;
+  } else {
+    stroke = '#334155';
+    animated = false;
+  }
+
+  const isDimmed = simulationActive && !touchesSource && !touchesImpact;
+
+  return {
+    id:     e.id,
+    source: e.sourceId,
+    target: e.targetId,
+    label:  EDGE_LABEL[e.relationType] ?? e.relationType,
+    type:   'smoothstep',
+    animated,
+    markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 14, height: 14 },
+    style: {
+      stroke,
+      strokeWidth: touchesSource || touchesImpact ? 2 : 1.5,
+      opacity: isDimmed ? 0.08 : 1,
+      transition: 'stroke 0.4s, opacity 0.4s',
+    },
+    labelStyle:      { fill: isDimmed ? '#334155' : '#94a3b8', fontSize: 10 },
+    labelBgStyle:    { fill: '#0f172a', fillOpacity: isDimmed ? 0.3 : 0.85 },
+    labelBgPadding:  [4, 2] as [number, number],
+    labelBgBorderRadius: 3,
+  };
+}
+
+/* ── Custom node component ──────────────────────────────────────────────── */
 
 function ResourceNode({ data, selected, id }: NodeProps) {
   const d = data as NodeData;
-  const s = TYPE_STYLE[d.resourceType] ?? TYPE_STYLE.server;
   const updateNodeInternals = useUpdateNodeInternals();
-  // Force handle-bounds registration on mount (required in @xyflow/react v12)
+  // Required in @xyflow/react v12 to populate handleBounds so edges render
   useEffect(() => { updateNodeInternals(id); }, [id, updateNodeInternals]);
+
+  const isOffline   = d.impactDepth === 0;
+  const isDirect    = d.impactDepth === 1;
+  const isIndirect  = d.impactDepth !== undefined && d.impactDepth >= 2;
+  const isImpacted  = isDirect || isIndirect;
+  const isDimmed    = d.simulationActive && d.impactDepth === undefined;
+
+  let palette: { bg: string; border: string; text: string };
+  if (isOffline)       palette = IMPACT_STYLE.source;
+  else if (isDirect)   palette = IMPACT_STYLE.direct;
+  else if (isIndirect) palette = IMPACT_STYLE.indirect;
+  else                 palette = TYPE_STYLE[d.resourceType] ?? TYPE_STYLE.server;
+
+  const borderColor   = selected ? '#f1f5f9' : palette.border;
+  const hasBoldBorder = selected || isOffline || isImpacted;
 
   return (
     <div
       style={{
-        width: NODE_W,
-        background: d.isImpacted ? `${s.border}22` : s.bg,
-        borderColor: selected ? '#f1f5f9' : d.isImpacted ? s.border : `${s.border}99`,
-        borderWidth: selected || d.isImpacted ? 2 : 1,
+        width:        NODE_W,
+        background:   palette.bg,
+        borderColor,
+        borderWidth:  hasBoldBorder ? 2 : 1,
+        opacity:      isDimmed ? 0.2 : 1,
+        filter:       isDimmed ? 'grayscale(0.8)' : 'none',
+        transition:   'opacity 0.4s ease, filter 0.4s ease, border-color 0.4s ease, background 0.4s ease',
       }}
       className="rounded-lg border px-3 py-2 shadow-lg cursor-pointer"
     >
@@ -101,18 +185,42 @@ function ResourceNode({ data, selected, id }: NodeProps) {
         style={{ background: '#64748b', border: 'none', width: 8, height: 8 }}
       />
 
+      {/* Type badge / offline label */}
       <div className="flex items-center gap-1.5 mb-0.5">
-        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: s.border }} />
-        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: s.text }}>
-          {d.resourceType}
-        </span>
+        <span
+          className="w-1.5 h-1.5 rounded-full shrink-0"
+          style={{ background: isOffline ? '#ef4444' : palette.border }}
+        />
+        {isOffline ? (
+          <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 animate-pulse">
+            OFFLINE
+          </span>
+        ) : (
+          <span
+            className="text-[10px] font-bold uppercase tracking-wider"
+            style={{ color: palette.text }}
+          >
+            {d.resourceType}
+          </span>
+        )}
       </div>
 
-      <p className="text-sm font-semibold text-slate-100 leading-snug" style={{ maxWidth: NODE_W - 28 }}>
+      {/* Node label */}
+      <p
+        className="text-sm font-semibold leading-snug"
+        style={{ color: palette.text, maxWidth: NODE_W - 28 }}
+      >
         {d.label}
       </p>
 
-      {d.status && (
+      {/* Impact depth hint */}
+      {isDirect && (
+        <p className="text-[10px] mt-0.5 font-medium text-orange-400">impacto direto</p>
+      )}
+      {isIndirect && (
+        <p className="text-[10px] mt-0.5 text-amber-500">{d.impactDepth}° nivel</p>
+      )}
+      {!isOffline && !isImpacted && d.status && (
         <p className="text-[10px] text-slate-500 mt-0.5 capitalize">{d.status}</p>
       )}
 
@@ -127,7 +235,7 @@ function ResourceNode({ data, selected, id }: NodeProps) {
 
 const NODE_TYPES = { resource: ResourceNode };
 
-/* ── Main component ─────────────────────────────────────────────────────── */
+/* ── Props ──────────────────────────────────────────────────────────────── */
 
 interface ResourceGraphProps {
   nodes: Array<{
@@ -146,69 +254,94 @@ interface ResourceGraphProps {
     relationType: string;
   }>;
   mode?: 'overview' | 'subgraph' | 'impact';
+  /** IDs of nodes in the impact blast radius (not including the source itself) */
   impactedNodeIds?: Set<string>;
+  /** Depth of each impacted node (resourceId → depth, where depth ≥ 1) */
+  impactedByDepth?: Map<string, number>;
+  /** The node currently being simulated as offline */
+  simulationSourceId?: string;
   onNodeSelect?: (nodeId: string, resourceType: string) => void;
   onNodeNavigate?: (nodeId: string, resourceType: string) => void;
   isLoading?: boolean;
 }
 
+/* ── Main component ─────────────────────────────────────────────────────── */
+
 export function ResourceGraph({
   nodes: propNodes,
   edges: propEdges,
   impactedNodeIds = new Set(),
+  impactedByDepth,
+  simulationSourceId,
   onNodeSelect,
   onNodeNavigate,
   isLoading = false,
 }: ResourceGraphProps) {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const impactedKey = useMemo(() => [...impactedNodeIds].sort().join(','), [impactedNodeIds]);
+  const [rfNodes, setRfNodes] = useState<RFNode<NodeData>[]>([]);
+  const [rfEdges, setRfEdges] = useState<RFEdge[]>([]);
 
-  const defaultNodes = useMemo<RFNode<NodeData>[]>(() => {
-    if (!propNodes.length) return [];
+  // Impact key — stable string that changes only when the impacted set changes
+  const impactedKey = useMemo(
+    () => [...impactedNodeIds].sort().join(','),
+    [impactedNodeIds],
+  );
+
+  // ── Effect 1: recompute layout when graph data changes ──────────────────
+  useEffect(() => {
+    if (!propNodes.length) {
+      setRfNodes([]);
+      setRfEdges([]);
+      return;
+    }
     const posMap = layoutGraph(
       propNodes.map((n) => n.id),
       propEdges.map((e) => ({ source: e.sourceId, target: e.targetId })),
     );
-    return propNodes.map((n) => ({
-      id: n.id,
-      type: 'resource',
-      position: posMap.get(n.id) ?? { x: 0, y: 0 },
-      data: {
-        label: n.label,
-        resourceType: n.resourceType as RType,
-        status: n.status,
-        isImpacted: impactedNodeIds.has(n.id),
-      },
-    }));
+    setRfNodes(
+      propNodes.map((n) => ({
+        id:       n.id,
+        type:     'resource',
+        position: posMap.get(n.id) ?? { x: 0, y: 0 },
+        data: {
+          label:           n.label,
+          resourceType:    n.resourceType as RType,
+          status:          n.status,
+          impactDepth:     n.id === simulationSourceId ? 0 : impactedByDepth?.get(n.id),
+          simulationActive: !!simulationSourceId,
+        },
+      })),
+    );
+    setRfEdges(propEdges.map((e) => buildEdge(e, impactedNodeIds, simulationSourceId)));
+    // Layout only re-runs when the graph topology changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [propNodes, propEdges, impactedKey]);
+  }, [propNodes, propEdges]);
 
-  const defaultEdges = useMemo<RFEdge[]>(
-    () =>
-      propEdges.map((e) => {
-        const isLit = impactedNodeIds.has(e.sourceId) || impactedNodeIds.has(e.targetId);
-        return {
-          id: e.id,
-          source: e.sourceId,
-          target: e.targetId,
-          label: EDGE_LABEL[e.relationType] ?? e.relationType,
-          type: 'smoothstep',
-          animated: isLit,
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: isLit ? '#f59e0b' : '#475569',
-            width: 14,
-            height: 14,
-          },
-          style: { stroke: isLit ? '#f59e0b' : '#475569', strokeWidth: 1.5 },
-          labelStyle: { fill: '#94a3b8', fontSize: 10 },
-          labelBgStyle: { fill: '#0f172a', fillOpacity: 0.85 },
-          labelBgPadding: [4, 2] as [number, number],
-          labelBgBorderRadius: 3,
-        };
-      }),
+  // ── Effect 2: update colors/states when simulation changes (no relayout) ─
+  useEffect(() => {
+    setRfNodes((prev) =>
+      prev.map((n) => ({
+        ...n,
+        data: {
+          ...n.data,
+          impactDepth:      n.id === simulationSourceId ? 0 : impactedByDepth?.get(n.id),
+          simulationActive: !!simulationSourceId,
+        } as NodeData,
+      })),
+    );
+    setRfEdges(propEdges.map((e) => buildEdge(e, impactedNodeIds, simulationSourceId)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [propEdges, impactedKey],
+  }, [impactedKey, simulationSourceId]);
+
+  // Controlled mode handlers — we disable dragging but keep selection/pan
+  const onNodesChange = useCallback(
+    (changes: NodeChange<RFNode<NodeData>>[]) =>
+      setRfNodes((prev) => applyNodeChanges(changes, prev)),
+    [],
+  );
+  const onEdgesChange = useCallback(
+    (changes: EdgeChange[]) =>
+      setRfEdges((prev) => applyEdgeChanges(changes, prev)),
+    [],
   );
 
   const onNodeClick = useCallback(
@@ -237,14 +370,15 @@ export function ResourceGraph({
   }
 
   return (
-    // key forces remount when data first arrives so defaultNodes/defaultEdges are used
     <ReactFlow
-      key={propNodes.length > 0 ? 'loaded' : 'empty'}
-      defaultNodes={defaultNodes}
-      defaultEdges={defaultEdges}
+      nodes={rfNodes}
+      edges={rfEdges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
       onNodeClick={onNodeClick}
       onNodeDoubleClick={onNodeDoubleClick}
       nodeTypes={NODE_TYPES}
+      nodesDraggable={false}
       fitView
       fitViewOptions={{ padding: 0.2, maxZoom: 1.2 }}
       minZoom={0.15}
@@ -252,20 +386,14 @@ export function ResourceGraph({
       className="bg-slate-950"
       proOptions={{ hideAttribution: true }}
     >
-      <Background
-        color="#1e293b"
-        variant={BackgroundVariant.Dots}
-        gap={20}
-        size={1.5}
-      />
-      <Controls
-        style={{ background: '#1e293b', border: '1px solid #334155' }}
-        showInteractive={false}
-      />
+      <Background color="#1e293b" variant={BackgroundVariant.Dots} gap={20} size={1.5} />
       <MiniMap
         nodeColor={(node) => {
-          const s = TYPE_STYLE[(node.data as NodeData)?.resourceType];
-          return s?.border ?? '#475569';
+          const d = node.data as NodeData;
+          if (d.impactDepth === 0)                          return '#ef4444';
+          if (d.impactDepth === 1)                          return '#f97316';
+          if (d.impactDepth !== undefined && d.impactDepth >= 2) return '#f59e0b';
+          return TYPE_STYLE[d.resourceType]?.border ?? '#475569';
         }}
         maskColor="#0f172acc"
         style={{ background: '#1e293b', border: '1px solid #334155' }}

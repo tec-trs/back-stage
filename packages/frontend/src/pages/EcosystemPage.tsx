@@ -1,8 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { ImpactAnalysisPanel } from '../features/resource-graph/ImpactAnalysisPanel';
 import { useFullGraph } from '../features/resource-graph/use-resource-graph';
+import type { ImpactResult } from '../features/resource-graph/use-resource-graph';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
@@ -15,18 +16,24 @@ type ResourceType = 'server' | 'application' | 'database' | 'url';
 const VALID_RESOURCE_TYPES = new Set<string>(['server', 'application', 'database', 'url']);
 
 const NODE_COLORS: Record<string, string> = {
-  server: '#3b82f6',
+  server:      '#3b82f6',
   application: '#8b5cf6',
-  database: '#ec4899',
-  url: '#f59e0b',
+  database:    '#ec4899',
+  url:         '#f59e0b',
 };
 
 export function EcosystemPage() {
   const { data, isLoading, isError, error } = useFullGraph({ page: 1, pageSize: 500 });
   const navigate = useNavigate();
 
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedNodeId,   setSelectedNodeId]   = useState<string | null>(null);
   const [selectedNodeType, setSelectedNodeType] = useState<ResourceType | null>(null);
+
+  // Simulation state — kept here so the graph reflects the blast radius
+  const [simulationSourceId, setSimulationSourceId] = useState<string | undefined>(undefined);
+  const [impactedByDepth,    setImpactedByDepth]    = useState<Map<string, number>>(new Map());
+
+  const impactedNodeIds = useMemo(() => new Set(impactedByDepth.keys()), [impactedByDepth]);
 
   const selectedNode = data?.nodes.find((n) => n.id === selectedNodeId);
 
@@ -38,15 +45,29 @@ export function EcosystemPage() {
   const handleNodeNavigate = useCallback(
     (nodeId: string, resourceType: string) => {
       const pathMap: Record<string, string> = {
-        server: 'servers',
+        server:      'servers',
         application: 'applications',
-        database: 'databases',
-        url: 'urls',
+        database:    'databases',
+        url:         'urls',
       };
       navigate(`/${pathMap[resourceType] ?? resourceType + 's'}/${nodeId}`);
     },
     [navigate],
   );
+
+  const handleImpactResult = useCallback((result: ImpactResult, sourceId: string) => {
+    const byDepth = new Map<string, number>();
+    for (const node of result.impactedResources) {
+      byDepth.set(node.resourceId, node.depth);
+    }
+    setImpactedByDepth(byDepth);
+    setSimulationSourceId(sourceId);
+  }, []);
+
+  const handleImpactReset = useCallback(() => {
+    setImpactedByDepth(new Map());
+    setSimulationSourceId(undefined);
+  }, []);
 
   if (isError)
     return (
@@ -73,13 +94,32 @@ export function EcosystemPage() {
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+        {/* ── Grafo ────────────────────────────────────────────────── */}
         <div className="lg:col-span-3">
+          {simulationSourceId && (
+            <div className="mb-2 flex items-center gap-3 rounded-md border border-red-900/50 bg-red-950/30 px-4 py-2 text-sm">
+              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+              <span className="text-red-300 font-medium">Modo simulacao ativo</span>
+              <span className="text-slate-400 flex-1">
+                — {impactedNodeIds.size} recurso{impactedNodeIds.size !== 1 ? 's' : ''} afetado{impactedNodeIds.size !== 1 ? 's' : ''}
+              </span>
+              <button
+                type="button"
+                onClick={handleImpactReset}
+                className="text-xs text-slate-400 hover:text-slate-200 underline"
+              >
+                Encerrar simulacao
+              </button>
+            </div>
+          )}
           <div style={{ height: '600px' }} className="overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
             <ResourceGraph
               nodes={data.nodes}
               edges={data.edges}
               mode="overview"
-              impactedNodeIds={new Set<string>()}
+              impactedNodeIds={impactedNodeIds}
+              impactedByDepth={impactedByDepth}
+              simulationSourceId={simulationSourceId}
               onNodeSelect={handleNodeSelect}
               onNodeNavigate={handleNodeNavigate}
               isLoading={isLoading}
@@ -87,6 +127,7 @@ export function EcosystemPage() {
           </div>
         </div>
 
+        {/* ── Painel lateral ───────────────────────────────────────── */}
         <div className="flex flex-col gap-4 lg:col-span-1">
           {/* Legenda */}
           <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
@@ -98,6 +139,28 @@ export function EcosystemPage() {
                   <span className="capitalize text-slate-400">{type}</span>
                 </div>
               ))}
+              {simulationSourceId && (
+                <>
+                  <div className="mt-2 border-t border-slate-800 pt-2 flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded bg-red-500" />
+                      <span className="text-red-400 text-xs">Offline (simulado)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded bg-orange-500" />
+                      <span className="text-orange-400 text-xs">Impacto direto</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded bg-amber-500" />
+                      <span className="text-amber-400 text-xs">Impacto indireto</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded bg-slate-700 opacity-30" />
+                      <span className="text-slate-600 text-xs">Sem impacto</span>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -137,12 +200,14 @@ export function EcosystemPage() {
             </div>
           )}
 
-          {/* Analise de impacto do node selecionado */}
+          {/* Analise de impacto */}
           {selectedNodeId && selectedNodeType && (
             <ImpactAnalysisPanel
               resourceType={selectedNodeType}
               resourceId={selectedNodeId}
               resourceLabel={selectedNode?.label ?? selectedNodeId}
+              onResult={handleImpactResult}
+              onReset={handleImpactReset}
             />
           )}
         </div>
