@@ -42,3 +42,11 @@ export const createRelationshipBodySchema = z.object({
 export const deleteRelationshipParamsSchema = z.object({
   relationshipId: z.string().uuid(),
 });
+
+export const listRelationshipsQuerySchema = z.object({
+  sourceType: resourceTypeEnum.optional(),
+  sourceId: z.string().uuid().optional(),
+  targetType: resourceTypeEnum.optional(),
+  targetId: z.string().uuid().optional(),
+  relationType: relationTypeEnum.optional(),
+});

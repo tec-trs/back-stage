@@ -120,6 +120,27 @@ export interface CreateRelationshipInput {
   metadata?: Record<string, unknown>;
 }
 
+export function useResourceRelationships(
+  sourceType: string | null,
+  sourceId: string | null,
+  relationType?: string,
+) {
+  return useQuery({
+    queryKey: ['resource-graph-relationships', sourceType, sourceId, relationType],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (sourceType) params.append('sourceType', sourceType);
+      if (sourceId)   params.append('sourceId',   sourceId);
+      if (relationType) params.append('relationType', relationType);
+      return apiRequest<{ items: GraphEdge[] }>(`/api/resource-graph/relationships?${params}`).then(
+        (r) => r.items,
+      );
+    },
+    enabled: !!sourceType && !!sourceId,
+    staleTime: 0,
+  });
+}
+
 export function useCreateRelationship() {
   const queryClient = useQueryClient();
 

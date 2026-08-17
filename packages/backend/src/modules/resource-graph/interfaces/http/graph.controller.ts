@@ -9,9 +9,11 @@ import type {
   getFullGraphQuerySchema,
   getSubgraphParamsSchema,
   getSubgraphQuerySchema,
+  listRelationshipsQuerySchema,
   simulateImpactBodySchema,
 } from './graph.validation.js';
 
+type ListRelationshipsQuery = z.infer<typeof listRelationshipsQuerySchema>;
 type GetFullGraphQuery = z.infer<typeof getFullGraphQuerySchema>;
 type GetSubgraphParams = z.infer<typeof getSubgraphParamsSchema>;
 type GetSubgraphQuery = z.infer<typeof getSubgraphQuerySchema>;
@@ -56,6 +58,18 @@ export class GraphController {
       nodes: result.nodes,
       edges: result.edges,
     });
+  };
+
+  public listRelationships = async (request: Request, response: Response): Promise<void> => {
+    const query = request.query as unknown as ListRelationshipsQuery;
+    const edges = await this.graphService.listRelationships({
+      sourceType: query.sourceType,
+      sourceId:   query.sourceId,
+      targetType: query.targetType,
+      targetId:   query.targetId,
+      relationType: query.relationType,
+    });
+    response.status(200).json({ items: edges });
   };
 
   public simulateImpact = async (request: Request, response: Response): Promise<void> => {

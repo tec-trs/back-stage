@@ -56,6 +56,16 @@ export class GraphService {
     return this.repository.getSubgraph(resourceType, resourceId, options);
   }
 
+  public async listRelationships(filters: {
+    sourceType?: ResourceType;
+    sourceId?: string;
+    targetType?: ResourceType;
+    targetId?: string;
+    relationType?: string;
+  }): Promise<GraphEdge[]> {
+    return this.repository.listRelationships(filters);
+  }
+
   public async simulateImpact(resourceType: ResourceType, resourceId: string): Promise<ImpactResult> {
     return this.repository.getTransitiveImpact(resourceType, resourceId);
   }

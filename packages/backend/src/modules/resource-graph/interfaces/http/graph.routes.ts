@@ -12,6 +12,7 @@ import {
   getFullGraphQuerySchema,
   getSubgraphParamsSchema,
   getSubgraphQuerySchema,
+  listRelationshipsQuerySchema,
   simulateImpactBodySchema,
 } from './graph.validation.js';
 
@@ -86,6 +87,12 @@ export function createGraphRouter(controller: GraphController): Router {
    *     responses:
    *       201: { description: Relacionamento criado }
    */
+  router.get(
+    '/relationships',
+    validateMiddleware({ query: listRelationshipsQuerySchema }),
+    asyncHandler(controller.listRelationships),
+  );
+
   router.post(
     '/relationships',
     authorizeMiddleware(...WRITE_ROLES),

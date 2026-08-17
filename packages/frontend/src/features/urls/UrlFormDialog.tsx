@@ -1,8 +1,13 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useApplications } from '../applications/use-applications';
 import { useDatabases } from '../databases/use-databases';
 import { useServers } from '../servers/use-servers';
+import {
+  useCreateRelationship,
+  useDeleteRelationship,
+  useResourceRelationships,
+} from '../resource-graph/use-resource-graph';
 import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
@@ -93,14 +98,27 @@ export function UrlFormDialog({
   const isEditMode = Boolean(url);
   const createUrl = useCreateUrl();
   const updateUrl = useUpdateUrl();
+  const createRelationship = useCreateRelationship();
+  const deleteRelationship = useDeleteRelationship();
   const mutation = isEditMode ? updateUrl : createUrl;
 
   const { data: serversData } = useServers();
   const { data: applicationsData } = useApplications();
   const { data: databasesData } = useDatabases({ page: 1, pageSize: 500 });
 
+  // Existing depends_on relationships for this URL (edit mode only)
+  const { data: existingRelationships } = useResourceRelationships(
+    isOpen && url ? 'url' : null,
+    url?.id ?? null,
+    'depends_on',
+  );
+
   const [form, setForm] = useState<FormState>(emptyForm());
   const [tags, setTags] = useState<string[]>([]);
+  // IDs of applications this URL depends on
+  const [dependsOnAppIds, setDependsOnAppIds] = useState<string[]>([]);
+  // Map from appId → relationshipId (to delete when unchecked in edit mode)
+  const existingRelMapRef = useRef<Map<string, string>>(new Map());
 
   const resourceOptions = useMemo(() => {
     switch (form.ownerResourceType) {
@@ -115,6 +133,12 @@ export function UrlFormDialog({
     }
   }, [form.ownerResourceType, serversData, applicationsData, databasesData]);
 
+  const allApplications = useMemo(
+    () => (applicationsData?.items ?? []).map((a) => ({ id: a.id, label: a.displayName ?? a.code })),
+    [applicationsData],
+  );
+
+  // Populate form fields when dialog opens
   useEffect(() => {
     if (isOpen) {
       const base = url ? formFromUrl(url) : prefill ? formFromUrl(prefill) : emptyForm();
@@ -122,17 +146,56 @@ export function UrlFormDialog({
       if (!url && !prefill && defaultOwnerResourceId) base.ownerResourceId = defaultOwnerResourceId;
       setForm(base);
       setTags(url?.tags ?? prefill?.tags ?? []);
+      setDependsOnAppIds([]);
+      existingRelMapRef.current = new Map();
       createUrl.reset();
       updateUrl.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, url, prefill, defaultOwnerResourceType, defaultOwnerResourceId]);
 
+  // When existing relationships load (edit mode), populate the dependency checkboxes
+  useEffect(() => {
+    if (isOpen && existingRelationships) {
+      const appRels = existingRelationships.filter((r) => r.targetType === 'application');
+      setDependsOnAppIds(appRels.map((r) => r.targetId));
+      existingRelMapRef.current = new Map(appRels.map((r) => [r.targetId, r.id]));
+    }
+  }, [isOpen, existingRelationships]);
+
   function setField<K extends keyof FormState>(key: K, value: FormState[K]): void {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+  function toggleDependency(appId: string): void {
+    setDependsOnAppIds((prev) =>
+      prev.includes(appId) ? prev.filter((id) => id !== appId) : [...prev, appId],
+    );
+  }
+
+  async function syncRelationships(urlId: string): Promise<void> {
+    const oldMap = existingRelMapRef.current;
+    const oldIds = new Set(oldMap.keys());
+    const newIds = new Set(dependsOnAppIds);
+
+    const toDelete = [...oldIds].filter((id) => !newIds.has(id));
+    const toCreate = [...newIds].filter((id) => !oldIds.has(id));
+
+    await Promise.all([
+      ...toDelete.map((appId) => deleteRelationship.mutateAsync(oldMap.get(appId)!)),
+      ...toCreate.map((appId) =>
+        createRelationship.mutateAsync({
+          sourceType: 'url',
+          sourceId: urlId,
+          targetType: 'application',
+          targetId: appId,
+          relationType: 'depends_on',
+        }),
+      ),
+    ]);
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
     const payload: CreateUrlInput = {
@@ -150,12 +213,20 @@ export function UrlFormDialog({
       tags: tags.map((t) => t.trim()).filter(Boolean),
     };
 
-    if (isEditMode && url) {
-      updateUrl.mutate({ id: url.id, ...payload }, { onSuccess: onClose });
-      return;
+    try {
+      let urlId: string;
+      if (isEditMode && url) {
+        await updateUrl.mutateAsync({ id: url.id, ...payload });
+        urlId = url.id;
+      } else {
+        const created = await createUrl.mutateAsync(payload);
+        urlId = created.id;
+      }
+      await syncRelationships(urlId);
+      onClose();
+    } catch {
+      // errors surfaced via mutation.isError
     }
-
-    createUrl.mutate(payload, { onSuccess: onClose });
   }
 
   return (
@@ -167,6 +238,7 @@ export function UrlFormDialog({
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto pr-1">
+
           {/* Identificacao */}
           <fieldset className="flex flex-col gap-3">
             <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -202,9 +274,7 @@ export function UrlFormDialog({
                   className={inputClass}
                 >
                   {URL_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
+                    <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
               </label>
@@ -216,9 +286,7 @@ export function UrlFormDialog({
                   className={inputClass}
                 >
                   {URL_STATUSES.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
+                    <option key={s.value} value={s.value}>{s.label}</option>
                   ))}
                 </select>
               </label>
@@ -251,9 +319,7 @@ export function UrlFormDialog({
                   className={inputClass}
                 >
                   {OWNER_RESOURCE_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
+                    <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>
               </label>
@@ -274,6 +340,39 @@ export function UrlFormDialog({
             </div>
           </fieldset>
 
+          {/* Depende de (aplicacoes) */}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Depende de
+            </legend>
+            <p className="text-xs text-slate-500">
+              Selecione as aplicacoes que esta URL precisa para funcionar. Se alguma cair, esta URL sera impactada.
+            </p>
+            {allApplications.length === 0 ? (
+              <p className="text-xs text-slate-600">Nenhuma aplicacao cadastrada.</p>
+            ) : (
+              <div className="flex flex-col gap-1 rounded-md border border-slate-800 p-2">
+                {allApplications.map((app) => {
+                  const checked = dependsOnAppIds.includes(app.id);
+                  return (
+                    <label
+                      key={app.id}
+                      className="flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 hover:bg-slate-900/60"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleDependency(app.id)}
+                        className="h-4 w-4 accent-sky-500"
+                      />
+                      <span className="text-sm text-slate-200">{app.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </fieldset>
+
           {/* HTTP & Auth */}
           <fieldset className="flex flex-col gap-3">
             <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -288,9 +387,7 @@ export function UrlFormDialog({
               >
                 <option value="">— Nao especificado —</option>
                 {HTTP_METHODS.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
+                  <option key={m} value={m}>{m}</option>
                 ))}
               </select>
             </label>
@@ -302,7 +399,7 @@ export function UrlFormDialog({
                 onChange={(e) => setField('authRequired', e.target.checked)}
                 className="h-4 w-4 accent-sky-500"
               />
-              <label htmlFor="authRequired" className="text-sm text-slate-400 cursor-pointer">
+              <label htmlFor="authRequired" className="cursor-pointer text-sm text-slate-400">
                 Requer autenticacao
               </label>
             </div>
@@ -325,7 +422,7 @@ export function UrlFormDialog({
                 onChange={(e) => setField('healthcheckEnabled', e.target.checked)}
                 className="h-4 w-4 accent-sky-500"
               />
-              <label htmlFor="healthcheckEnabled" className="text-sm text-slate-400 cursor-pointer">
+              <label htmlFor="healthcheckEnabled" className="cursor-pointer text-sm text-slate-400">
                 Habilitar healthcheck automatico
               </label>
             </div>
@@ -385,7 +482,13 @@ export function UrlFormDialog({
             Cancelar
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Salvando...' : isEditMode ? 'Salvar alteracoes' : prefill ? 'Criar copia' : 'Criar URL'}
+            {mutation.isPending
+              ? 'Salvando...'
+              : isEditMode
+                ? 'Salvar alteracoes'
+                : prefill
+                  ? 'Criar copia'
+                  : 'Criar URL'}
           </Button>
         </div>
       </form>

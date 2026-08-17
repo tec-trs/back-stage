@@ -425,6 +425,32 @@ export class ResourceRelationshipRepository {
     };
   }
 
+  public async listRelationships(filters: {
+    sourceType?: ResourceType;
+    sourceId?: string;
+    targetType?: ResourceType;
+    targetId?: string;
+    relationType?: string;
+  }): Promise<GraphEdge[]> {
+    let query = this.db(TABLE_NAME).select('*').whereNull('deleted_at');
+    if (filters.sourceType) query = query.where('source_type', filters.sourceType);
+    if (filters.sourceId)   query = query.where('source_id',   filters.sourceId);
+    if (filters.targetType) query = query.where('target_type', filters.targetType);
+    if (filters.targetId)   query = query.where('target_id',   filters.targetId);
+    if (filters.relationType) query = query.where('relation_type', filters.relationType);
+
+    const rows = (await query) as RelationshipRow[];
+    return rows.map((r) => ({
+      id: r.id,
+      sourceType: r.source_type,
+      sourceId:   r.source_id,
+      targetType: r.target_type,
+      targetId:   r.target_id,
+      relationType: r.relation_type as any,
+      metadata: r.metadata,
+    }));
+  }
+
   public async createRelationship(
     sourceType: ResourceType,
     sourceId: string,
