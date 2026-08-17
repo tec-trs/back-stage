@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { ImpactAnalysisPanel } from '../features/resource-graph/ImpactAnalysisPanel';
 import { useFullGraph } from '../features/resource-graph/use-resource-graph';
-import type { ImpactResult } from '../features/resource-graph/use-resource-graph';
+import type { GraphNode, ImpactResult } from '../features/resource-graph/use-resource-graph';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
@@ -14,6 +14,11 @@ import { Spinner } from '../shared/components/Spinner';
 type ResourceType = 'server' | 'application' | 'database' | 'url';
 
 const VALID_RESOURCE_TYPES = new Set<string>(['server', 'application', 'database', 'url']);
+
+type EcoNode = Omit<GraphNode, 'resourceType'> & {
+  resourceType: ResourceType | 'db-group';
+  dbLabels?: string[];
+};
 
 interface DbGroup {
   id: string;
@@ -68,7 +73,7 @@ export function EcosystemPage() {
     const groups: DbGroup[] = [];
     const hiddenNodeIds = new Set<string>();
     const hiddenEdgeIds = new Set<string>();
-    const syntheticNodes: typeof data.nodes = [];
+    const syntheticNodes: EcoNode[] = [];
     const syntheticEdges: typeof data.edges = [];
 
     for (const [appId, dbEdges] of appDbEdgeMap) {
@@ -85,7 +90,7 @@ export function EcosystemPage() {
 
       syntheticNodes.push({
         id: groupId,
-        resourceType: 'db-group' as ResourceType,
+        resourceType: 'db-group',
         label: `${dbEdges.length} bancos`,
         dbLabels,
       });
@@ -105,9 +110,9 @@ export function EcosystemPage() {
 
     return {
       graphNodes: [
-        ...data.nodes.filter((n) => !hiddenNodeIds.has(n.id)),
+        ...(data.nodes.filter((n) => !hiddenNodeIds.has(n.id)) as EcoNode[]),
         ...syntheticNodes,
-      ],
+      ] as EcoNode[],
       graphEdges: [
         ...data.edges.filter((e) => !hiddenEdgeIds.has(e.id)),
         ...syntheticEdges,

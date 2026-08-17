@@ -12,6 +12,7 @@ import {
 } from '../../shared/constants/labels';
 import { useEnvironments } from '../environments/use-environments';
 import { useServerTypes } from '../server-types/use-server-types';
+import { useTeams } from '../teams/use-teams';
 
 import type { ServerDiskInput } from './use-create-server';
 import { useCreateServer } from './use-create-server';
@@ -77,7 +78,7 @@ interface FormState {
   accessMethod: string;
   accessUser: string;
   observations: string;
-  ownerTeam: string;
+  ownerTeamSlugs: string[];
 }
 
 interface ServiceInput {
@@ -111,7 +112,7 @@ function emptyForm(): FormState {
     accessMethod: '',
     accessUser: '',
     observations: '',
-    ownerTeam: '',
+    ownerTeamSlugs: [],
   };
 }
 
@@ -135,7 +136,7 @@ function formFromServer(server: ServerSummary): FormState {
     accessMethod: server.accessMethod ?? '',
     accessUser: server.accessUser ?? '',
     observations: server.observations ?? '',
-    ownerTeam: server.ownerTeam ?? '',
+    ownerTeamSlugs: server.ownerTeam ? server.ownerTeam.split(',').map((s) => s.trim()).filter(Boolean) : [],
   };
 }
 
@@ -170,6 +171,7 @@ export function ServerFormDialog({
   const mutation = isEditMode ? updateServer : createServer;
   const { data: environments } = useEnvironments();
   const { data: serverTypes } = useServerTypes();
+  const { data: teams = [] } = useTeams();
 
   const [activeTab, setActiveTab] = useState<TabKey>('identification');
   const [form, setForm] = useState<FormState>(emptyForm());
@@ -297,7 +299,7 @@ export function ServerFormDialog({
         status: svc.status,
         observations: svc.observations.trim() || null,
       })),
-      ownerTeam: form.ownerTeam.trim() || null,
+      ownerTeam: form.ownerTeamSlugs.join(',') || null,
       disks,
     };
 
@@ -626,6 +628,16 @@ export function ServerFormDialog({
           {/* ── Servicos ──────────────────────────────────────────────────── */}
           {activeTab === 'services' && (
             <fieldset className="flex flex-col gap-3">
+              {(() => {
+                const isWindows = form.osName.toLowerCase().includes('windows');
+                return isWindows ? (
+                  <div className="rounded-md border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-400">
+                    <span className="font-medium text-slate-300">Sistema Windows detectado.</span>{' '}
+                    Os servicos sao gerenciados pelo painel de controle do Windows:{' '}
+                    <span className="font-mono text-slate-300">services.msc</span>
+                  </div>
+                ) : null;
+              })()}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-400">Servicos cadastrados</span>
                 <Button type="button" variant="secondary" size="sm" onClick={addService}>
@@ -717,33 +729,37 @@ export function ServerFormDialog({
                             className={`${inputClass} py-1.5 text-sm`}
                           />
                         </label>
-                        <label className="flex flex-col gap-1 text-xs">
-                          <span className="text-slate-500">Comando de subir</span>
-                          <input
-                            value={svc.commandStart}
-                            onChange={(event) => updateService(index, { commandStart: event.target.value })}
-                            placeholder="systemctl start nginx"
-                            className={`${inputClass} py-1.5 text-sm`}
-                          />
-                        </label>
-                        <label className="flex flex-col gap-1 text-xs">
-                          <span className="text-slate-500">Comando de parar</span>
-                          <input
-                            value={svc.commandStop}
-                            onChange={(event) => updateService(index, { commandStop: event.target.value })}
-                            placeholder="systemctl stop nginx"
-                            className={`${inputClass} py-1.5 text-sm`}
-                          />
-                        </label>
-                        <label className="flex flex-col gap-1 text-xs">
-                          <span className="text-slate-500">Comando de status</span>
-                          <input
-                            value={svc.commandStatus}
-                            onChange={(event) => updateService(index, { commandStatus: event.target.value })}
-                            placeholder="systemctl status nginx"
-                            className={`${inputClass} py-1.5 text-sm`}
-                          />
-                        </label>
+                        {!form.osName.toLowerCase().includes('windows') && (
+                          <>
+                            <label className="flex flex-col gap-1 text-xs">
+                              <span className="text-slate-500">Comando de subir</span>
+                              <input
+                                value={svc.commandStart}
+                                onChange={(event) => updateService(index, { commandStart: event.target.value })}
+                                placeholder="systemctl start nginx"
+                                className={`${inputClass} py-1.5 text-sm`}
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs">
+                              <span className="text-slate-500">Comando de parar</span>
+                              <input
+                                value={svc.commandStop}
+                                onChange={(event) => updateService(index, { commandStop: event.target.value })}
+                                placeholder="systemctl stop nginx"
+                                className={`${inputClass} py-1.5 text-sm`}
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs">
+                              <span className="text-slate-500">Comando de status</span>
+                              <input
+                                value={svc.commandStatus}
+                                onChange={(event) => updateService(index, { commandStatus: event.target.value })}
+                                placeholder="systemctl status nginx"
+                                className={`${inputClass} py-1.5 text-sm`}
+                              />
+                            </label>
+                          </>
+                        )}
                         <label className="flex flex-col gap-1 text-xs">
                           <span className="text-slate-500">Observacoes</span>
                           <input
@@ -786,15 +802,37 @@ export function ServerFormDialog({
           {/* ── Responsaveis ──────────────────────────────────────────────── */}
           {activeTab === 'responsible' && (
             <fieldset className="flex flex-col gap-3">
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="text-slate-400">Equipe responsável</span>
-                <input
-                  value={form.ownerTeam}
-                  onChange={(event) => setField('ownerTeam', event.target.value)}
-                  placeholder="Infraestrutura, DevOps..."
-                  className={inputClass}
-                />
-              </label>
+              <span className="text-sm text-slate-400">Equipes responsaveis</span>
+              {teams.length === 0 ? (
+                <p className="text-xs text-slate-500">Nenhum time cadastrado.</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {teams.map((team) => {
+                    const checked = form.ownerTeamSlugs.includes(team.slug);
+                    return (
+                      <label key={team.slug} className="flex cursor-pointer items-center gap-3 rounded-md border border-slate-800 px-3 py-2 hover:bg-slate-900/60">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            setField(
+                              'ownerTeamSlugs',
+                              checked
+                                ? form.ownerTeamSlugs.filter((s) => s !== team.slug)
+                                : [...form.ownerTeamSlugs, team.slug],
+                            );
+                          }}
+                          className="h-4 w-4 accent-sky-500"
+                        />
+                        <span className="text-sm text-slate-200">{team.name}</span>
+                        {team.description && (
+                          <span className="ml-auto text-xs text-slate-500">{team.description}</span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </fieldset>
           )}
         </div>

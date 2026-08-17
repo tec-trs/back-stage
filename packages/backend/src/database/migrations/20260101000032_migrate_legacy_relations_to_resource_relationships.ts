@@ -39,7 +39,7 @@ export async function up(knex: Knex): Promise<void> {
   `);
 }
 
-export async function down(knex: Knex): Promise<void> {
+export async function down(_knex: Knex): Promise<void> {
   // Migration de dados não é revertida - revertir exigiria backup
   // Este é um ponto de não-retorno parcial, conforme documentado no plano
   throw new Error('Essa migration de dados nao pode ser revertida. Restaure via backup de banco de dados se necessario.');

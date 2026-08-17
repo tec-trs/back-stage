@@ -167,18 +167,63 @@ export class ResourceRelationshipRepository {
     const total = Number(countResult[0]?.count ?? 0);
 
     if (total > nodeLimit) {
-      return {
-        nodes: [],
-        edges: [],
-        total,
-      };
+      return { nodes: [], edges: [], total };
     }
 
     const nodes = await nodeQuery as ResourceRow[];
 
-    let edgeQuery = this.db(TABLE_NAME).select('*').whereNull('deleted_at');
+    // Explicit relationships stored in resource_relationships
+    const explicitEdges = await this.db(TABLE_NAME).select('*').whereNull('deleted_at') as RelationshipRow[];
 
-    const edges = await edgeQuery as RelationshipRow[];
+    // Implicit edges from application_deployments (server → hosts → application)
+    interface DeploymentRow { server_id: string; application_id: string }
+    const deployments = await this.db('application_deployments')
+      .select('server_id', 'application_id')
+      .whereNull('deleted_at')
+      .whereRaw('(SELECT deleted_at FROM applications WHERE id = application_id) IS NULL') as DeploymentRow[];
+
+    // Implicit edges from urls (owner_resource → exposes → url)
+    interface UrlRow { id: string; owner_resource_type: string; owner_resource_id: string }
+    const urlEdges = await this.db('urls')
+      .select('id', 'owner_resource_type', 'owner_resource_id')
+      .whereNull('deleted_at') as UrlRow[];
+
+    const mappedExplicit = explicitEdges.map((e) => ({
+      id: e.id,
+      sourceType: e.source_type,
+      sourceId: e.source_id,
+      targetType: e.target_type,
+      targetId: e.target_id,
+      relationType: e.relation_type as any,
+      metadata: e.metadata,
+    }));
+
+    const mappedDeployments: GraphEdge[] = deployments.map((d) => ({
+      id: `deploy:${d.server_id}:${d.application_id}`,
+      sourceType: 'server' as const,
+      sourceId: d.server_id,
+      targetType: 'application' as const,
+      targetId: d.application_id,
+      relationType: 'hosts' as any,
+    }));
+
+    const mappedUrls: GraphEdge[] = urlEdges.map((u) => ({
+      id: `url-owner:${u.owner_resource_id}:${u.id}`,
+      sourceType: u.owner_resource_type as any,
+      sourceId: u.owner_resource_id,
+      targetType: 'url' as const,
+      targetId: u.id,
+      relationType: 'exposes' as any,
+    }));
+
+    // Deduplicate: explicit relationships that duplicate an implicit one take precedence
+    const implicitKeys = new Set([
+      ...mappedDeployments.map((e) => `${e.sourceId}:${e.targetId}:hosts`),
+      ...mappedUrls.map((e) => `${e.sourceId}:${e.targetId}:exposes`),
+    ]);
+    const deduped = mappedExplicit.filter(
+      (e) => !implicitKeys.has(`${e.sourceId}:${e.targetId}:${e.relationType}`),
+    );
 
     return {
       nodes: nodes.map((n) => ({
@@ -191,15 +236,7 @@ export class ResourceRelationshipRepository {
         hostedOnServerId: n.hosted_on_server_id,
         monitoringUrl: n.monitoring_url,
       })),
-      edges: edges.map((e) => ({
-        id: e.id,
-        sourceType: e.source_type,
-        sourceId: e.source_id,
-        targetType: e.target_type,
-        targetId: e.target_id,
-        relationType: e.relation_type as any,
-        metadata: e.metadata,
-      })),
+      edges: [...deduped, ...mappedDeployments, ...mappedUrls],
       total,
     };
   }
@@ -285,24 +322,68 @@ export class ResourceRelationshipRepository {
   ): Promise<ImpactResult> {
     const effectiveMaxDepth = Math.min(maxDepth, MAX_DEPTH_DEFAULT);
 
+    // all_edges unifies explicit relationships with two implicit edge sources:
+    //   - application_deployments  (server → hosts → application)
+    //   - urls.owner_resource_id   (owner  → exposes → url)
+    //
+    // Impact direction semantics:
+    //   depends_on / connects_to / consumes:
+    //     source depends on target → if TARGET goes down, SOURCE is affected
+    //     → initial seed: WHERE target = root  → collect source
+    //   hosts / exposes:
+    //     source provides to target → if SOURCE goes down, TARGET is affected
+    //     → initial seed: WHERE source = root  → collect target
     const { rows } = await this.db.raw<{ rows: ImpactRow[] }>(`
-      WITH RECURSIVE impact(resource_type, resource_id, depth, path) AS (
-        SELECT source_type, source_id, 1,
-               ARRAY[target_type || ':' || target_id]
+      WITH
+      all_edges(source_type, source_id, target_type, target_id, relation_type) AS (
+        SELECT source_type::text, source_id::text, target_type::text, target_id::text, relation_type
         FROM ${TABLE_NAME}
         WHERE deleted_at IS NULL
-          AND target_type = :rootType AND target_id = :rootId
-          AND relation_type IN ('depends_on', 'hosts', 'connects_to', 'consumes')
         UNION ALL
-        SELECT rr.source_type, rr.source_id, i.depth + 1, i.path || (rr.target_type || ':' || rr.target_id)
-        FROM ${TABLE_NAME} rr
-        JOIN impact i ON rr.target_type = i.resource_type AND rr.target_id = i.resource_id
-        WHERE rr.deleted_at IS NULL
-          AND rr.relation_type IN ('depends_on', 'hosts', 'connects_to', 'consumes')
-          AND i.depth < :maxDepth
-          AND NOT ((rr.target_type || ':' || rr.target_id) = ANY(i.path))
+        SELECT 'server', ad.server_id::text, 'application', ad.application_id::text, 'hosts'
+        FROM application_deployments ad
+        JOIN applications a ON a.id = ad.application_id AND a.deleted_at IS NULL
+        WHERE ad.deleted_at IS NULL
+        UNION ALL
+        SELECT u.owner_resource_type::text, u.owner_resource_id::text, 'url', u.id::text, 'exposes'
+        FROM urls u
+        WHERE u.deleted_at IS NULL
+      ),
+      impact(resource_type, resource_id, depth, path) AS (
+        SELECT
+          CASE WHEN relation_type IN ('depends_on','connects_to','consumes')
+               THEN source_type ELSE target_type END,
+          CASE WHEN relation_type IN ('depends_on','connects_to','consumes')
+               THEN source_id ELSE target_id END,
+          1,
+          ARRAY[:rootType || ':' || :rootId]
+        FROM all_edges
+        WHERE (target_type = :rootType AND target_id = :rootId AND relation_type IN ('depends_on','connects_to','consumes'))
+           OR (source_type = :rootType AND source_id = :rootId AND relation_type IN ('hosts','exposes'))
+
+        UNION ALL
+
+        SELECT
+          CASE WHEN ae.relation_type IN ('depends_on','connects_to','consumes')
+               THEN ae.source_type ELSE ae.target_type END,
+          CASE WHEN ae.relation_type IN ('depends_on','connects_to','consumes')
+               THEN ae.source_id ELSE ae.target_id END,
+          i.depth + 1,
+          i.path || (i.resource_type || ':' || i.resource_id)
+        FROM all_edges ae
+        JOIN impact i ON (
+          (ae.relation_type IN ('depends_on','connects_to','consumes')
+            AND ae.target_type = i.resource_type AND ae.target_id = i.resource_id)
+          OR
+          (ae.relation_type IN ('hosts','exposes')
+            AND ae.source_type = i.resource_type AND ae.source_id = i.resource_id)
+        )
+        WHERE i.depth < :maxDepth
+          AND NOT ((i.resource_type || ':' || i.resource_id) = ANY(i.path))
       )
-      SELECT resource_type, resource_id, MIN(depth) AS min_depth FROM impact GROUP BY resource_type, resource_id
+      SELECT resource_type, resource_id, MIN(depth) AS min_depth
+      FROM impact
+      GROUP BY resource_type, resource_id
     `, { rootType, rootId, maxDepth: effectiveMaxDepth });
 
     const impactedResources: ImpactNode[] = [];
@@ -352,17 +433,19 @@ export class ResourceRelationshipRepository {
     relationType: string,
     metadata?: Record<string, unknown>,
   ): Promise<GraphEdge> {
-    const [id] = await this.db(TABLE_NAME).insert({
-      source_type: sourceType,
-      source_id: sourceId,
-      target_type: targetType,
-      target_id: targetId,
-      relation_type: relationType,
-      metadata: metadata ?? {},
-    });
+    const [row] = (await this.db(TABLE_NAME)
+      .insert({
+        source_type: sourceType,
+        source_id: sourceId,
+        target_type: targetType,
+        target_id: targetId,
+        relation_type: relationType,
+        metadata: metadata ?? {},
+      })
+      .returning('id')) as { id: string }[];
 
     return {
-      id: String(id),
+      id: row.id,
       sourceType,
       sourceId,
       targetType,
