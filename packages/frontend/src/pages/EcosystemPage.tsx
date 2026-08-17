@@ -74,7 +74,7 @@ export function EcosystemPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
         <div className="lg:col-span-3">
-          <div className="h-[600px] overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
+          <div style={{ height: '600px' }} className="overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
             <ResourceGraph
               nodes={data.nodes}
               edges={data.edges}

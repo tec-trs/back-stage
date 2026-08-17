@@ -13,12 +13,12 @@ export default defineConfig({
     host: true,
   },
   optimizeDeps: {
-    exclude: ['@xyflow/react'],
-    include: ['dagre'],
-  },
-  build: {
-    commonjsOptions: {
-      include: [/@xyflow/],
-    },
+    include: [
+      'dagre',
+      '@xyflow/react',
+      'use-sync-external-store',
+      'use-sync-external-store/shim',
+      'use-sync-external-store/with-selector',
+    ],
   },
 });
