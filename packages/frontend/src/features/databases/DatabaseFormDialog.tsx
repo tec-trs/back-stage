@@ -110,10 +110,12 @@ export function DatabaseFormDialog({
   isOpen,
   onClose,
   database,
+  prefill,
 }: {
   isOpen: boolean;
   onClose: () => void;
   database?: Database | null;
+  prefill?: Database | null;
 }) {
   const isEditMode = Boolean(database);
   const createDatabase = useCreateDatabase();
@@ -132,13 +134,13 @@ export function DatabaseFormDialog({
   useEffect(() => {
     if (isOpen) {
       setActiveTab('identification');
-      setForm(database ? formFromDatabase(database) : emptyForm());
-      setTags(database?.tags ?? []);
+      setForm(database ? formFromDatabase(database) : prefill ? formFromDatabase(prefill) : emptyForm());
+      setTags(database?.tags ?? prefill?.tags ?? []);
       createDatabase.reset();
       updateDatabase.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, database]);
+  }, [isOpen, database, prefill]);
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]): void {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -176,7 +178,7 @@ export function DatabaseFormDialog({
 
   return (
     <Modal
-      title={isEditMode ? 'Editar Banco de Dados' : 'Incluir Banco de Dados'}
+      title={isEditMode ? 'Editar Banco de Dados' : prefill ? 'Duplicar Banco de Dados' : 'Incluir Banco de Dados'}
       isOpen={isOpen}
       onClose={onClose}
       size="lg"
@@ -438,7 +440,9 @@ export function DatabaseFormDialog({
               ? 'Salvando...'
               : isEditMode
                 ? 'Salvar alteracoes'
-                : 'Criar banco de dados'}
+                : prefill
+                  ? 'Criar copia'
+                  : 'Criar banco de dados'}
           </Button>
         </div>
       </form>

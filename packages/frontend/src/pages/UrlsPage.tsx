@@ -10,7 +10,7 @@ import { Button } from '../shared/components/Button';
 import { ConfirmDialog } from '../shared/components/ConfirmDialog';
 import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
-import { PencilIcon, PlusIcon, TrashIcon } from '../shared/components/icons';
+import { CopyIcon, PencilIcon, PlusIcon, TrashIcon } from '../shared/components/icons';
 import { exportToCsv } from '../shared/utils/export-csv';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Spinner } from '../shared/components/Spinner';
@@ -35,6 +35,7 @@ export function UrlsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editing, setEditing] = useState<Url | null>(null);
+  const [duplicating, setDuplicating] = useState<Url | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const items = data?.items ?? [];
@@ -42,17 +43,26 @@ export function UrlsPage() {
 
   function openCreate(): void {
     setEditing(null);
+    setDuplicating(null);
     setIsFormOpen(true);
   }
 
   function openEdit(url: Url): void {
     setEditing(url);
+    setDuplicating(null);
+    setIsFormOpen(true);
+  }
+
+  function openDuplicate(url: Url): void {
+    setEditing(null);
+    setDuplicating(url);
     setIsFormOpen(true);
   }
 
   function closeForm(): void {
     setIsFormOpen(false);
     setEditing(null);
+    setDuplicating(null);
   }
 
   function handleConfirmDelete(): void {
@@ -77,7 +87,7 @@ export function UrlsPage() {
         description="Gerencie URLs, endpoints e webhooks dos seus recursos"
       />
 
-      <UrlFormDialog isOpen={isFormOpen} onClose={closeForm} url={editing} />
+      <UrlFormDialog isOpen={isFormOpen} onClose={closeForm} url={editing} prefill={duplicating} />
 
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
@@ -104,6 +114,15 @@ export function UrlsPage() {
           onClick={() => selected && openEdit(selected)}
         >
           Editar
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<CopyIcon />}
+          disabled={!selected}
+          onClick={() => selected && openDuplicate(selected)}
+        >
+          Duplicar
         </Button>
         <Button
           size="sm"

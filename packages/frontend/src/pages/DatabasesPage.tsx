@@ -10,7 +10,7 @@ import { Button } from '../shared/components/Button';
 import { ConfirmDialog } from '../shared/components/ConfirmDialog';
 import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
-import { PencilIcon, PlusIcon, TrashIcon } from '../shared/components/icons';
+import { CopyIcon, PencilIcon, PlusIcon, TrashIcon } from '../shared/components/icons';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Spinner } from '../shared/components/Spinner';
 import { CRITICALITY_LABELS } from '../shared/constants/labels';
@@ -31,6 +31,7 @@ export function DatabasesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editing, setEditing] = useState<Database | null>(null);
+  const [duplicating, setDuplicating] = useState<Database | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const items = data?.items ?? [];
@@ -38,17 +39,26 @@ export function DatabasesPage() {
 
   function openCreate(): void {
     setEditing(null);
+    setDuplicating(null);
     setIsFormOpen(true);
   }
 
   function openEdit(db: Database): void {
     setEditing(db);
+    setDuplicating(null);
+    setIsFormOpen(true);
+  }
+
+  function openDuplicate(db: Database): void {
+    setEditing(null);
+    setDuplicating(db);
     setIsFormOpen(true);
   }
 
   function closeForm(): void {
     setIsFormOpen(false);
     setEditing(null);
+    setDuplicating(null);
   }
 
   function handleConfirmDelete(): void {
@@ -73,7 +83,7 @@ export function DatabasesPage() {
         description="Gerencie bancos de dados, dependencias e impacto na infraestrutura"
       />
 
-      <DatabaseFormDialog isOpen={isFormOpen} onClose={closeForm} database={editing} />
+      <DatabaseFormDialog isOpen={isFormOpen} onClose={closeForm} database={editing} prefill={duplicating} />
 
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
@@ -100,6 +110,15 @@ export function DatabasesPage() {
           onClick={() => selected && openEdit(selected)}
         >
           Editar
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<CopyIcon />}
+          disabled={!selected}
+          onClick={() => selected && openDuplicate(selected)}
+        >
+          Duplicar
         </Button>
         <Button
           size="sm"

@@ -79,12 +79,14 @@ export function UrlFormDialog({
   isOpen,
   onClose,
   url,
+  prefill,
   defaultOwnerResourceType,
   defaultOwnerResourceId,
 }: {
   isOpen: boolean;
   onClose: () => void;
   url?: Url | null;
+  prefill?: Url | null;
   defaultOwnerResourceType?: UrlOwnerResourceType;
   defaultOwnerResourceId?: string;
 }) {
@@ -115,16 +117,16 @@ export function UrlFormDialog({
 
   useEffect(() => {
     if (isOpen) {
-      const base = url ? formFromUrl(url) : emptyForm();
-      if (!url && defaultOwnerResourceType) base.ownerResourceType = defaultOwnerResourceType;
-      if (!url && defaultOwnerResourceId) base.ownerResourceId = defaultOwnerResourceId;
+      const base = url ? formFromUrl(url) : prefill ? formFromUrl(prefill) : emptyForm();
+      if (!url && !prefill && defaultOwnerResourceType) base.ownerResourceType = defaultOwnerResourceType;
+      if (!url && !prefill && defaultOwnerResourceId) base.ownerResourceId = defaultOwnerResourceId;
       setForm(base);
-      setTags(url?.tags ?? []);
+      setTags(url?.tags ?? prefill?.tags ?? []);
       createUrl.reset();
       updateUrl.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, url, defaultOwnerResourceType, defaultOwnerResourceId]);
+  }, [isOpen, url, prefill, defaultOwnerResourceType, defaultOwnerResourceId]);
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]): void {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -158,7 +160,7 @@ export function UrlFormDialog({
 
   return (
     <Modal
-      title={isEditMode ? 'Editar URL' : 'Incluir URL'}
+      title={isEditMode ? 'Editar URL' : prefill ? 'Duplicar URL' : 'Incluir URL'}
       isOpen={isOpen}
       onClose={onClose}
       size="lg"
@@ -383,7 +385,7 @@ export function UrlFormDialog({
             Cancelar
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Salvando...' : isEditMode ? 'Salvar alteracoes' : 'Criar URL'}
+            {mutation.isPending ? 'Salvando...' : isEditMode ? 'Salvar alteracoes' : prefill ? 'Criar copia' : 'Criar URL'}
           </Button>
         </div>
       </form>

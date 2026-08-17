@@ -50,8 +50,6 @@ export function EcosystemPage() {
 
   const impactedNodeIds = useMemo(() => new Set(impactedByDepth.keys()), [impactedByDepth]);
 
-  const selectedNode = graphNodes.find((n) => n.id === selectedNodeId);
-
   // ── Opção A: agrupar bancos quando aplicação tem ≥ 2 ──────────────────────
   const { graphNodes, graphEdges, dbGroups } = useMemo(() => {
     if (!data) return { graphNodes: [], graphEdges: [], dbGroups: [] };
@@ -117,6 +115,8 @@ export function EcosystemPage() {
       dbGroups: groups,
     };
   }, [data]);
+
+  const selectedNode = graphNodes.find((n) => n.id === selectedNodeId);
 
   const handleNodeSelect = useCallback((nodeId: string, resourceType: string) => {
     setSelectedNodeId(nodeId);
