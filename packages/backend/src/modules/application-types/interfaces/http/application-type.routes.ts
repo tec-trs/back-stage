@@ -18,11 +18,12 @@ const DELETE_ROLES = ['admin'];
 export function createApplicationTypeRouter(controller: ApplicationTypeController): Router {
   const router = Router();
 
+  router.use(authenticateMiddleware);
+
   router.get('/', asyncHandler(controller.list));
 
   router.post(
     '/',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ body: createApplicationTypeBodySchema }),
     asyncHandler(controller.create),
@@ -36,7 +37,6 @@ export function createApplicationTypeRouter(controller: ApplicationTypeControlle
 
   router.put(
     '/:id',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ params: applicationTypeIdParamsSchema, body: updateApplicationTypeBodySchema }),
     asyncHandler(controller.update),
@@ -44,7 +44,6 @@ export function createApplicationTypeRouter(controller: ApplicationTypeControlle
 
   router.delete(
     '/:id',
-    authenticateMiddleware,
     authorizeMiddleware(...DELETE_ROLES),
     validateMiddleware({ params: applicationTypeIdParamsSchema }),
     asyncHandler(controller.remove),

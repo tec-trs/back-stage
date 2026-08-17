@@ -21,11 +21,12 @@ const ADMIN_ROLES = ['admin'];
 export function createTeamRouter(controller: TeamController): Router {
   const router = Router();
 
+  router.use(authenticateMiddleware);
+
   router.get('/', asyncHandler(controller.list));
 
   router.post(
     '/',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ body: createTeamBodySchema }),
     asyncHandler(controller.create),
@@ -39,7 +40,6 @@ export function createTeamRouter(controller: TeamController): Router {
 
   router.put(
     '/:id',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ params: teamIdParamsSchema, body: updateTeamBodySchema }),
     asyncHandler(controller.update),
@@ -47,7 +47,6 @@ export function createTeamRouter(controller: TeamController): Router {
 
   router.delete(
     '/:id',
-    authenticateMiddleware,
     authorizeMiddleware(...ADMIN_ROLES),
     validateMiddleware({ params: teamIdParamsSchema }),
     asyncHandler(controller.remove),
@@ -56,7 +55,6 @@ export function createTeamRouter(controller: TeamController): Router {
   // Member management
   router.post(
     '/:id/members',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ params: teamIdParamsSchema, body: addMemberBodySchema }),
     asyncHandler(controller.addMember),
@@ -64,7 +62,6 @@ export function createTeamRouter(controller: TeamController): Router {
 
   router.delete(
     '/:id/members/:userId',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ params: memberParamsSchema }),
     asyncHandler(controller.removeMember),
@@ -72,7 +69,6 @@ export function createTeamRouter(controller: TeamController): Router {
 
   router.patch(
     '/:id/members/:userId',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ params: memberParamsSchema, body: updateMemberRoleBodySchema }),
     asyncHandler(controller.updateMemberRole),

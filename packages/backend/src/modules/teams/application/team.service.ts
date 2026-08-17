@@ -68,7 +68,8 @@ export class TeamService {
   async delete(id: string, audit: AuditContext): Promise<void> {
     const team = await this.getById(id);
 
-    await this.repository.softDelete(id);
+    const deleted = await this.repository.softDelete(id);
+    if (!deleted) return;
 
     await auditLogger.record({
       actorUserId: audit.actorUserId,

@@ -1,5 +1,7 @@
 import type { Knex } from 'knex';
 
+import { NotFoundError } from '@back-stage/shared';
+
 import { Team, type TeamMemberRow, type TeamRole, type TeamRow } from '../domain/team.entity.js';
 
 export interface CreateTeamData {
@@ -119,12 +121,19 @@ export class TeamRepository implements ITeamRepository {
   }
 
   async addMember(teamId: string, userId: string, role: TeamRole): Promise<void> {
-    await this.db('team_members').insert({
-      team_id: teamId,
-      user_id: userId,
-      role,
-      metadata: JSON.stringify({}),
-    });
+    try {
+      await this.db('team_members').insert({
+        team_id: teamId,
+        user_id: userId,
+        role,
+        metadata: {} as Record<string, unknown>,
+      });
+    } catch (err) {
+      if ((err as { code?: string }).code === '23503') {
+        throw new NotFoundError('Usuario', userId);
+      }
+      throw err;
+    }
   }
 
   async removeMember(teamId: string, userId: string): Promise<boolean> {

@@ -24,7 +24,7 @@ export interface IEnvironmentRepository {
   findById(id: string): Promise<Environment | undefined>;
   findBySlug(slug: string): Promise<Environment | undefined>;
   create(input: CreateEnvironmentInput): Promise<Environment>;
-  update(id: string, input: UpdateEnvironmentInput): Promise<Environment>;
+  update(id: string, input: UpdateEnvironmentInput): Promise<Environment | null>;
   delete(id: string): Promise<void>;
 }
 
@@ -59,7 +59,7 @@ export class EnvironmentRepository implements IEnvironmentRepository {
     return new Environment(row!);
   }
 
-  public async update(id: string, input: UpdateEnvironmentInput): Promise<Environment> {
+  public async update(id: string, input: UpdateEnvironmentInput): Promise<Environment | null> {
     const patch: Partial<EnvironmentRow> = {};
     if (input.name !== undefined) patch.name = input.name;
     if (input.description !== undefined) patch.description = input.description;
@@ -70,7 +70,7 @@ export class EnvironmentRepository implements IEnvironmentRepository {
       .where('id', id)
       .update(patch)
       .returning('*');
-    return new Environment(row!);
+    return row ? new Environment(row) : null;
   }
 
   public async delete(id: string): Promise<void> {

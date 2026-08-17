@@ -18,11 +18,12 @@ const DELETE_ROLES = ['admin'];
 export function createServerTypeRouter(controller: ServerTypeController): Router {
   const router = Router();
 
+  router.use(authenticateMiddleware);
+
   router.get('/', asyncHandler(controller.list));
 
   router.post(
     '/',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ body: createServerTypeBodySchema }),
     asyncHandler(controller.create),
@@ -36,7 +37,6 @@ export function createServerTypeRouter(controller: ServerTypeController): Router
 
   router.put(
     '/:id',
-    authenticateMiddleware,
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ params: serverTypeIdParamsSchema, body: updateServerTypeBodySchema }),
     asyncHandler(controller.update),
@@ -44,7 +44,6 @@ export function createServerTypeRouter(controller: ServerTypeController): Router
 
   router.delete(
     '/:id',
-    authenticateMiddleware,
     authorizeMiddleware(...DELETE_ROLES),
     validateMiddleware({ params: serverTypeIdParamsSchema }),
     asyncHandler(controller.remove),

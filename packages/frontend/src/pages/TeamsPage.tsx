@@ -48,10 +48,6 @@ export function TeamsPage() {
 
   function closeMembers(): void {
     setMembersTeam(null);
-    // Keep selectedId so the row stays highlighted after closing the dialog.
-    // Reload from cache happens automatically via query invalidation.
-    const freshSelected = (data ?? []).find((t) => t.id === selectedId);
-    if (freshSelected) setMembersTeam(null);
   }
 
   function handleDeleteSelected(): void {

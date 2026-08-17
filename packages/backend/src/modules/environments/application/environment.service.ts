@@ -52,6 +52,7 @@ export class EnvironmentService {
     await this.getById(id);
 
     const env = await this.environmentRepository.update(id, input);
+    if (!env) throw new NotFoundError('Ambiente', id);
 
     await auditLogger.record({
       actorUserId: audit.actorUserId,
