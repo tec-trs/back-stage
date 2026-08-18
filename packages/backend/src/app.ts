@@ -93,12 +93,12 @@ export function createApp(): Express {
   app.use('/api/catalog-entities', registerCatalogModule());
   app.use('/api/audit-logs', registerAuditModule());
   app.use('/api/users', registerUsersModule());
-  app.use('/api/environments', registerEnvironmentsModule());
-  app.use('/api/teams', registerTeamsModule());
-  app.use('/api/server-types', registerServerTypesModule());
-  app.use('/api/application-types', registerApplicationTypesModule());
   // Resource routes require authentication + organization context
   const withOrg = [authenticateMiddleware, organizationMiddleware];
+  app.use('/api/environments', ...withOrg, registerEnvironmentsModule());
+  app.use('/api/teams', ...withOrg, registerTeamsModule());
+  app.use('/api/server-types', registerServerTypesModule());
+  app.use('/api/application-types', registerApplicationTypesModule());
   app.use('/api/servers', ...withOrg, registerServersModule());
   app.use('/api/applications', ...withOrg, registerApplicationsModule());
   app.use('/api/databases', ...withOrg, registerDatabasesModule());

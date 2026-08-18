@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { orgContext } from '../../../shared/context/org-context.js';
 import { Environment, type EnvironmentRow } from '../domain/environment.entity.js';
 
 const TABLE_NAME = 'environments';
@@ -32,24 +33,29 @@ export interface IEnvironmentRepository {
 export class EnvironmentRepository implements IEnvironmentRepository {
   public constructor(private readonly knex: Knex) {}
 
+  private baseQuery(): Knex.QueryBuilder {
+    return this.knex(TABLE_NAME).where('organization_id', orgContext.getOrThrow());
+  }
+
   public async findAll(): Promise<Environment[]> {
-    const rows = await this.knex<EnvironmentRow>(TABLE_NAME).orderBy('name');
-    return rows.map((row) => new Environment(row));
+    const rows = await this.baseQuery().orderBy('name');
+    return rows.map((row: EnvironmentRow) => new Environment(row));
   }
 
   public async findById(id: string): Promise<Environment | undefined> {
-    const row = await this.knex<EnvironmentRow>(TABLE_NAME).where('id', id).first();
+    const row = await this.baseQuery().where('id', id).first();
     return row ? new Environment(row) : undefined;
   }
 
   public async findBySlug(slug: string): Promise<Environment | undefined> {
-    const row = await this.knex<EnvironmentRow>(TABLE_NAME).where('slug', slug).first();
+    const row = await this.baseQuery().where('slug', slug).first();
     return row ? new Environment(row) : undefined;
   }
 
   public async create(input: CreateEnvironmentInput): Promise<Environment> {
-    const [row] = await this.knex<EnvironmentRow>(TABLE_NAME)
+    const [row] = await this.knex(TABLE_NAME)
       .insert({
+        organization_id: orgContext.getOrThrow(),
         slug: input.slug,
         name: input.name,
         description: input.description ?? null,
@@ -57,30 +63,30 @@ export class EnvironmentRepository implements IEnvironmentRepository {
         is_active: input.isActive ?? true,
       })
       .returning('*');
-    return new Environment(row!);
+    return new Environment(row as EnvironmentRow);
   }
 
   public async update(id: string, input: UpdateEnvironmentInput): Promise<Environment | null> {
-    const patch: Partial<EnvironmentRow> = {};
+    const patch: Record<string, unknown> = {};
     if (input.name !== undefined) patch.name = input.name;
     if (input.description !== undefined) patch.description = input.description;
     if (input.color !== undefined) patch.color = input.color;
     if (input.isActive !== undefined) patch.is_active = input.isActive;
 
-    const [row] = await this.knex<EnvironmentRow>(TABLE_NAME)
+    const [row] = await this.baseQuery()
       .where('id', id)
       .update(patch)
       .returning('*');
-    return row ? new Environment(row) : null;
+    return row ? new Environment(row as EnvironmentRow) : null;
   }
 
   public async delete(id: string): Promise<void> {
-    await this.knex<EnvironmentRow>(TABLE_NAME).where('id', id).delete();
+    await this.baseQuery().where('id', id).delete();
   }
 
   public async bulkSoftDelete(ids: string[]): Promise<number> {
     if (ids.length === 0) return 0;
-    const affected = (await this.knex(TABLE_NAME)
+    const affected = (await this.baseQuery()
       .whereNull('deleted_at')
       .whereIn('id', ids)
       .update({ deleted_at: this.knex.fn.now() })) as unknown as number;

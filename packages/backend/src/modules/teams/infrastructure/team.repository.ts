@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 
 import { NotFoundError } from '@back-stage/shared';
 
+import { orgContext } from '../../../shared/context/org-context.js';
 import { Team, type TeamMemberRow, type TeamRole, type TeamRow } from '../domain/team.entity.js';
 
 export interface CreateTeamData {
@@ -51,72 +52,74 @@ export class TeamRepository implements ITeamRepository {
       .orderBy('u.full_name', 'asc');
   }
 
+  private baseQuery(): Knex.QueryBuilder {
+    return this.db('teams')
+      .where('organization_id', orgContext.getOrThrow())
+      .whereNull('deleted_at');
+  }
+
   async findAll(): Promise<Team[]> {
-    const rows = await this.db<TeamRow>('teams')
-      .whereNull('deleted_at')
-      .orderBy('name', 'asc');
+    const rows = await this.baseQuery().orderBy('name', 'asc');
 
-    const memberRows = await this.membersFor(rows.map((r) => r.id));
+    const memberRows = await this.membersFor(rows.map((r: TeamRow) => r.id));
 
-    return rows.map((row) => {
+    return rows.map((row: TeamRow) => {
       const members = memberRows.filter((m) => m.team_id === row.id);
       return new Team(row, members);
     });
   }
 
   async findById(id: string): Promise<Team | null> {
-    const row = await this.db<TeamRow>('teams').where({ id }).whereNull('deleted_at').first();
+    const row = await this.baseQuery().where({ id }).first();
     if (!row) return null;
 
     const memberRows = await this.membersFor([id]);
-    return new Team(row, memberRows);
+    return new Team(row as TeamRow, memberRows);
   }
 
   async findBySlug(slug: string): Promise<TeamRow | null> {
-    const row = await this.db<TeamRow>('teams').where({ slug }).whereNull('deleted_at').first();
-    return row ?? null;
+    const row = await this.baseQuery().where({ slug }).first();
+    return (row as TeamRow) ?? null;
   }
 
   async create(data: CreateTeamData): Promise<Team> {
-    const [row] = await this.db<TeamRow>('teams')
+    const [row] = await this.db('teams')
       .insert({
+        organization_id: orgContext.getOrThrow(),
         name: data.name,
         slug: data.slug,
         description: data.description ?? null,
         metadata: {} as Record<string, unknown>,
       })
       .returning('*');
-    return new Team(row, []);
+    return new Team(row as TeamRow, []);
   }
 
   async update(id: string, data: UpdateTeamData): Promise<Team | null> {
-    const patch: Partial<TeamRow> = {};
+    const patch: Record<string, unknown> = {};
     if (data.name !== undefined) patch.name = data.name;
     if (data.description !== undefined) patch.description = data.description;
 
-    const [row] = await this.db<TeamRow>('teams')
+    const [row] = await this.baseQuery()
       .where({ id })
-      .whereNull('deleted_at')
       .update(patch)
       .returning('*');
 
     if (!row) return null;
     const memberRows = await this.membersFor([id]);
-    return new Team(row, memberRows);
+    return new Team(row as TeamRow, memberRows);
   }
 
   async softDelete(id: string): Promise<boolean> {
-    const count = await this.db('teams')
+    const count = await this.baseQuery()
       .where({ id })
-      .whereNull('deleted_at')
       .update({ deleted_at: this.db.fn.now() });
     return count > 0;
   }
 
   async bulkSoftDelete(ids: string[]): Promise<number> {
     if (ids.length === 0) return 0;
-    const affected = (await this.db('teams')
-      .whereNull('deleted_at')
+    const affected = (await this.baseQuery()
       .whereIn('id', ids)
       .update({ deleted_at: this.db.fn.now() })) as unknown as number;
     return affected;
@@ -133,6 +136,7 @@ export class TeamRepository implements ITeamRepository {
   async addMember(teamId: string, userId: string, role: TeamRole): Promise<void> {
     try {
       await this.db('team_members').insert({
+        organization_id: orgContext.getOrThrow(),
         team_id: teamId,
         user_id: userId,
         role,
