@@ -3,7 +3,6 @@ import { z } from 'zod';
 const urlTypeEnum = z.string().min(1).max(50).regex(/^[a-z0-9_-]+$/, 'tipo de url invalido');
 const statusEnum = z.enum(['active', 'inactive', 'deprecated', 'error']);
 const methodEnum = z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']).nullable().optional();
-const ownerResourceTypeEnum = z.enum(['server', 'application', 'database']);
 
 const baseFields = {
   url: z.string().url().max(2048),
@@ -23,8 +22,6 @@ const baseFields = {
 export const createUrlBodySchema = z.object({
   label: z.string().min(1).max(255),
   ...baseFields,
-  ownerResourceType: ownerResourceTypeEnum,
-  ownerResourceId: z.string().uuid(),
 });
 
 export const updateUrlBodySchema = z.object({
@@ -32,8 +29,6 @@ export const updateUrlBodySchema = z.object({
   url: baseFields.url.optional(),
   urlType: baseFields.urlType.optional(),
   description: baseFields.description,
-  ownerResourceType: ownerResourceTypeEnum.optional(),
-  ownerResourceId: z.string().uuid().optional(),
   method: baseFields.method,
   authRequired: baseFields.authRequired,
   authMethod: baseFields.authMethod,
@@ -62,8 +57,6 @@ export const listUrlsQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   status: statusEnum.optional(),
   urlType: urlTypeEnum.optional(),
-  ownerResourceType: ownerResourceTypeEnum.optional(),
-  ownerResourceId: z.string().uuid().optional(),
   tags: z.string().transform((str) => str.split(',')).optional(),
   search: z.string().optional(),
 });

@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 
-import type { CreateUrlInput, UrlHttpMethod, UrlOwnerResourceType } from './use-create-url';
+import type { CreateUrlInput, UrlHttpMethod } from './use-create-url';
 import { useCreateUrl } from './use-create-url';
 import { Button } from '../../shared/components/Button';
 import { DownloadIcon, UploadIcon } from '../../shared/components/icons';
@@ -9,16 +9,14 @@ import { Modal } from '../../shared/components/Modal';
 // --- Constants ---
 
 const VALID_URL_TYPES: readonly string[] = ['api', 'web', 'healthcheck', 'webhook', 'documentation', 'other'];
-const VALID_OWNER_TYPES: readonly string[] = ['server', 'application', 'database'];
 const VALID_METHODS: readonly string[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
 const VALID_STATUSES: readonly string[] = ['active', 'inactive', 'deprecated', 'error'];
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const CSV_TEMPLATE = [
-  'label,url,urlType,ownerResourceType,ownerResourceId,method,authRequired,authMethod,status,description',
-  'Portal Clientes,https://portal.empresa.com,web,application,00000000-0000-0000-0000-000000000001,GET,true,oauth2,active,Portal de acesso de clientes',
-  'API Pedidos v2,https://api.empresa.com/v2/pedidos,api,application,00000000-0000-0000-0000-000000000002,POST,true,jwt,active,Endpoint de criacao de pedidos',
-  'Health API,https://api.empresa.com/health,healthcheck,application,00000000-0000-0000-0000-000000000002,GET,false,,active,Endpoint de health check',
+  'label,url,urlType,method,authRequired,authMethod,status,description',
+  'Portal Clientes,https://portal.empresa.com,web,GET,true,oauth2,active,Portal de acesso de clientes',
+  'API Pedidos v2,https://api.empresa.com/v2/pedidos,api,POST,true,jwt,active,Endpoint de criacao de pedidos',
+  'Health API,https://api.empresa.com/health,healthcheck,GET,false,,active,Endpoint de health check',
 ].join('\n');
 
 // --- Types ---
@@ -86,8 +84,6 @@ function parseAndValidate(csvText: string): ParsedRow[] {
     const label = col(cells, 'label');
     const url = col(cells, 'url');
     const urlType = col(cells, 'urltype');
-    const ownerResourceType = col(cells, 'ownerresourcetype');
-    const ownerResourceId = col(cells, 'ownerresourceid');
     const method = col(cells, 'method');
     const status = col(cells, 'status');
 
@@ -103,18 +99,6 @@ function parseAndValidate(csvText: string): ParsedRow[] {
       errors.push('urlType obrigatorio');
     } else if (!VALID_URL_TYPES.includes(urlType)) {
       errors.push(`urlType "${urlType}" invalido — use: ${VALID_URL_TYPES.join(', ')}`);
-    }
-
-    if (!ownerResourceType) {
-      errors.push('ownerResourceType obrigatorio');
-    } else if (!VALID_OWNER_TYPES.includes(ownerResourceType)) {
-      errors.push(`ownerResourceType "${ownerResourceType}" invalido — use: ${VALID_OWNER_TYPES.join(', ')}`);
-    }
-
-    if (!ownerResourceId) {
-      errors.push('ownerResourceId obrigatorio — use o UUID do recurso proprietario');
-    } else if (!UUID_RE.test(ownerResourceId)) {
-      errors.push('ownerResourceId deve ser um UUID valido (ex: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)');
     }
 
     if (method && !VALID_METHODS.includes(method.toUpperCase())) {
@@ -134,8 +118,6 @@ function parseAndValidate(csvText: string): ParsedRow[] {
       label,
       url,
       urlType,
-      ownerResourceType: ownerResourceType as UrlOwnerResourceType,
-      ownerResourceId,
       method: method ? (method.toUpperCase() as UrlHttpMethod) : null,
       authRequired: authRequiredStr === 'true' || authRequiredStr === '1' || authRequiredStr === 'sim',
       authMethod: col(cells, 'authmethod') || null,
@@ -303,18 +285,16 @@ export function UrlImportDialog({ isOpen, onClose }: UrlImportDialogProps) {
               value={csvText}
               onChange={(e) => setCsvText(e.target.value)}
               rows={6}
-              placeholder={'label,url,urlType,ownerResourceType,ownerResourceId,...\nPortal,https://portal.empresa.com,web,application,uuid-aqui,...'}
+              placeholder={'label,url,urlType,method,status,...\nPortal,https://portal.empresa.com,web,GET,active,...'}
               className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-xs text-slate-200 placeholder-slate-600 focus:border-slate-500 focus:outline-none"
             />
           </div>
 
           <div className="rounded-md border border-slate-800 bg-slate-800/40 px-3 py-3 text-xs text-slate-400">
             <p className="mb-1 font-semibold text-slate-300">Colunas obrigatorias:</p>
-            <p className="font-mono">label, url, urlType, ownerResourceType, ownerResourceId</p>
+            <p className="font-mono">label, url, urlType</p>
             <div className="mt-2 space-y-0.5">
               <p><span className="text-slate-300">urlType:</span> api | web | healthcheck | webhook | documentation | other</p>
-              <p><span className="text-slate-300">ownerResourceType:</span> server | application | database</p>
-              <p><span className="text-slate-300">ownerResourceId:</span> UUID do recurso proprietario <span className="text-slate-600">(visivel na URL ao abrir o cadastro)</span></p>
             </div>
             <p className="mt-2 font-semibold text-slate-300">Colunas opcionais:</p>
             <p className="font-mono text-slate-500">method, authRequired, authMethod, status, description</p>

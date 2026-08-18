@@ -2,16 +2,12 @@ export type UrlType = 'public' | 'internal' | 'api' | 'webhook' | 'admin_panel' 
 
 export type UrlStatus = 'active' | 'inactive' | 'deprecated' | 'error';
 
-export type OwnerResourceType = 'server' | 'application' | 'database';
-
 export interface UrlRow {
   id: string;
   label: string;
   url: string;
   url_type: string;
   description: string | null;
-  owner_resource_type: string;
-  owner_resource_id: string;
   method: string | null;
   auth_required: boolean;
   auth_method: string | null;
@@ -31,8 +27,6 @@ export class Url {
   public readonly url: string;
   public readonly urlType: UrlType;
   public readonly description: string | null;
-  public readonly ownerResourceType: OwnerResourceType;
-  public readonly ownerResourceId: string;
   public readonly method: string | null;
   public readonly authRequired: boolean;
   public readonly authMethod: string | null;
@@ -51,8 +45,6 @@ export class Url {
     this.url = row.url;
     this.urlType = row.url_type as UrlType;
     this.description = row.description;
-    this.ownerResourceType = row.owner_resource_type as OwnerResourceType;
-    this.ownerResourceId = row.owner_resource_id;
     this.method = row.method;
     this.authRequired = row.auth_required;
     this.authMethod = row.auth_method;
@@ -73,8 +65,6 @@ export class Url {
       url: this.url,
       urlType: this.urlType,
       description: this.description,
-      ownerResourceType: this.ownerResourceType,
-      ownerResourceId: this.ownerResourceId,
       method: this.method,
       authRequired: this.authRequired,
       authMethod: this.authMethod,

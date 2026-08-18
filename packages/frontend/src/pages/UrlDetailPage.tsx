@@ -154,14 +154,6 @@ export function UrlDetailPage() {
         </section>
 
         <section>
-          <h2 className="mb-2 text-lg font-medium text-slate-200">Proprietario</h2>
-          <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
-            <Field label="Tipo de recurso" value={url.ownerResourceType} />
-            <Field label="ID do recurso" value={url.ownerResourceId} />
-          </dl>
-        </section>
-
-        <section>
           <h2 className="mb-2 text-lg font-medium text-slate-200">Dependencias</h2>
           {isSubgraphLoading ? (
             <div className="flex justify-center py-8">

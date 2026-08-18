@@ -4,7 +4,6 @@ import { apiRequest } from '../../shared/api/http-client';
 
 import type { Url } from './use-urls';
 
-export type UrlOwnerResourceType = 'server' | 'application' | 'database';
 export type UrlHttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
 
 export interface CreateUrlInput {
@@ -12,8 +11,6 @@ export interface CreateUrlInput {
   url: string;
   urlType: string;
   description?: string | null;
-  ownerResourceType: UrlOwnerResourceType;
-  ownerResourceId: string;
   method?: UrlHttpMethod | null;
   authRequired?: boolean;
   authMethod?: string | null;

@@ -1,4 +1,4 @@
-import { ConflictError, NotFoundError, ValidationError } from '@back-stage/shared';
+import { ConflictError, NotFoundError } from '@back-stage/shared';
 
 import { auditLogger } from '../../../shared/audit/audit-logger.js';
 import type { Url } from '../domain/url.entity.js';
@@ -37,27 +37,10 @@ export class UrlService {
     return url;
   }
 
-  public async getByOwnerResource(
-    ownerResourceType: string,
-    ownerResourceId: string,
-  ): Promise<Url[]> {
-    return this.urlRepository.findByOwnerResource(ownerResourceType, ownerResourceId);
-  }
-
   public async create(input: CreateUrlInput, audit: AuditContext): Promise<Url> {
-    const resourceExists = await this.urlRepository.validateOwnerResourceExists(
-      input.ownerResourceType,
-      input.ownerResourceId,
-    );
-    if (!resourceExists) {
-      throw new ValidationError(
-        `Recurso '${input.ownerResourceType}' com id '${input.ownerResourceId}' nao existe`,
-      );
-    }
-
     const existing = await this.urlRepository.findByUrl(input.url);
-    if (existing && existing.ownerResourceId === input.ownerResourceId) {
-      throw new ConflictError(`Ja existe uma URL com este endereco para este recurso`);
+    if (existing) {
+      throw new ConflictError(`Ja existe uma URL cadastrada com este endereco`);
     }
 
     const url = await this.urlRepository.create(input);
@@ -77,16 +60,6 @@ export class UrlService {
 
   public async update(id: string, input: UpdateUrlInput, audit: AuditContext): Promise<Url> {
     await this.getById(id);
-
-    if (input.ownerResourceType !== undefined || input.ownerResourceId !== undefined) {
-      const ownerType = input.ownerResourceType || (await this.getById(id)).ownerResourceType;
-      const ownerId = input.ownerResourceId || (await this.getById(id)).ownerResourceId;
-
-      const resourceExists = await this.urlRepository.validateOwnerResourceExists(ownerType, ownerId);
-      if (!resourceExists) {
-        throw new ValidationError(`Recurso '${ownerType}' com id '${ownerId}' nao existe`);
-      }
-    }
 
     if (input.url !== undefined) {
       const existing = await this.urlRepository.findByUrl(input.url);

@@ -7,8 +7,6 @@ export interface Url {
   url: string;
   urlType: string;
   description: string | null;
-  ownerResourceType: string;
-  ownerResourceId: string;
   method: string | null;
   authRequired: boolean;
   authMethod: string | null;
@@ -34,8 +32,6 @@ export interface UrlsResponse {
 export interface UrlFilters {
   status?: string;
   urlType?: string;
-  ownerResourceType?: string;
-  ownerResourceId?: string;
   tags?: string[];
   search?: string;
   page?: number;
@@ -49,8 +45,6 @@ export function useUrls(filters: UrlFilters = {}) {
       const params = new URLSearchParams();
       if (filters.status) params.append('status', filters.status);
       if (filters.urlType) params.append('urlType', filters.urlType);
-      if (filters.ownerResourceType) params.append('ownerResourceType', filters.ownerResourceType);
-      if (filters.ownerResourceId) params.append('ownerResourceId', filters.ownerResourceId);
       if (filters.tags?.length) params.append('tags', filters.tags.join(','));
       if (filters.search) params.append('search', filters.search);
       if (filters.page) params.append('page', String(filters.page));
@@ -58,18 +52,6 @@ export function useUrls(filters: UrlFilters = {}) {
 
       return apiRequest<UrlsResponse>(`/api/urls?${params}`, { method: 'GET' });
     },
-  });
-}
-
-export function useUrlsByOwner(ownerResourceType: string, ownerResourceId: string) {
-  return useQuery({
-    queryKey: ['urls', { ownerResourceType, ownerResourceId }],
-    queryFn: () =>
-      apiRequest<UrlsResponse>(
-        `/api/urls?ownerResourceType=${ownerResourceType}&ownerResourceId=${ownerResourceId}`,
-        { method: 'GET' },
-      ),
-    enabled: !!ownerResourceType && !!ownerResourceId,
   });
 }
 

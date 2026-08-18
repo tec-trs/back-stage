@@ -185,8 +185,6 @@ export function UrlsPage() {
                 Label: url.label,
                 URL: url.url,
                 Tipo: url.urlType,
-                RecursoTipo: url.ownerResourceType,
-                RecursoId: url.ownerResourceId,
                 Healthcheck: url.healthcheckEnabled ? 'Sim' : 'Nao',
                 UltimoCheck: url.lastCheckStatus ?? '',
                 Status: url.status,
@@ -231,7 +229,6 @@ export function UrlsPage() {
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Código</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">URL</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Tipo</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-400">Recurso</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Healthcheck</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Status</th>
               </tr>
@@ -279,9 +276,6 @@ export function UrlsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone="default">{url.urlType}</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-slate-400">
-                      <span className="capitalize">{url.ownerResourceType}</span>
                     </td>
                     <td className="px-4 py-3">
                       {url.healthcheckEnabled && url.lastCheckStatus ? (

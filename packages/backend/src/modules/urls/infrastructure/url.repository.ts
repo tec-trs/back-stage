@@ -8,8 +8,6 @@ const TABLE_NAME = 'urls';
 export interface UrlFilters {
   status?: string;
   urlType?: string;
-  ownerResourceType?: string;
-  ownerResourceId?: string;
   tags?: string[];
   search?: string;
 }
@@ -24,8 +22,6 @@ export interface CreateUrlInput {
   url: string;
   urlType: string;
   description?: string | null;
-  ownerResourceType: string;
-  ownerResourceId: string;
   method?: string | null;
   authRequired?: boolean;
   authMethod?: string | null;
@@ -43,13 +39,11 @@ export interface IUrlRepository {
   findMany(filters: UrlFilters, pagination: Pagination): Promise<{ items: Url[]; total: number }>;
   findById(id: string): Promise<Url | undefined>;
   findByUrl(url: string): Promise<Url | undefined>;
-  findByOwnerResource(ownerResourceType: string, ownerResourceId: string): Promise<Url[]>;
   create(input: CreateUrlInput): Promise<Url>;
   update(id: string, input: UpdateUrlInput): Promise<Url | undefined>;
   setStatus(id: string, status: string): Promise<Url | undefined>;
   softDelete(id: string): Promise<boolean>;
   bulkSoftDelete(ids: string[]): Promise<number>;
-  validateOwnerResourceExists(ownerResourceType: string, ownerResourceId: string): Promise<boolean>;
 }
 
 export class UrlRepository implements IUrlRepository {
@@ -70,12 +64,6 @@ export class UrlRepository implements IUrlRepository {
     }
     if (filters.urlType) {
       filteredQuery.where('url_type', filters.urlType);
-    }
-    if (filters.ownerResourceType) {
-      filteredQuery.where('owner_resource_type', filters.ownerResourceType);
-    }
-    if (filters.ownerResourceId) {
-      filteredQuery.where('owner_resource_id', filters.ownerResourceId);
     }
     if (filters.tags && filters.tags.length > 0) {
       filteredQuery.where((builder) => {
@@ -117,15 +105,6 @@ export class UrlRepository implements IUrlRepository {
     return new Url(row);
   }
 
-  public async findByOwnerResource(ownerResourceType: string, ownerResourceId: string): Promise<Url[]> {
-    const rows = (await this.baseQuery()
-      .where('owner_resource_type', ownerResourceType)
-      .where('owner_resource_id', ownerResourceId)
-      .orderBy('label', 'asc')) as UrlRow[];
-
-    return rows.map((row) => new Url(row));
-  }
-
   public async create(input: CreateUrlInput): Promise<Url> {
     const [row] = (await this.db(TABLE_NAME)
       .insert({
@@ -134,8 +113,6 @@ export class UrlRepository implements IUrlRepository {
         url: input.url,
         url_type: input.urlType,
         description: input.description,
-        owner_resource_type: input.ownerResourceType,
-        owner_resource_id: input.ownerResourceId,
         method: input.method,
         auth_required: input.authRequired ?? false,
         auth_method: input.authMethod,
@@ -164,6 +141,7 @@ export class UrlRepository implements IUrlRepository {
     if (input.description !== undefined) updateData.description = input.description;
     if (input.method !== undefined) updateData.method = input.method;
     if (input.authRequired !== undefined) updateData.auth_required = input.authRequired;
+
     if (input.authMethod !== undefined) updateData.auth_method = input.authMethod;
     if (input.status !== undefined) updateData.status = input.status;
     if (input.healthcheckEnabled !== undefined) updateData.healthcheck_enabled = input.healthcheckEnabled;
@@ -197,32 +175,5 @@ export class UrlRepository implements IUrlRepository {
       .whereIn('id', ids)
       .update({ deleted_at: this.db.fn.now() })) as unknown as number;
     return affected;
-  }
-
-  public async validateOwnerResourceExists(
-    ownerResourceType: string,
-    ownerResourceId: string,
-  ): Promise<boolean> {
-    let table: string;
-    switch (ownerResourceType) {
-      case 'server':
-        table = 'servers';
-        break;
-      case 'application':
-        table = 'applications';
-        break;
-      case 'database':
-        table = 'databases';
-        break;
-      default:
-        return false;
-    }
-
-    const exists = await this.db(table)
-      .where('id', ownerResourceId)
-      .whereNull('deleted_at')
-      .first();
-
-    return !!exists;
   }
 }

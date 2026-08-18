@@ -25,8 +25,6 @@ export class UrlController {
       {
         status: query.status,
         urlType: query.urlType,
-        ownerResourceType: query.ownerResourceType,
-        ownerResourceId: query.ownerResourceId,
         tags: query.tags,
         search: query.search,
       },

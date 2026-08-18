@@ -1,8 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useApplications } from '../applications/use-applications';
-import { useDatabases } from '../databases/use-databases';
-import { useServers } from '../servers/use-servers';
 import {
   useCreateRelationship,
   useDeleteRelationship,
@@ -12,7 +10,7 @@ import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
 
-import type { CreateUrlInput, UrlHttpMethod, UrlOwnerResourceType } from './use-create-url';
+import type { CreateUrlInput, UrlHttpMethod } from './use-create-url';
 import { useCreateUrl } from './use-create-url';
 import type { Url } from './use-urls';
 import { useUpdateUrl } from './use-update-url';
@@ -22,11 +20,6 @@ const inputClass =
 
 const URL_TYPES = ['api', 'frontend', 'monitoring', 'docs', 'webhook', 'cdn', 'download', 'api_external', 'internal'];
 const HTTP_METHODS: UrlHttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
-const OWNER_RESOURCE_TYPES: Array<{ value: UrlOwnerResourceType; label: string }> = [
-  { value: 'server', label: 'Servidor' },
-  { value: 'application', label: 'Aplicacao' },
-  { value: 'database', label: 'Banco de Dados' },
-];
 const URL_STATUSES: Array<{ value: string; label: string }> = [
   { value: 'active', label: 'Ativo' },
   { value: 'inactive', label: 'Inativo' },
@@ -39,8 +32,6 @@ interface FormState {
   url: string;
   urlType: string;
   description: string;
-  ownerResourceType: UrlOwnerResourceType;
-  ownerResourceId: string;
   method: UrlHttpMethod | '';
   authRequired: boolean;
   authMethod: string;
@@ -54,8 +45,6 @@ function emptyForm(): FormState {
     url: '',
     urlType: 'api',
     description: '',
-    ownerResourceType: 'application',
-    ownerResourceId: '',
     method: 'GET',
     authRequired: false,
     authMethod: '',
@@ -70,8 +59,6 @@ function formFromUrl(url: Url): FormState {
     url: url.url,
     urlType: url.urlType,
     description: url.description ?? '',
-    ownerResourceType: url.ownerResourceType as UrlOwnerResourceType,
-    ownerResourceId: url.ownerResourceId,
     method: (url.method as UrlHttpMethod) ?? 'GET',
     authRequired: url.authRequired,
     authMethod: url.authMethod ?? '',
@@ -85,15 +72,11 @@ export function UrlFormDialog({
   onClose,
   url,
   prefill,
-  defaultOwnerResourceType,
-  defaultOwnerResourceId,
 }: {
   isOpen: boolean;
   onClose: () => void;
   url?: Url | null;
   prefill?: Url | null;
-  defaultOwnerResourceType?: UrlOwnerResourceType;
-  defaultOwnerResourceId?: string;
 }) {
   const isEditMode = Boolean(url);
   const createUrl = useCreateUrl();
@@ -102,9 +85,7 @@ export function UrlFormDialog({
   const deleteRelationship = useDeleteRelationship();
   const mutation = isEditMode ? updateUrl : createUrl;
 
-  const { data: serversData } = useServers();
   const { data: applicationsData } = useApplications();
-  const { data: databasesData } = useDatabases({ page: 1, pageSize: 500 });
 
   // Existing depends_on relationships for this URL (edit mode only)
   const { data: existingRelationships } = useResourceRelationships(
@@ -120,19 +101,6 @@ export function UrlFormDialog({
   // Map from appId → relationshipId (to delete when unchecked in edit mode)
   const existingRelMapRef = useRef<Map<string, string>>(new Map());
 
-  const resourceOptions = useMemo(() => {
-    switch (form.ownerResourceType) {
-      case 'server':
-        return (serversData?.items ?? []).map((s) => ({ id: s.id, label: s.displayName ?? s.hostname }));
-      case 'application':
-        return (applicationsData?.items ?? []).map((a) => ({ id: a.id, label: a.displayName ?? a.code }));
-      case 'database':
-        return (databasesData?.items ?? []).map((d) => ({ id: d.id, label: d.displayName ?? d.name }));
-      default:
-        return [];
-    }
-  }, [form.ownerResourceType, serversData, applicationsData, databasesData]);
-
   const allApplications = useMemo(
     () => (applicationsData?.items ?? []).map((a) => ({ id: a.id, label: a.displayName ?? a.code })),
     [applicationsData],
@@ -142,8 +110,6 @@ export function UrlFormDialog({
   useEffect(() => {
     if (isOpen) {
       const base = url ? formFromUrl(url) : prefill ? formFromUrl(prefill) : emptyForm();
-      if (!url && !prefill && defaultOwnerResourceType) base.ownerResourceType = defaultOwnerResourceType;
-      if (!url && !prefill && defaultOwnerResourceId) base.ownerResourceId = defaultOwnerResourceId;
       setForm(base);
       setTags(url?.tags ?? prefill?.tags ?? []);
       setDependsOnAppIds([]);
@@ -152,7 +118,7 @@ export function UrlFormDialog({
       updateUrl.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, url, prefill, defaultOwnerResourceType, defaultOwnerResourceId]);
+  }, [isOpen, url, prefill]);
 
   // When existing relationships load (edit mode), populate the dependency checkboxes
   useEffect(() => {
@@ -203,8 +169,6 @@ export function UrlFormDialog({
       url: form.url.trim(),
       urlType: form.urlType,
       description: form.description.trim() || null,
-      ownerResourceType: form.ownerResourceType,
-      ownerResourceId: form.ownerResourceId.trim(),
       method: form.method || null,
       authRequired: form.authRequired,
       authMethod: form.authMethod.trim() || null,
@@ -300,44 +264,6 @@ export function UrlFormDialog({
                 className={inputClass}
               />
             </label>
-          </fieldset>
-
-          {/* Recurso dono */}
-          <fieldset className="flex flex-col gap-3">
-            <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Recurso Proprietario
-            </legend>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="text-slate-400">Tipo do recurso *</span>
-                <select
-                  value={form.ownerResourceType}
-                  onChange={(e) => {
-                    setField('ownerResourceType', e.target.value as UrlOwnerResourceType);
-                    setField('ownerResourceId', '');
-                  }}
-                  className={inputClass}
-                >
-                  {OWNER_RESOURCE_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="text-slate-400">Recurso proprietario *</span>
-                <select
-                  required
-                  value={form.ownerResourceId}
-                  onChange={(e) => setField('ownerResourceId', e.target.value)}
-                  className={inputClass}
-                >
-                  <option value="">Selecione...</option>
-                  {resourceOptions.map((r) => (
-                    <option key={r.id} value={r.id}>{r.label}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
           </fieldset>
 
           {/* Depende de (aplicacoes) */}
