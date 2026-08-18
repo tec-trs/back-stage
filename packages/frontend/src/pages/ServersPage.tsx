@@ -82,6 +82,7 @@ export function ServersPage() {
     setIsFormOpen(false);
     setEditingServer(null);
     setDuplicatingServer(null);
+    setSelectedIds(new Set());
   }
 
   function handleToggleStatusSelected(): void {

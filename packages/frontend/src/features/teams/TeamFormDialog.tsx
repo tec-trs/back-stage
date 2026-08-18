@@ -40,12 +40,15 @@ export function TeamFormDialog({
   isOpen,
   onClose,
   team,
+  duplicateFrom,
 }: {
   isOpen: boolean;
   onClose: () => void;
   team?: TeamSummary | null;
+  duplicateFrom?: TeamSummary | null;
 }) {
   const isEditMode = Boolean(team);
+  const isDuplicateMode = Boolean(duplicateFrom);
   const create = useCreateTeam();
   const update = useUpdateTeam();
   const mutation = isEditMode ? update : create;
@@ -56,14 +59,20 @@ export function TeamFormDialog({
 
   useEffect(() => {
     if (isOpen) {
-      setForm(team ? formFrom(team) : emptyForm());
+      if (team) {
+        setForm(formFrom(team));
+      } else if (duplicateFrom) {
+        setForm({ name: duplicateFrom.name, slug: '', description: duplicateFrom.description ?? '' });
+      } else {
+        setForm(emptyForm());
+      }
       setSlugError(null);
       setSlugTouched(false);
       create.reset();
       update.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, team]);
+  }, [isOpen, team, duplicateFrom]);
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]): void {
     setForm((curr) => ({ ...curr, [key]: value }));
@@ -114,12 +123,10 @@ export function TeamFormDialog({
     create.mutate(input, { onSuccess: onClose });
   }
 
+  const title = isEditMode ? 'Editar Time' : isDuplicateMode ? 'Duplicar Time' : 'Incluir Time';
+
   return (
-    <Modal
-      title={isEditMode ? 'Editar Time' : 'Incluir Time'}
-      isOpen={isOpen}
-      onClose={onClose}
-    >
+    <Modal title={title} isOpen={isOpen} onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-slate-400">Nome *</span>
@@ -172,7 +179,7 @@ export function TeamFormDialog({
             Cancelar
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Salvando...' : isEditMode ? 'Salvar alteracoes' : 'Criar time'}
+            {mutation.isPending ? 'Salvando...' : isEditMode ? 'Salvar alteracoes' : isDuplicateMode ? 'Duplicar' : 'Criar time'}
           </Button>
         </div>
       </form>

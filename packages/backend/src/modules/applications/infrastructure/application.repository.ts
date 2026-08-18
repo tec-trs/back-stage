@@ -249,8 +249,10 @@ export class ApplicationRepository implements IApplicationRepository {
   private async replaceDeployments(applicationId: string, deployments: DeploymentInput[]): Promise<void> {
     await this.db(DEPLOYMENTS_TABLE_NAME).where({ application_id: applicationId }).del();
     if (deployments.length > 0) {
+      const orgId = orgContext.getOrThrow();
       await this.db(DEPLOYMENTS_TABLE_NAME).insert(
         deployments.map((deployment) => ({
+          organization_id: orgId,
           application_id: applicationId,
           server_id: deployment.serverId,
           environment: deployment.environment,
@@ -268,8 +270,10 @@ export class ApplicationRepository implements IApplicationRepository {
     await this.db(DEPENDENCIES_TABLE_NAME).where({ application_id: applicationId }).del();
     const uniqueIds = [...new Set(dependsOnIds)].filter((id) => id !== applicationId);
     if (uniqueIds.length > 0) {
+      const orgId = orgContext.getOrThrow();
       await this.db(DEPENDENCIES_TABLE_NAME).insert(
         uniqueIds.map((dependsOnId) => ({
+          organization_id: orgId,
           application_id: applicationId,
           depends_on_application_id: dependsOnId,
         })),

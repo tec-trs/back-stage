@@ -65,6 +65,7 @@ export function EnvironmentsPage() {
   function closeDialog(): void {
     setIsFormOpen(false);
     setEditingEnvironment(null);
+    setSelectedIds(new Set());
   }
 
   function handleToggleActive(): void {

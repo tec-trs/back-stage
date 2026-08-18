@@ -34,7 +34,9 @@ export class EnvironmentRepository implements IEnvironmentRepository {
   public constructor(private readonly knex: Knex) {}
 
   private baseQuery(): Knex.QueryBuilder {
-    return this.knex(TABLE_NAME).where('organization_id', orgContext.getOrThrow());
+    return this.knex(TABLE_NAME)
+      .where('organization_id', orgContext.getOrThrow())
+      .whereNull('deleted_at');
   }
 
   public async findAll(): Promise<Environment[]> {

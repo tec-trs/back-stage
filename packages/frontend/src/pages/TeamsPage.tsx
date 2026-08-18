@@ -10,7 +10,7 @@ import { Button } from '../shared/components/Button';
 import { ConfirmDialog } from '../shared/components/ConfirmDialog';
 import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
-import { PencilIcon, PlusIcon, TrashIcon, UsersIcon } from '../shared/components/icons';
+import { CopyIcon, PencilIcon, PlusIcon, TrashIcon, UsersIcon } from '../shared/components/icons';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Spinner } from '../shared/components/Spinner';
 
@@ -20,6 +20,7 @@ export function TeamsPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editing, setEditing] = useState<TeamSummary | null>(null);
+  const [duplicating, setDuplicating] = useState<TeamSummary | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [membersTeam, setMembersTeam] = useState<TeamSummary | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -47,17 +48,27 @@ export function TeamsPage() {
 
   function openCreate(): void {
     setEditing(null);
+    setDuplicating(null);
     setIsFormOpen(true);
   }
 
   function openEdit(team: TeamSummary): void {
     setEditing(team);
+    setDuplicating(null);
+    setIsFormOpen(true);
+  }
+
+  function openDuplicate(team: TeamSummary): void {
+    setEditing(null);
+    setDuplicating(team);
     setIsFormOpen(true);
   }
 
   function closeForm(): void {
     setIsFormOpen(false);
     setEditing(null);
+    setDuplicating(null);
+    setSelectedIds(new Set());
   }
 
   function openMembers(team: TeamSummary): void {
@@ -97,7 +108,12 @@ export function TeamsPage() {
         description="Grupos de usuarios responsaveis por conjuntos de recursos"
       />
 
-      <TeamFormDialog isOpen={isFormOpen} onClose={closeForm} team={editing} />
+      <TeamFormDialog
+        isOpen={isFormOpen}
+        onClose={closeForm}
+        team={editing}
+        duplicateFrom={duplicating}
+      />
 
       {freshMembersTeam && (
         <TeamMembersDialog
@@ -132,6 +148,16 @@ export function TeamsPage() {
           onClick={() => singleSelected && openEdit(singleSelected)}
         >
           Editar
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<CopyIcon />}
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openDuplicate(singleSelected)}
+          title={singleSelected ? `Duplicar ${singleSelected.name}` : 'Selecione um time para duplicar'}
+        >
+          Duplicar
         </Button>
         <Button
           size="sm"

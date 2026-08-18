@@ -184,8 +184,10 @@ export class ServerRepository implements IServerRepository {
   private async replaceDisks(serverId: string, disks: DiskInput[]): Promise<void> {
     await this.db(DISKS_TABLE_NAME).where({ server_id: serverId }).del();
     if (disks.length > 0) {
+      const orgId = orgContext.getOrThrow();
       await this.db(DISKS_TABLE_NAME).insert(
         disks.map((disk) => ({
+          organization_id: orgId,
           server_id: serverId,
           mount_point: disk.mountPoint,
           capacity_gb: disk.capacityGb,

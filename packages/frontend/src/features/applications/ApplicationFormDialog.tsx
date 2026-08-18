@@ -431,95 +431,144 @@ export function ApplicationFormDialog({
 
           {activeTab === 'relationships' && (
             <div className="flex flex-col gap-5">
+              {/* ── Implantacoes ─────────────────────────────────────── */}
               <fieldset className="flex flex-col gap-2">
-                <legend className="mb-1 text-sm font-medium text-slate-300">Implantacoes</legend>
-                <div className="flex flex-col gap-2 rounded-md border border-slate-800 p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-400">Servidores onde esta implantada</span>
-                    <Button type="button" variant="secondary" size="sm" onClick={addDeployment}>
-                      + Implantacao
-                    </Button>
-                  </div>
-                  {deployments.length === 0 && (
-                    <p className="text-xs text-slate-500">Nenhuma implantacao adicionada.</p>
-                  )}
-                  {deployments.map((deployment, index) => (
-                    <div key={index} className="grid grid-cols-[2fr_1fr_1fr_auto] items-end gap-2">
-                      <label className="flex flex-col gap-1 text-xs">
-                        <span className="text-slate-500">Servidor</span>
-                        <select
-                          value={deployment.serverId}
-                          onChange={(event) =>
-                            updateDeployment(index, { serverId: event.target.value })
-                          }
-                          className={`${inputClass} py-1.5 text-sm`}
-                        >
-                          <option value="">Selecione...</option>
-                          {(servers.data?.items ?? []).map((server) => (
-                            <option key={server.id} value={server.id}>
-                              {server.hostname}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="flex flex-col gap-1 text-xs">
-                        <span className="text-slate-500">Ambiente</span>
-                        <select
-                          value={deployment.environment}
-                          onChange={(event) =>
-                            updateDeployment(index, {
-                              environment: event.target.value as DeployEnvironment,
-                            })
-                          }
-                          className={`${inputClass} py-1.5 text-sm`}
-                        >
-                          {(environments ?? []).map((env) => (
-                            <option key={env.slug} value={env.slug}>
-                              {env.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="flex flex-col gap-1 text-xs">
-                        <span className="text-slate-500">Versao</span>
-                        <input
-                          value={deployment.deployedVersion ?? ''}
-                          onChange={(event) =>
-                            updateDeployment(index, { deployedVersion: event.target.value })
-                          }
-                          className={`${inputClass} py-1.5 text-sm`}
-                        />
-                      </label>
-                      <Button
-                        type="button"
-                        variant="ghost-danger"
-                        size="sm"
-                        onClick={() => removeDeployment(index)}
-                      >
-                        Remover
-                      </Button>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between">
+                  <legend className="text-sm font-medium text-slate-300">
+                    Implantacoes em maquinas
+                  </legend>
+                  <Button type="button" variant="secondary" size="sm" onClick={addDeployment}>
+                    + Implantacao
+                  </Button>
                 </div>
+
+                {deployments.length === 0 ? (
+                  <p className="text-xs text-slate-500">Nenhuma implantacao adicionada.</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {deployments.map((deployment, index) => {
+                      const serverName =
+                        (servers.data?.items ?? []).find((s) => s.id === deployment.serverId)
+                          ?.hostname ?? '—';
+                      const envName =
+                        (environments ?? []).find((e) => e.slug === deployment.environment)
+                          ?.name ?? deployment.environment;
+                      return (
+                        <div
+                          key={index}
+                          className="rounded-md border border-slate-800 bg-slate-900/40 p-3"
+                        >
+                          {/* Header do card */}
+                          <div className="mb-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-mono text-slate-500">#{index + 1}</span>
+                              <span className="text-sm font-medium text-slate-200">{serverName}</span>
+                              {envName && (
+                                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
+                                  {envName}
+                                </span>
+                              )}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost-danger"
+                              size="sm"
+                              onClick={() => removeDeployment(index)}
+                            >
+                              Remover
+                            </Button>
+                          </div>
+
+                          {/* Campos em grid 2 colunas */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <label className="flex flex-col gap-1 text-xs">
+                              <span className="text-slate-500">Maquina *</span>
+                              <select
+                                value={deployment.serverId}
+                                onChange={(event) =>
+                                  updateDeployment(index, { serverId: event.target.value })
+                                }
+                                className={`${inputClass} py-1.5 text-sm`}
+                              >
+                                <option value="">Selecione a maquina...</option>
+                                {(servers.data?.items ?? []).map((server) => (
+                                  <option key={server.id} value={server.id}>
+                                    {server.hostname}
+                                    {server.displayName ? ` — ${server.displayName}` : ''}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs">
+                              <span className="text-slate-500">Ambiente *</span>
+                              <select
+                                value={deployment.environment}
+                                onChange={(event) =>
+                                  updateDeployment(index, {
+                                    environment: event.target.value as DeployEnvironment,
+                                  })
+                                }
+                                className={`${inputClass} py-1.5 text-sm`}
+                              >
+                                {(environments ?? []).map((env) => (
+                                  <option key={env.slug} value={env.slug}>
+                                    {env.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs">
+                              <span className="text-slate-500">Versao implantada</span>
+                              <input
+                                value={deployment.deployedVersion ?? ''}
+                                onChange={(event) =>
+                                  updateDeployment(index, { deployedVersion: event.target.value })
+                                }
+                                placeholder="1.0.0"
+                                className={`${inputClass} py-1.5 text-sm`}
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs">
+                              <span className="text-slate-500">URL de acesso</span>
+                              <input
+                                value={deployment.accessUrl ?? ''}
+                                onChange={(event) =>
+                                  updateDeployment(index, { accessUrl: event.target.value || null })
+                                }
+                                placeholder="https://app.example.com"
+                                className={`${inputClass} py-1.5 text-sm`}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </fieldset>
 
+              {/* ── Dependencias ─────────────────────────────────────── */}
               <fieldset className="flex flex-col gap-2">
                 <legend className="mb-1 text-sm font-medium text-slate-300">
                   Dependencias (aplicacoes das quais esta depende)
                 </legend>
-                <div className="flex max-h-32 flex-col gap-1 overflow-y-auto rounded-md border border-slate-800 p-3">
+                <div className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-md border border-slate-800 p-3">
                   {availableApplications.length === 0 ? (
                     <p className="text-xs text-slate-500">Nenhuma outra aplicacao cadastrada.</p>
                   ) : (
                     availableApplications.map((item) => (
-                      <label key={item.id} className="flex items-center gap-2 text-sm text-slate-200">
+                      <label
+                        key={item.id}
+                        className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm text-slate-200 hover:bg-slate-900/60"
+                      >
                         <input
                           type="checkbox"
                           checked={dependsOnIds.includes(item.id)}
                           onChange={() => toggleDependency(item.id)}
-                          className="rounded border-slate-700 bg-slate-950"
+                          className="h-4 w-4 rounded border-slate-700 bg-slate-950 accent-sky-500"
                         />
-                        {item.displayName} ({item.code})
+                        <span className="font-medium">{item.displayName}</span>
+                        <span className="font-mono text-xs text-slate-500">({item.code})</span>
                       </label>
                     ))
                   )}

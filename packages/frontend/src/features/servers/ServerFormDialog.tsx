@@ -1,8 +1,9 @@
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState, useCallback } from 'react';
 
 import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
+import { ServiceEditModal, type ServiceInput } from './ServiceEditModal';
 import { TagInput } from '../../shared/components/TagInput';
 import { Tabs, type TabItem } from '../../shared/components/Tabs';
 import {
@@ -23,7 +24,6 @@ import type {
   ServerStatus,
   ServerSummary,
   ServerType,
-  ServiceStatus,
 } from './use-servers';
 import { useUpdateServer } from './use-update-server';
 
@@ -81,16 +81,6 @@ interface FormState {
   ownerTeamSlugs: string[];
 }
 
-interface ServiceInput {
-  seq: number;
-  name: string;
-  commandStart: string;
-  commandStop: string;
-  commandStatus: string;
-  ports: string;
-  status: ServiceStatus;
-  observations: string;
-}
 
 function emptyForm(): FormState {
   return {
@@ -179,7 +169,7 @@ export function ServerFormDialog({
   const [services, setServices] = useState<ServiceInput[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [hostnameError, setHostnameError] = useState<string | null>(null);
-  const [expandedSeq, setExpandedSeq] = useState<number | null>(null);
+  const [editingService, setEditingService] = useState<{ service: ServiceInput; index: number | null } | null>(null);
   const nextSeqRef = useRef(1);
 
   useEffect(() => {
@@ -202,7 +192,7 @@ export function ServerFormDialog({
           ? Math.max(...existingServices.map((s) => s.seq)) + 1
           : 1;
       setTags(source?.tags ?? []);
-      setExpandedSeq(null);
+      setEditingService(null);
       setHostnameError(null);
       createServer.reset();
       updateServer.reset();
@@ -233,20 +223,23 @@ export function ServerFormDialog({
 
   // ── Serviços ──────────────────────────────────────────────────────────────
 
-  function addService(): void {
+  function openAddService(): void {
     const seq = nextSeqRef.current++;
-    setServices((current) => [
-      ...current,
-      { seq, name: '', commandStart: '', commandStop: '', commandStatus: '', ports: '', status: 'active', observations: '' },
-    ]);
-    setExpandedSeq(seq);
+    setEditingService({ service: { seq, name: '', commandStart: '', commandStop: '', commandStatus: '', ports: '', status: 'active', observations: '' }, index: null });
   }
 
-  function updateService(index: number, patch: Partial<ServiceInput>): void {
-    setServices((current) =>
-      current.map((svc, i) => (i === index ? { ...svc, ...patch } : svc)),
-    );
+  function openEditService(svc: ServiceInput, index: number): void {
+    setEditingService({ service: svc, index });
   }
+
+  const saveService = useCallback((updated: ServiceInput, index: number | null) => {
+    if (index === null) {
+      setServices((current) => [...current, updated]);
+    } else {
+      setServices((current) => current.map((s, i) => (i === index ? updated : s)));
+    }
+    setEditingService(null);
+  }, []);
 
   function removeService(index: number): void {
     setServices((current) => current.filter((_, i) => i !== index));
@@ -314,6 +307,16 @@ export function ServerFormDialog({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
+    <>
+      {editingService && (
+        <ServiceEditModal
+          service={editingService.service}
+          index={editingService.index}
+          isWindows={form.osName.toLowerCase().includes('windows')}
+          onSave={saveService}
+          onCancel={() => setEditingService(null)}
+        />
+      )}
     <Modal
       title={isEditMode ? 'Editar Servidor' : isDuplicateMode ? 'Duplicar Servidor' : 'Incluir Servidor'}
       isOpen={isOpen}
@@ -628,40 +631,37 @@ export function ServerFormDialog({
           {/* ── Servicos ──────────────────────────────────────────────────── */}
           {activeTab === 'services' && (
             <fieldset className="flex flex-col gap-3">
-              {(() => {
-                const isWindows = form.osName.toLowerCase().includes('windows');
-                return isWindows ? (
-                  <div className="rounded-md border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-400">
-                    <span className="font-medium text-slate-300">Sistema Windows detectado.</span>{' '}
-                    Os servicos sao gerenciados pelo painel de controle do Windows:{' '}
-                    <span className="font-mono text-slate-300">services.msc</span>
-                  </div>
-                ) : null;
-              })()}
+              {form.osName.toLowerCase().includes('windows') && (
+                <div className="rounded-md border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-400">
+                  <span className="font-medium text-slate-300">Sistema Windows detectado.</span>{' '}
+                  Os servicos sao gerenciados pelo painel de controle do Windows:{' '}
+                  <span className="font-mono text-slate-300">services.msc</span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Servicos cadastrados</span>
-                <Button type="button" variant="secondary" size="sm" onClick={addService}>
+                <span className="text-sm text-slate-400">
+                  {services.length === 0 ? 'Nenhum servico cadastrado.' : `${services.length} servico(s)`}
+                </span>
+                <Button type="button" variant="secondary" size="sm" onClick={openAddService}>
                   + Servico
                 </Button>
               </div>
-              {services.length === 0 && (
-                <p className="text-xs text-slate-500">Nenhum servico cadastrado.</p>
-              )}
-              {services.map((svc, index) => {
-                const isExpanded = expandedSeq === svc.seq;
-                return (
-                  <div
-                    key={svc.seq}
-                    className="rounded-md border border-slate-800 overflow-hidden"
-                  >
-                    {/* Linha resumida — sempre visivel */}
-                    <div className="flex items-center gap-3 px-3 py-2">
-                      <span className="text-xs font-mono text-slate-500 shrink-0">
+              {services.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {services.map((svc, index) => (
+                    <div
+                      key={svc.seq}
+                      className="flex items-center gap-3 rounded-md border border-slate-800 px-3 py-2"
+                    >
+                      <span className="font-mono text-xs text-slate-500 shrink-0">
                         #{String(svc.seq).padStart(3, '0')}
                       </span>
                       <span className="flex-1 text-sm text-slate-100 truncate">
                         {svc.name || <span className="text-slate-500 italic">sem nome</span>}
                       </span>
+                      {svc.ports && (
+                        <span className="shrink-0 font-mono text-xs text-slate-500">{svc.ports}</span>
+                      )}
                       <span
                         className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                           svc.status === 'active'
@@ -675,106 +675,22 @@ export function ServerFormDialog({
                         type="button"
                         variant="secondary"
                         size="sm"
-                        onClick={() => setExpandedSeq(isExpanded ? null : svc.seq)}
+                        onClick={() => openEditService(svc, index)}
                       >
-                        {isExpanded ? 'Fechar' : 'Editar'}
+                        Editar
                       </Button>
                       <Button
                         type="button"
                         variant="ghost-danger"
                         size="sm"
-                        onClick={() => {
-                          if (expandedSeq === svc.seq) setExpandedSeq(null);
-                          removeService(index);
-                        }}
+                        onClick={() => removeService(index)}
                       >
                         Remover
                       </Button>
                     </div>
-
-                    {/* Formulario expandido */}
-                    {isExpanded && (
-                      <div className="flex flex-col gap-2 border-t border-slate-800 p-3">
-                        <div className="grid grid-cols-2 gap-2">
-                          <label className="flex flex-col gap-1 text-xs">
-                            <span className="text-slate-500">Nome do servico *</span>
-                            <input
-                              required
-                              value={svc.name}
-                              onChange={(event) => updateService(index, { name: event.target.value })}
-                              placeholder="nginx, tomcat..."
-                              className={`${inputClass} py-1.5 text-sm`}
-                            />
-                          </label>
-                          <label className="flex flex-col gap-1 text-xs">
-                            <span className="text-slate-500">Situacao</span>
-                            <select
-                              value={svc.status}
-                              onChange={(event) =>
-                                updateService(index, { status: event.target.value as ServiceStatus })
-                              }
-                              className={`${inputClass} py-1.5 text-sm`}
-                            >
-                              <option value="active">Ativo</option>
-                              <option value="inactive">Inativo</option>
-                            </select>
-                          </label>
-                        </div>
-                        <label className="flex flex-col gap-1 text-xs">
-                          <span className="text-slate-500">Portas (separadas por virgula)</span>
-                          <input
-                            value={svc.ports}
-                            onChange={(event) => updateService(index, { ports: event.target.value })}
-                            placeholder="80, 443"
-                            className={`${inputClass} py-1.5 text-sm`}
-                          />
-                        </label>
-                        {!form.osName.toLowerCase().includes('windows') && (
-                          <>
-                            <label className="flex flex-col gap-1 text-xs">
-                              <span className="text-slate-500">Comando de subir</span>
-                              <input
-                                value={svc.commandStart}
-                                onChange={(event) => updateService(index, { commandStart: event.target.value })}
-                                placeholder="systemctl start nginx"
-                                className={`${inputClass} py-1.5 text-sm`}
-                              />
-                            </label>
-                            <label className="flex flex-col gap-1 text-xs">
-                              <span className="text-slate-500">Comando de parar</span>
-                              <input
-                                value={svc.commandStop}
-                                onChange={(event) => updateService(index, { commandStop: event.target.value })}
-                                placeholder="systemctl stop nginx"
-                                className={`${inputClass} py-1.5 text-sm`}
-                              />
-                            </label>
-                            <label className="flex flex-col gap-1 text-xs">
-                              <span className="text-slate-500">Comando de status</span>
-                              <input
-                                value={svc.commandStatus}
-                                onChange={(event) => updateService(index, { commandStatus: event.target.value })}
-                                placeholder="systemctl status nginx"
-                                className={`${inputClass} py-1.5 text-sm`}
-                              />
-                            </label>
-                          </>
-                        )}
-                        <label className="flex flex-col gap-1 text-xs">
-                          <span className="text-slate-500">Observacoes</span>
-                          <input
-                            value={svc.observations}
-                            onChange={(event) =>
-                              updateService(index, { observations: event.target.value })
-                            }
-                            className={`${inputClass} py-1.5 text-sm`}
-                          />
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                  ))}
+                </div>
+              )}
             </fieldset>
           )}
 
@@ -859,5 +775,6 @@ export function ServerFormDialog({
         </div>
       </form>
     </Modal>
+    </>
   );
 }

@@ -58,6 +58,7 @@ export function ServerTypesPage() {
   function closeDialog(): void {
     setIsFormOpen(false);
     setEditing(null);
+    setSelectedIds(new Set());
   }
 
   function handleToggleActive(): void {

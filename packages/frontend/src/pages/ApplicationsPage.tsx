@@ -90,6 +90,7 @@ export function ApplicationsPage() {
     setIsFormOpen(false);
     setEditingApplication(null);
     setDuplicatingApplication(null);
+    setSelectedIds(new Set());
   }
 
   function handleToggleStatusSelected(): void {

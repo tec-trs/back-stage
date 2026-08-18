@@ -77,6 +77,7 @@ export function DatabasesPage() {
     setIsFormOpen(false);
     setEditing(null);
     setDuplicating(null);
+    setSelectedIds(new Set());
   }
 
   async function handleConfirmDelete(): Promise<void> {
