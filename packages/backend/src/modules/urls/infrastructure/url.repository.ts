@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { orgContext } from '../../../shared/context/org-context.js';
 import { Url, type UrlRow } from '../domain/url.entity.js';
 
 const TABLE_NAME = 'urls';
@@ -54,11 +55,14 @@ export class UrlRepository implements IUrlRepository {
   public constructor(private readonly db: Knex) {}
 
   private baseQuery(): Knex.QueryBuilder {
-    return this.db(TABLE_NAME).whereNull('deleted_at');
+    return this.db(TABLE_NAME)
+      .where('organization_id', orgContext.getOrThrow())
+      .whereNull('deleted_at');
   }
 
   public async findMany(filters: UrlFilters, pagination: Pagination): Promise<{ items: Url[]; total: number }> {
-    const filteredQuery = this.baseQuery();
+    const orgId = orgContext.getOrThrow();
+    const filteredQuery = this.db(TABLE_NAME).where('organization_id', orgId).whereNull('deleted_at');
 
     if (filters.status) {
       filteredQuery.where('status', filters.status);
@@ -124,6 +128,7 @@ export class UrlRepository implements IUrlRepository {
   public async create(input: CreateUrlInput): Promise<Url> {
     const [row] = (await this.db(TABLE_NAME)
       .insert({
+        organization_id: orgContext.getOrThrow(),
         label: input.label,
         url: input.url,
         url_type: input.urlType,

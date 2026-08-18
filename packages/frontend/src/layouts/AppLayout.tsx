@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
+import { OrgPickerDialog } from '../features/auth/OrgPickerDialog';
 import { useAuthStore } from '../features/auth/auth.store';
 import { Button } from '../shared/components/Button';
 import { GlobalSearch } from '../shared/components/GlobalSearch';
@@ -89,10 +90,14 @@ const CHILD_LINK_CLASS = 'flex items-center gap-2 rounded-md py-1.5 pl-7 pr-3 te
 export function AppLayout() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const organizationId = useAuthStore((state) => state.organizationId);
+  const organizationName = useAuthStore((state) => state.organizationName);
+  const organizations = useAuthStore((state) => state.organizations);
   const isSidebarOpen = useAppStore((state) => state.isSidebarOpen);
   const toggleSidebar = useAppStore((state) => state.toggleSidebar);
   const location = useLocation();
   const isAdmin = user?.roles.includes('admin') ?? false;
+  const [showOrgPicker, setShowOrgPicker] = useState(false);
 
   // Auto-expand groups that contain the active route
   const initialExpanded = new Set<string>(
@@ -114,11 +119,20 @@ export function AppLayout() {
     });
   }
 
+  const canSwitchOrg = organizations.length > 1;
+
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100">
       {isSidebarOpen && (
         <aside className="w-60 shrink-0 border-r border-slate-800 p-4">
-          <p className="mb-6 text-lg font-semibold">Platform Engineering Center</p>
+          <div className="mb-6">
+            <p className="text-lg font-semibold">Platform Engineering Center</p>
+            {organizationName && (
+              <p className="mt-0.5 truncate text-xs text-slate-500" title={organizationName}>
+                {organizationName}
+              </p>
+            )}
+          </div>
           <nav className="flex flex-col gap-0.5">
             {NAV_ITEMS.map((item) => {
               if (item.kind === 'link') {
@@ -197,6 +211,11 @@ export function AppLayout() {
           </Button>
           <GlobalSearch />
           <div className="flex items-center gap-3">
+            {canSwitchOrg && (
+              <Button variant="secondary" size="sm" onClick={() => setShowOrgPicker(true)}>
+                Trocar org
+              </Button>
+            )}
             <span className="font-mono text-sm text-slate-400">{user?.code}</span>
             <Button variant="secondary" size="sm" onClick={logout}>
               Sair
@@ -208,6 +227,15 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      {showOrgPicker && (
+        <OrgPickerDialog
+          organizations={organizations}
+          currentOrgId={organizationId ?? undefined}
+          onSuccess={() => setShowOrgPicker(false)}
+          onCancel={() => setShowOrgPicker(false)}
+        />
+      )}
     </div>
   );
 }

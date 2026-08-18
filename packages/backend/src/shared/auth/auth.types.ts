@@ -4,6 +4,8 @@ export interface AuthenticatedUser {
   email: string;
   fullName: string;
   roles: string[];
+  organizationId: string;
+  organizationName: string;
 }
 
 export interface JwtPayload {
@@ -12,4 +14,11 @@ export interface JwtPayload {
   email: string;
   fullName: string;
   roles: string[];
+  organizationId: string;
+  organizationName: string;
+}
+
+export interface PendingOrgPayload {
+  sub: string;
+  type: 'pending_org_selection';
 }

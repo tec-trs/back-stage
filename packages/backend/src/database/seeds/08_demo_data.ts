@@ -51,6 +51,14 @@ function svc(
 }
 
 export async function seed(knex: Knex): Promise<void> {
+  // ── Organizacao padrao ────────────────────────────────────────────────────
+
+  const defaultOrg = await knex('organizations').where('slug', 'default').first() as { id: string } | undefined;
+  if (!defaultOrg) {
+    throw new Error('Organizacao padrao nao encontrada. Execute as migrations primeiro.');
+  }
+  const orgId = defaultOrg.id;
+
   // ── Limpeza (idempotente) ────────────────────────────────────────────────
 
   const hostnames = ['juca', 'zeca', 'xurumela'];
@@ -60,18 +68,22 @@ export async function seed(knex: Knex): Promise<void> {
 
   // Busca IDs existentes para limpar relacionamentos primeiro
   const existingServers = await knex('servers')
+    .where('organization_id', orgId)
     .whereIn('hostname', hostnames)
     .whereNull('deleted_at')
     .select('id');
   const existingDbs = await knex('databases')
+    .where('organization_id', orgId)
     .whereIn('name', dbNames)
     .whereNull('deleted_at')
     .select('id');
   const existingApps = await knex('applications')
+    .where('organization_id', orgId)
     .where('code', appCode)
     .whereNull('deleted_at')
     .select('id');
   const existingUrls = await knex('urls')
+    .where('organization_id', orgId)
     .whereIn('url', urlPaths)
     .whereNull('deleted_at')
     .select('id');
@@ -85,27 +97,36 @@ export async function seed(knex: Knex): Promise<void> {
 
   if (allIds.length > 0) {
     await knex('resource_relationships')
+      .where('organization_id', orgId)
       .where((b) => {
         b.whereIn('source_id', allIds).orWhereIn('target_id', allIds);
       })
       .del();
   }
 
-  await knex('urls').whereIn('url', urlPaths).del();
+  await knex('urls').where('organization_id', orgId).whereIn('url', urlPaths).del();
   await knex('application_deployments')
+    .where('organization_id', orgId)
     .whereIn(
       'application_id',
       existingApps.map((r: { id: string }) => r.id),
     )
     .del();
-  await knex('applications').where('code', appCode).del();
-  await knex('databases').whereIn('name', dbNames).update({ deleted_at: knex.fn.now() });
-  await knex('servers').whereIn('hostname', hostnames).update({ deleted_at: knex.fn.now() });
+  await knex('applications').where('organization_id', orgId).where('code', appCode).del();
+  await knex('databases')
+    .where('organization_id', orgId)
+    .whereIn('name', dbNames)
+    .update({ deleted_at: knex.fn.now() });
+  await knex('servers')
+    .where('organization_id', orgId)
+    .whereIn('hostname', hostnames)
+    .update({ deleted_at: knex.fn.now() });
 
   // ── Servidores ────────────────────────────────────────────────────────────
 
   const [juca] = (await knex('servers')
     .insert({
+      organization_id: orgId,
       hostname: 'juca',
       display_name: 'Servidor Juca',
       description: 'Servidor Windows — fileserver e licenseserver',
@@ -127,6 +148,7 @@ export async function seed(knex: Knex): Promise<void> {
 
   const [zeca] = (await knex('servers')
     .insert({
+      organization_id: orgId,
       hostname: 'zeca',
       display_name: 'Servidor Zeca',
       description: 'Servidor Linux — admin, fathom, bancos e pasoe',
@@ -149,6 +171,7 @@ export async function seed(knex: Knex): Promise<void> {
 
   const [xurumela] = (await knex('servers')
     .insert({
+      organization_id: orgId,
       hostname: 'xurumela',
       display_name: 'Servidor Xurumela',
       description: 'Servidor de aplicacao — tomcat',
@@ -170,6 +193,7 @@ export async function seed(knex: Knex): Promise<void> {
 
   const [banco1] = (await knex('databases')
     .insert({
+      organization_id: orgId,
       name: 'banco1',
       display_name: 'Banco1',
       description: 'Banco de dados OpenEdge 1',
@@ -192,6 +216,7 @@ export async function seed(knex: Knex): Promise<void> {
 
   const [banco2] = (await knex('databases')
     .insert({
+      organization_id: orgId,
       name: 'banco2',
       display_name: 'Banco2',
       description: 'Banco de dados OpenEdge 2',
@@ -214,6 +239,7 @@ export async function seed(knex: Knex): Promise<void> {
 
   const [banco3] = (await knex('databases')
     .insert({
+      organization_id: orgId,
       name: 'banco3',
       display_name: 'Banco3',
       description: 'Banco de dados OpenEdge 3',
@@ -238,6 +264,7 @@ export async function seed(knex: Knex): Promise<void> {
 
   const [totvsApp] = (await knex('applications')
     .insert({
+      organization_id: orgId,
       code: 'totvs',
       display_name: 'TOTVS',
       description: 'Sistema ERP TOTVS — frontend em http://totvs.tectrs.com.br',
@@ -252,6 +279,7 @@ export async function seed(knex: Knex): Promise<void> {
 
   // Deployment: TOTVS roda no xurumela
   await knex('application_deployments').insert({
+    organization_id: orgId,
     application_id: totvsApp.id,
     server_id: xurumela.id,
     environment: 'production',
@@ -261,6 +289,7 @@ export async function seed(knex: Knex): Promise<void> {
 
   // Fathom — monitoramento no zeca
   await knex('urls').insert({
+    organization_id: orgId,
     label: 'Fathom Analytics',
     url: 'http://zeca:9090',
     url_type: 'monitoring',
@@ -277,6 +306,7 @@ export async function seed(knex: Knex): Promise<void> {
 
   // TOTVS — frontend publico
   await knex('urls').insert({
+    organization_id: orgId,
     label: 'Portal TOTVS',
     url: 'http://totvs.tectrs.com.br',
     url_type: 'frontend',
@@ -296,27 +326,28 @@ export async function seed(knex: Knex): Promise<void> {
 
   await knex('resource_relationships').insert([
     // zeca hospeda os tres bancos
-    { source_type: 'server', source_id: zeca.id, target_type: 'database', target_id: banco1.id, relation_type: 'hosts', metadata: JSON.stringify({ note: 'zeca hospeda banco1' }) },
-    { source_type: 'server', source_id: zeca.id, target_type: 'database', target_id: banco2.id, relation_type: 'hosts', metadata: JSON.stringify({ note: 'zeca hospeda banco2' }) },
-    { source_type: 'server', source_id: zeca.id, target_type: 'database', target_id: banco3.id, relation_type: 'hosts', metadata: JSON.stringify({ note: 'zeca hospeda banco3' }) },
+    { organization_id: orgId, source_type: 'server', source_id: zeca.id, target_type: 'database', target_id: banco1.id, relation_type: 'hosts', metadata: JSON.stringify({ note: 'zeca hospeda banco1' }) },
+    { organization_id: orgId, source_type: 'server', source_id: zeca.id, target_type: 'database', target_id: banco2.id, relation_type: 'hosts', metadata: JSON.stringify({ note: 'zeca hospeda banco2' }) },
+    { organization_id: orgId, source_type: 'server', source_id: zeca.id, target_type: 'database', target_id: banco3.id, relation_type: 'hosts', metadata: JSON.stringify({ note: 'zeca hospeda banco3' }) },
 
     // pasoe (zeca) depende do fileserver (juca) — modelado como server→server
-    { source_type: 'server', source_id: zeca.id, target_type: 'server', target_id: juca.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'pasoe→fileserver', note: 'pasoe no zeca depende do fileserver no juca' }) },
+    { organization_id: orgId, source_type: 'server', source_id: zeca.id, target_type: 'server', target_id: juca.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'pasoe→fileserver', note: 'pasoe no zeca depende do fileserver no juca' }) },
 
     // tomcat (xurumela) depende do pasoe (zeca) e do licenseserver (juca)
-    { source_type: 'server', source_id: xurumela.id, target_type: 'server', target_id: zeca.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'tomcat→pasoe', note: 'tomcat no xurumela depende do pasoe no zeca' }) },
-    { source_type: 'server', source_id: xurumela.id, target_type: 'server', target_id: juca.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'tomcat→licenseserver', note: 'tomcat no xurumela depende do licenseserver no juca' }) },
+    { organization_id: orgId, source_type: 'server', source_id: xurumela.id, target_type: 'server', target_id: zeca.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'tomcat→pasoe', note: 'tomcat no xurumela depende do pasoe no zeca' }) },
+    { organization_id: orgId, source_type: 'server', source_id: xurumela.id, target_type: 'server', target_id: juca.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'tomcat→licenseserver', note: 'tomcat no xurumela depende do licenseserver no juca' }) },
 
     // TOTVS (app) depende do tomcat (xurumela)
-    { source_type: 'application', source_id: totvsApp.id, target_type: 'server', target_id: xurumela.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'totvs→tomcat', note: 'TOTVS depende do tomcat no xurumela' }) },
+    { organization_id: orgId, source_type: 'application', source_id: totvsApp.id, target_type: 'server', target_id: xurumela.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'totvs→tomcat', note: 'TOTVS depende do tomcat no xurumela' }) },
 
-    // pasoe (zeca) consome os tres bancos — banco→server direction via consumes
-    { source_type: 'server', source_id: zeca.id, target_type: 'database', target_id: banco1.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'pasoe→banco1' }) },
-    { source_type: 'server', source_id: zeca.id, target_type: 'database', target_id: banco2.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'pasoe→banco2' }) },
-    { source_type: 'server', source_id: zeca.id, target_type: 'database', target_id: banco3.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'pasoe→banco3' }) },
+    // pasoe (zeca) consome os tres bancos
+    { organization_id: orgId, source_type: 'server', source_id: zeca.id, target_type: 'database', target_id: banco1.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'pasoe→banco1' }) },
+    { organization_id: orgId, source_type: 'server', source_id: zeca.id, target_type: 'database', target_id: banco2.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'pasoe→banco2' }) },
+    { organization_id: orgId, source_type: 'server', source_id: zeca.id, target_type: 'database', target_id: banco3.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'pasoe→banco3' }) },
   ]);
 
   console.log('✓ Demo data inserted successfully');
+  console.log(`  Org: ${orgId}`);
   console.log(`  Servers: juca (${juca.id}), zeca (${zeca.id}), xurumela (${xurumela.id})`);
   console.log(`  Databases: banco1 (${banco1.id}), banco2 (${banco2.id}), banco3 (${banco3.id})`);
   console.log(`  Application: TOTVS (${totvsApp.id})`);

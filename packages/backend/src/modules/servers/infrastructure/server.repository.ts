@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { orgContext } from '../../../shared/context/org-context.js';
 import { Server, ServerDisk, type ServerDiskRow, type ServerRow } from '../domain/server.entity.js';
 
 const TABLE_NAME = 'servers';
@@ -93,7 +94,9 @@ export class ServerRepository implements IServerRepository {
   public constructor(private readonly db: Knex) {}
 
   private baseQuery(): Knex.QueryBuilder {
-    return this.db(TABLE_NAME).whereNull('deleted_at');
+    return this.db(TABLE_NAME)
+      .where('organization_id', orgContext.getOrThrow())
+      .whereNull('deleted_at');
   }
 
   private async loadDisks(serverIds: string[]): Promise<Map<string, ServerDisk[]>> {
@@ -124,7 +127,9 @@ export class ServerRepository implements IServerRepository {
     filters: ServerFilters,
     pagination: Pagination,
   ): Promise<{ items: Server[]; total: number }> {
-    const filteredQuery = this.db(TABLE_NAME).whereNull('deleted_at');
+    const filteredQuery = this.db(TABLE_NAME)
+      .where('organization_id', orgContext.getOrThrow())
+      .whereNull('deleted_at');
 
     if (filters.status) {
       filteredQuery.where('status', filters.status);
@@ -192,6 +197,7 @@ export class ServerRepository implements IServerRepository {
   public async create(input: CreateServerInput): Promise<Server> {
     const rows = (await this.db(TABLE_NAME)
       .insert({
+        organization_id: orgContext.getOrThrow(),
         hostname: input.hostname,
         display_name: input.displayName ?? null,
         description: input.description ?? null,

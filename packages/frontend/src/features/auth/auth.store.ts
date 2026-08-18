@@ -9,10 +9,20 @@ export interface AuthUser {
   roles: string[];
 }
 
+export interface OrgOption {
+  id: string;
+  slug: string;
+  name: string;
+}
+
 interface AuthState {
   accessToken: string | null;
   user: AuthUser | null;
-  setSession: (accessToken: string, user: AuthUser) => void;
+  organizationId: string | null;
+  organizationName: string | null;
+  organizations: OrgOption[];
+  setSession: (accessToken: string, user: AuthUser, organizationId: string, organizationName: string) => void;
+  setOrganizations: (organizations: OrgOption[]) => void;
   logout: () => void;
 }
 
@@ -21,8 +31,14 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       accessToken: null,
       user: null,
-      setSession: (accessToken, user) => set({ accessToken, user }),
-      logout: () => set({ accessToken: null, user: null }),
+      organizationId: null,
+      organizationName: null,
+      organizations: [],
+      setSession: (accessToken, user, organizationId, organizationName) =>
+        set({ accessToken, user, organizationId, organizationName }),
+      setOrganizations: (organizations) => set({ organizations }),
+      logout: () =>
+        set({ accessToken: null, user: null, organizationId: null, organizationName: null, organizations: [] }),
     }),
     { name: 'back-stage-auth' },
   ),

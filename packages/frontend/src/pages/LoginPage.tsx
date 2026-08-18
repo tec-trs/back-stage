@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 
+import { OrgPickerDialog } from '../features/auth/OrgPickerDialog';
 import { useAuthStore } from '../features/auth/auth.store';
 import { useLogin } from '../features/auth/use-login';
 import { Button } from '../shared/components/Button';
@@ -26,50 +27,73 @@ export function LoginPage() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    login.mutate({ code, password }, { onSuccess: () => navigate('/', { replace: true }) });
+    login.mutate(
+      { code, password },
+      {
+        onSuccess: (data) => {
+          if (data.status === 'ok') {
+            navigate('/', { replace: true });
+          }
+          // if status === 'select_org', the dialog renders below
+        },
+      },
+    );
   }
 
+  const isSelectOrg = login.isSuccess && login.data.status === 'select_org';
+
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col gap-4 rounded-lg border border-slate-800 p-6"
-    >
-      <div>
-        <h1 className="text-xl font-semibold text-slate-100">Platform Engineering Center</h1>
-        <p className="mt-1 text-sm text-slate-400">Entre com suas credenciais para continuar</p>
-      </div>
+    <>
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-4 rounded-lg border border-slate-800 p-6"
+      >
+        <div>
+          <h1 className="text-xl font-semibold text-slate-100">Platform Engineering Center</h1>
+          <p className="mt-1 text-sm text-slate-400">Entre com suas credenciais para continuar</p>
+        </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-slate-400">Codigo de usuario</span>
-        <input
-          type="text"
-          required
-          value={code}
-          onChange={(event) => setCode(event.target.value)}
-          className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-slate-500"
-        />
-      </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-slate-400">Codigo de usuario</span>
+          <input
+            type="text"
+            required
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-slate-500"
+          />
+        </label>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-slate-400">Senha</span>
-        <input
-          type="password"
-          required
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-slate-500"
-        />
-      </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-slate-400">Senha</span>
+          <input
+            type="password"
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-slate-500"
+          />
+        </label>
 
-      {login.isError && (
-        <ErrorMessage
-          message={login.error instanceof Error ? login.error.message : 'Falha ao autenticar'}
+        {login.isError && (
+          <ErrorMessage
+            message={login.error instanceof Error ? login.error.message : 'Falha ao autenticar'}
+          />
+        )}
+
+        <Button type="submit" disabled={login.isPending} className="w-full">
+          {login.isPending ? 'Entrando...' : 'Entrar'}
+        </Button>
+      </form>
+
+      {isSelectOrg && login.data.status === 'select_org' && (
+        <OrgPickerDialog
+          pendingToken={login.data.pendingToken}
+          organizations={login.data.organizations}
+          onSuccess={() => navigate('/', { replace: true })}
+          onCancel={() => login.reset()}
         />
       )}
-
-      <Button type="submit" disabled={login.isPending} className="w-full">
-        {login.isPending ? 'Entrando...' : 'Entrar'}
-      </Button>
-    </form>
+    </>
   );
 }

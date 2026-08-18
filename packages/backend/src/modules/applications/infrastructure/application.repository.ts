@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { orgContext } from '../../../shared/context/org-context.js';
 import {
   Application,
   ApplicationDeployment,
@@ -83,7 +84,9 @@ export class ApplicationRepository implements IApplicationRepository {
   public constructor(private readonly db: Knex) {}
 
   private baseQuery(): Knex.QueryBuilder {
-    return this.db(TABLE_NAME).whereNull('deleted_at');
+    return this.db(TABLE_NAME)
+      .where('organization_id', orgContext.getOrThrow())
+      .whereNull('deleted_at');
   }
 
   private async loadDeployments(applicationIds: string[]): Promise<Map<string, ApplicationDeployment[]>> {
@@ -189,7 +192,9 @@ export class ApplicationRepository implements IApplicationRepository {
     filters: ApplicationFilters,
     pagination: Pagination,
   ): Promise<{ items: Application[]; total: number }> {
-    const filteredQuery = this.db(TABLE_NAME).whereNull('deleted_at');
+    const filteredQuery = this.db(TABLE_NAME)
+      .where('organization_id', orgContext.getOrThrow())
+      .whereNull('deleted_at');
 
     if (filters.status) {
       filteredQuery.where('status', filters.status);
@@ -273,6 +278,7 @@ export class ApplicationRepository implements IApplicationRepository {
   public async create(input: CreateApplicationInput): Promise<Application> {
     const rows = (await this.db(TABLE_NAME)
       .insert({
+        organization_id: orgContext.getOrThrow(),
         code: input.code,
         display_name: input.displayName,
         description: input.description ?? null,

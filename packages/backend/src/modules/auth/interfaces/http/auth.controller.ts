@@ -11,6 +11,21 @@ export class AuthController {
     response.status(200).json(result);
   };
 
+  public selectOrg = async (request: Request, response: Response): Promise<void> => {
+    const { pendingToken, organizationId } = request.body as {
+      pendingToken: string;
+      organizationId: string;
+    };
+    const result = await this.loginService.selectOrg(pendingToken, organizationId);
+    response.status(200).json(result);
+  };
+
+  public switchOrg = async (request: Request, response: Response): Promise<void> => {
+    const { organizationId } = request.body as { organizationId: string };
+    const result = await this.loginService.switchOrg(request.user!.id, organizationId);
+    response.status(200).json(result);
+  };
+
   public me = (request: Request, response: Response): void => {
     response.status(200).json({ user: request.user });
   };

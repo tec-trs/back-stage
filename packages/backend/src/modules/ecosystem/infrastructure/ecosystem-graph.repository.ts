@@ -1,5 +1,7 @@
 import type { Knex } from 'knex';
 
+import { orgContext } from '../../../shared/context/org-context.js';
+
 export interface EcosystemNode {
   id: string;
   kind: 'server' | 'application';
@@ -57,17 +59,22 @@ export class EcosystemGraphRepository implements IEcosystemGraphRepository {
   public constructor(private readonly db: Knex) {}
 
   public async getGraph(): Promise<EcosystemGraph> {
+    const orgId = orgContext.getOrThrow();
     const [serverRows, applicationRows, deploymentRows, dependencyRows] = await Promise.all([
       this.db('servers')
+        .where('organization_id', orgId)
         .whereNull('deleted_at')
         .select('id', 'server_type', 'hostname', 'display_name', 'status') as Promise<ServerNodeRow[]>,
       this.db('applications')
+        .where('organization_id', orgId)
         .whereNull('deleted_at')
         .select('id', 'app_type', 'code', 'display_name', 'status') as Promise<ApplicationNodeRow[]>,
       this.db('application_deployments')
+        .where('organization_id', orgId)
         .whereNull('deleted_at')
         .select('id', 'server_id', 'application_id') as Promise<DeploymentEdgeRow[]>,
       this.db('application_dependencies')
+        .where('organization_id', orgId)
         .whereNull('deleted_at')
         .select('id', 'application_id', 'depends_on_application_id') as Promise<DependencyEdgeRow[]>,
     ]);

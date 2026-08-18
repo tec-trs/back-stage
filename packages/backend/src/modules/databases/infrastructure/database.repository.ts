@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { orgContext } from '../../../shared/context/org-context.js';
 import { Database, type DatabaseRow } from '../domain/database.entity.js';
 
 const TABLE_NAME = 'databases';
@@ -62,7 +63,9 @@ export class DatabaseRepository implements IDatabaseRepository {
   public constructor(private readonly db: Knex) {}
 
   private baseQuery(): Knex.QueryBuilder {
-    return this.db(TABLE_NAME).whereNull('deleted_at');
+    return this.db(TABLE_NAME)
+      .where('organization_id', orgContext.getOrThrow())
+      .whereNull('deleted_at');
   }
 
   private async hydrate(rows: DatabaseRow[]): Promise<Database[]> {
@@ -92,7 +95,8 @@ export class DatabaseRepository implements IDatabaseRepository {
     filters: DatabaseFilters,
     pagination: Pagination,
   ): Promise<{ items: Database[]; total: number }> {
-    const filteredQuery = this.baseQuery();
+    const orgId = orgContext.getOrThrow();
+    const filteredQuery = this.db(TABLE_NAME).where('organization_id', orgId).whereNull('deleted_at');
 
     if (filters.status) {
       filteredQuery.where('status', filters.status);
@@ -153,6 +157,7 @@ export class DatabaseRepository implements IDatabaseRepository {
   public async create(input: CreateDatabaseInput): Promise<Database> {
     const [row] = (await this.db(TABLE_NAME)
       .insert({
+        organization_id: orgContext.getOrThrow(),
         name: input.name,
         display_name: input.displayName,
         description: input.description,

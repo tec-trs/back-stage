@@ -27,10 +27,12 @@ import { registerServersModule } from './modules/servers/servers.module.js';
 import { registerServiceCatalogModule } from './modules/service-catalog/service-catalog.module.js';
 import { registerUsersModule } from './modules/users/users.module.js';
 import { metricsRegistry } from './observability/metrics.js';
+import { authenticateMiddleware } from './shared/http/authenticate.middleware.js';
 import { errorHandlerMiddleware } from './shared/http/error-handler.middleware.js';
 import { metricsMiddleware } from './shared/http/metrics.middleware.js';
 import { createMorganMiddleware } from './shared/http/morgan.middleware.js';
 import { notFoundMiddleware } from './shared/http/not-found.middleware.js';
+import { organizationMiddleware } from './shared/http/organization.middleware.js';
 import { requestIdMiddleware } from './shared/http/request-id.middleware.js';
 
 export function createApp(): Express {
@@ -87,12 +89,14 @@ export function createApp(): Express {
   app.use('/api/teams', registerTeamsModule());
   app.use('/api/server-types', registerServerTypesModule());
   app.use('/api/application-types', registerApplicationTypesModule());
-  app.use('/api/servers', registerServersModule());
-  app.use('/api/applications', registerApplicationsModule());
-  app.use('/api/databases', registerDatabasesModule());
-  app.use('/api/urls', registerUrlsModule());
-  app.use('/api/resource-graph', registerResourceGraphModule());
-  app.use('/api/ecosystem', registerEcosystemModule());
+  // Resource routes require authentication + organization context
+  const withOrg = [authenticateMiddleware, organizationMiddleware];
+  app.use('/api/servers', ...withOrg, registerServersModule());
+  app.use('/api/applications', ...withOrg, registerApplicationsModule());
+  app.use('/api/databases', ...withOrg, registerDatabasesModule());
+  app.use('/api/urls', ...withOrg, registerUrlsModule());
+  app.use('/api/resource-graph', ...withOrg, registerResourceGraphModule());
+  app.use('/api/ecosystem', ...withOrg, registerEcosystemModule());
   app.use(registerDeploymentsModule());
 
   app.use(notFoundMiddleware);

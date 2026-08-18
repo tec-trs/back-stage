@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { orgContext } from '../../../shared/context/org-context.js';
 import type {
   GraphEdge,
   GraphFilters,
@@ -111,15 +112,15 @@ export class ResourceRelationshipRepository {
     };
   }
 
-  private buildResourceUnion(): string {
+  private buildResourceUnion(orgId: string): string {
     return `
-      SELECT id, 'server' as type, hostname as label, status, null::text as criticality, environment, null::uuid as hosted_on_server_id, monitoring_url FROM servers WHERE deleted_at IS NULL
+      SELECT id, 'server' as type, hostname as label, status, null::text as criticality, environment, null::uuid as hosted_on_server_id, monitoring_url FROM servers WHERE deleted_at IS NULL AND organization_id = '${orgId}'
       UNION ALL
-      SELECT id, 'application' as type, display_name as label, status, criticality, null::text as environment, null::uuid as hosted_on_server_id, monitoring_url FROM applications WHERE deleted_at IS NULL
+      SELECT id, 'application' as type, display_name as label, status, criticality, null::text as environment, null::uuid as hosted_on_server_id, monitoring_url FROM applications WHERE deleted_at IS NULL AND organization_id = '${orgId}'
       UNION ALL
-      SELECT id, 'database' as type, display_name as label, status, criticality, environment, hosted_on_server_id, monitoring_url FROM databases WHERE deleted_at IS NULL
+      SELECT id, 'database' as type, display_name as label, status, criticality, environment, hosted_on_server_id, monitoring_url FROM databases WHERE deleted_at IS NULL AND organization_id = '${orgId}'
       UNION ALL
-      SELECT id, 'url' as type, label, status, null::text as criticality, null::text as environment, null::uuid as hosted_on_server_id, null::text as monitoring_url FROM urls WHERE deleted_at IS NULL
+      SELECT id, 'url' as type, label, status, null::text as criticality, null::text as environment, null::uuid as hosted_on_server_id, null::text as monitoring_url FROM urls WHERE deleted_at IS NULL AND organization_id = '${orgId}'
     `;
   }
 
@@ -128,10 +129,11 @@ export class ResourceRelationshipRepository {
     _pagination: Pagination,
   ): Promise<{ nodes: GraphNode[]; edges: GraphEdge[]; total: number }> {
     const nodeLimit = MAX_GRAPH_NODES_DEFAULT;
+    const orgId = orgContext.getOrThrow();
 
     let nodeQuery = this.db
       .select('id', 'type', 'label', 'status', 'criticality', 'environment', 'hosted_on_server_id', 'monitoring_url')
-      .from(this.db.raw(`(${this.buildResourceUnion()}) as all_resources`));
+      .from(this.db.raw(`(${this.buildResourceUnion(orgId)}) as all_resources`));
 
     if (filters.resourceTypes && filters.resourceTypes.length > 0) {
       nodeQuery = nodeQuery.whereIn('type', filters.resourceTypes);
@@ -148,7 +150,7 @@ export class ResourceRelationshipRepository {
 
     const countQuery = this.db
       .select(this.db.raw('COUNT(*) as count'))
-      .from(this.db.raw(`(${this.buildResourceUnion()}) as all_resources`));
+      .from(this.db.raw(`(${this.buildResourceUnion(orgId)}) as all_resources`));
 
     if (filters.resourceTypes && filters.resourceTypes.length > 0) {
       countQuery.whereIn('type', filters.resourceTypes);
@@ -173,12 +175,16 @@ export class ResourceRelationshipRepository {
     const nodes = await nodeQuery as ResourceRow[];
 
     // Explicit relationships stored in resource_relationships
-    const explicitEdges = await this.db(TABLE_NAME).select('*').whereNull('deleted_at') as RelationshipRow[];
+    const explicitEdges = await this.db(TABLE_NAME)
+      .select('*')
+      .where('organization_id', orgId)
+      .whereNull('deleted_at') as RelationshipRow[];
 
     // Implicit edges from application_deployments (server → hosts → application)
     interface DeploymentRow { server_id: string; application_id: string }
     const deployments = await this.db('application_deployments')
       .select('server_id', 'application_id')
+      .where('organization_id', orgId)
       .whereNull('deleted_at')
       .whereRaw('(SELECT deleted_at FROM applications WHERE id = application_id) IS NULL') as DeploymentRow[];
 
@@ -186,6 +192,7 @@ export class ResourceRelationshipRepository {
     interface UrlRow { id: string; owner_resource_type: string; owner_resource_id: string }
     const urlEdges = await this.db('urls')
       .select('id', 'owner_resource_type', 'owner_resource_id')
+      .where('organization_id', orgId)
       .whereNull('deleted_at') as UrlRow[];
 
     const mappedExplicit = explicitEdges.map((e) => ({
@@ -263,21 +270,22 @@ export class ResourceRelationshipRepository {
         ? `rr.target_type = t.source_type AND rr.target_id = t.source_id`
         : `(rr.source_type = t.target_type AND rr.source_id = t.target_id) OR (rr.target_type = t.source_type AND rr.target_id = t.source_id)`;
 
+    const orgId = orgContext.getOrThrow();
     const { rows } = await this.db.raw<{ rows: TraversalRow[] }>(`
       WITH RECURSIVE
       all_edges(source_type, source_id, target_type, target_id, relation_type) AS (
         SELECT source_type::text, source_id::text, target_type::text, target_id::text, relation_type
         FROM ${TABLE_NAME}
-        WHERE deleted_at IS NULL
+        WHERE deleted_at IS NULL AND organization_id = :orgId
         UNION ALL
         SELECT 'server', ad.server_id::text, 'application', ad.application_id::text, 'hosts'
         FROM application_deployments ad
-        JOIN applications a ON a.id = ad.application_id AND a.deleted_at IS NULL
-        WHERE ad.deleted_at IS NULL
+        JOIN applications a ON a.id = ad.application_id AND a.deleted_at IS NULL AND a.organization_id = :orgId
+        WHERE ad.deleted_at IS NULL AND ad.organization_id = :orgId
         UNION ALL
         SELECT u.owner_resource_type::text, u.owner_resource_id::text, 'url', u.id::text, 'exposes'
         FROM urls u
-        WHERE u.deleted_at IS NULL
+        WHERE u.deleted_at IS NULL AND u.organization_id = :orgId
       ),
       traversal(source_type, source_id, target_type, target_id, relation_type, depth, path) AS (
         SELECT source_type, source_id, target_type, target_id, relation_type, 1,
@@ -295,7 +303,7 @@ export class ResourceRelationshipRepository {
           AND NOT ((ae.source_type || ':' || ae.source_id) = ANY(t.path))
       )
       SELECT DISTINCT source_type, source_id, target_type, target_id, relation_type, depth FROM traversal
-    `, { rootType, rootId, maxDepth, ...(relationType ? { relationType } : {}) });
+    `, { rootType, rootId, maxDepth, orgId, ...(relationType ? { relationType } : {}) });
 
     const uniqueResourceIds = new Set<string>();
     uniqueResourceIds.add(`${rootType}:${rootId}`);
@@ -346,21 +354,22 @@ export class ResourceRelationshipRepository {
     //   hosts / exposes:
     //     source provides to target → if SOURCE goes down, TARGET is affected
     //     → initial seed: WHERE source = root  → collect target
+    const orgId = orgContext.getOrThrow();
     const { rows } = await this.db.raw<{ rows: ImpactRow[] }>(`
       WITH RECURSIVE
       all_edges(source_type, source_id, target_type, target_id, relation_type) AS (
         SELECT source_type::text, source_id::text, target_type::text, target_id::text, relation_type
         FROM ${TABLE_NAME}
-        WHERE deleted_at IS NULL
+        WHERE deleted_at IS NULL AND organization_id = :orgId
         UNION ALL
         SELECT 'server', ad.server_id::text, 'application', ad.application_id::text, 'hosts'
         FROM application_deployments ad
-        JOIN applications a ON a.id = ad.application_id AND a.deleted_at IS NULL
-        WHERE ad.deleted_at IS NULL
+        JOIN applications a ON a.id = ad.application_id AND a.deleted_at IS NULL AND a.organization_id = :orgId
+        WHERE ad.deleted_at IS NULL AND ad.organization_id = :orgId
         UNION ALL
         SELECT u.owner_resource_type::text, u.owner_resource_id::text, 'url', u.id::text, 'exposes'
         FROM urls u
-        WHERE u.deleted_at IS NULL
+        WHERE u.deleted_at IS NULL AND u.organization_id = :orgId
       ),
       impact(resource_type, resource_id, depth, path) AS (
         SELECT
@@ -397,7 +406,7 @@ export class ResourceRelationshipRepository {
       SELECT resource_type, resource_id, MIN(depth) AS min_depth
       FROM impact
       GROUP BY resource_type, resource_id
-    `, { rootType, rootId, maxDepth: effectiveMaxDepth });
+    `, { rootType, rootId, maxDepth: effectiveMaxDepth, orgId });
 
     const impactedResources: ImpactNode[] = [];
     const byType: Record<ResourceType, number> = {
@@ -445,7 +454,10 @@ export class ResourceRelationshipRepository {
     targetId?: string;
     relationType?: string;
   }): Promise<GraphEdge[]> {
-    let query = this.db(TABLE_NAME).select('*').whereNull('deleted_at');
+    let query = this.db(TABLE_NAME)
+      .select('*')
+      .where('organization_id', orgContext.getOrThrow())
+      .whereNull('deleted_at');
     if (filters.sourceType) query = query.where('source_type', filters.sourceType);
     if (filters.sourceId)   query = query.where('source_id',   filters.sourceId);
     if (filters.targetType) query = query.where('target_type', filters.targetType);
@@ -474,6 +486,7 @@ export class ResourceRelationshipRepository {
   ): Promise<GraphEdge> {
     const [row] = (await this.db(TABLE_NAME)
       .insert({
+        organization_id: orgContext.getOrThrow(),
         source_type: sourceType,
         source_id: sourceId,
         target_type: targetType,
