@@ -6,12 +6,14 @@ import type { UserService } from '../../application/user.service.js';
 import type {
   createUserBodySchema,
   listUsersQuerySchema,
+  setUserOrgsBodySchema,
   updateUserBodySchema,
 } from './user.validation.js';
 
 type CreateUserBody = z.infer<typeof createUserBodySchema>;
 type UpdateUserBody = z.infer<typeof updateUserBodySchema>;
 type ListUsersQuery = z.infer<typeof listUsersQuerySchema>;
+type SetUserOrgsBody = z.infer<typeof setUserOrgsBodySchema>;
 
 export class UserController {
   public constructor(private readonly userService: UserService) {}
@@ -71,6 +73,21 @@ export class UserController {
       userAgent: request.header('user-agent'),
     });
     response.status(200).json(user.toJSON());
+  };
+
+  public getOrganizations = async (request: Request, response: Response): Promise<void> => {
+    const orgs = await this.userService.getUserOrganizations(request.params.id);
+    response.status(200).json({ items: orgs });
+  };
+
+  public setOrganizations = async (request: Request, response: Response): Promise<void> => {
+    const { organizations } = request.body as SetUserOrgsBody;
+    await this.userService.setUserOrganizations(request.params.id, organizations, {
+      actorUserId: request.user?.id,
+      ipAddress: request.ip,
+      userAgent: request.header('user-agent'),
+    });
+    response.status(204).send();
   };
 
   public remove = async (request: Request, response: Response): Promise<void> => {

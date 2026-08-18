@@ -9,6 +9,7 @@ import type { UserController } from './user.controller.js';
 import {
   createUserBodySchema,
   listUsersQuerySchema,
+  setUserOrgsBodySchema,
   updateUserBodySchema,
   userIdParamsSchema,
 } from './user.validation.js';
@@ -127,6 +128,19 @@ export function createUserRouter(controller: UserController): Router {
    *     responses:
    *       204: { description: Usuario removido }
    */
+  router.get(
+    '/:id/organizations',
+    validateMiddleware({ params: userIdParamsSchema }),
+    asyncHandler(controller.getOrganizations),
+  );
+
+  router.put(
+    '/:id/organizations',
+    adminOnly,
+    validateMiddleware({ params: userIdParamsSchema, body: setUserOrgsBodySchema }),
+    asyncHandler(controller.setOrganizations),
+  );
+
   router.delete(
     '/:id',
     adminOnly,

@@ -27,6 +27,15 @@ export const userIdParamsSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const setUserOrgsBodySchema = z.object({
+  organizations: z.array(
+    z.object({
+      organizationId: z.string().uuid(),
+      role: z.enum(['owner', 'admin', 'member']),
+    }),
+  ),
+});
+
 export const listUsersQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(500).default(20),

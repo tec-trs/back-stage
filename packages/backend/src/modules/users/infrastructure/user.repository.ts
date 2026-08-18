@@ -43,6 +43,11 @@ export interface UpdateUserInput {
   passwordHash?: string;
 }
 
+export interface UserOrgEntry {
+  organizationId: string;
+  role: string;
+}
+
 export interface IUserRepository {
   findMany(filters: UserFilters, pagination: Pagination): Promise<{ items: User[]; total: number }>;
   findById(id: string): Promise<User | undefined>;
@@ -52,6 +57,8 @@ export interface IUserRepository {
   update(id: string, input: UpdateUserInput): Promise<User | undefined>;
   setActive(id: string, isActive: boolean): Promise<User | undefined>;
   softDelete(id: string): Promise<boolean>;
+  findUserOrganizations(userId: string): Promise<UserOrgEntry[]>;
+  setUserOrganizations(userId: string, orgs: UserOrgEntry[]): Promise<void>;
 }
 
 export class UserRepository implements IUserRepository {
@@ -156,6 +163,24 @@ export class UserRepository implements IUserRepository {
       .returning(SAFE_COLUMNS)) as UserRow[];
 
     return rows[0] ? new User(rows[0]) : undefined;
+  }
+
+  public async findUserOrganizations(userId: string): Promise<UserOrgEntry[]> {
+    const rows = await this.db('user_organizations')
+      .where('user_id', userId)
+      .select('organization_id', 'role') as Array<{ organization_id: string; role: string }>;
+    return rows.map((r) => ({ organizationId: r.organization_id, role: r.role }));
+  }
+
+  public async setUserOrganizations(userId: string, orgs: UserOrgEntry[]): Promise<void> {
+    await this.db.transaction(async (trx) => {
+      await trx('user_organizations').where('user_id', userId).delete();
+      if (orgs.length > 0) {
+        await trx('user_organizations').insert(
+          orgs.map((o) => ({ user_id: userId, organization_id: o.organizationId, role: o.role })),
+        );
+      }
+    });
   }
 
   public async softDelete(id: string): Promise<boolean> {

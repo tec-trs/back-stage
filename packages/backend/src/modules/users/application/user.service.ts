@@ -7,6 +7,7 @@ import type {
   IUserRepository,
   Pagination,
   UserFilters,
+  UserOrgEntry,
 } from '../infrastructure/user.repository.js';
 
 export interface ListUsersResult {
@@ -154,6 +155,30 @@ export class UserService {
       resourceId: id,
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
+    });
+  }
+
+  public async getUserOrganizations(userId: string): Promise<UserOrgEntry[]> {
+    await this.getById(userId);
+    return this.userRepository.findUserOrganizations(userId);
+  }
+
+  public async setUserOrganizations(
+    userId: string,
+    orgs: UserOrgEntry[],
+    audit: AuditContext,
+  ): Promise<void> {
+    await this.getById(userId);
+    await this.userRepository.setUserOrganizations(userId, orgs);
+
+    await auditLogger.record({
+      actorUserId: audit.actorUserId,
+      action: 'user.organizations_updated',
+      resourceType: 'user',
+      resourceId: userId,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+      metadata: { organizations: orgs },
     });
   }
 
