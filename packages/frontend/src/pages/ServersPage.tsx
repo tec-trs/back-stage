@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 import { ServerFormDialog } from '../features/servers/ServerFormDialog';
 import { ServerImportDialog } from '../features/servers/ServerImportDialog';
-import { useDeleteServer } from '../features/servers/use-delete-server';
+import { useBulkDeleteServers } from '../features/servers/use-bulk-delete-servers';
 import { useServers } from '../features/servers/use-servers';
 import type { ServerSummary } from '../features/servers/use-servers';
 import { useSetServerStatus } from '../features/servers/use-set-server-status';
@@ -32,16 +32,35 @@ const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'default'> 
 export function ServersPage() {
   const { data, isLoading, isError, error } = useServers();
   const setServerStatus = useSetServerStatus();
-  const deleteServer = useDeleteServer();
+  const bulkDelete = useBulkDeleteServers();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingServer, setEditingServer] = useState<ServerSummary | null>(null);
   const [duplicatingServer, setDuplicatingServer] = useState<ServerSummary | null>(null);
-  const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
-  const selectedServer = data?.items.find((item) => item.id === selectedServerId) ?? null;
+  const items = data?.items ?? [];
+  const selectedItems = items.filter((s) => selectedIds.has(s.id));
+  const singleSelected = selectedItems.length === 1 ? selectedItems[0] : null;
+  const allVisible = items.length > 0 && items.every((s) => selectedIds.has(s.id));
+
+  function toggleAll(): void {
+    if (allVisible) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map((s) => s.id)));
+    }
+  }
+
+  function toggleOne(id: string): void {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
 
   function openCreateDialog(): void {
     setEditingServer(null);
@@ -65,47 +84,32 @@ export function ServersPage() {
     setDuplicatingServer(null);
   }
 
-  function handleEditSelected(): void {
-    if (selectedServer) {
-      openEditDialog(selectedServer);
-    }
-  }
-
-  function handleDuplicateSelected(): void {
-    if (selectedServer) {
-      openDuplicateDialog(selectedServer);
-    }
-  }
-
   function handleToggleStatusSelected(): void {
-    if (selectedServer) {
+    if (singleSelected) {
       setServerStatus.mutate({
-        id: selectedServer.id,
-        status: selectedServer.status === 'deactivated' ? 'active' : 'deactivated',
+        id: singleSelected.id,
+        status: singleSelected.status === 'deactivated' ? 'active' : 'deactivated',
       });
     }
   }
 
-  function handleDeleteSelected(): void {
-    if (selectedServer) {
-      setConfirmDeleteOpen(true);
-    }
-  }
-
-  function handleConfirmDelete(): void {
-    if (!selectedServer) return;
-    deleteServer.mutate(selectedServer.id, {
-      onSuccess: () => {
-        setSelectedServerId(null);
-        setConfirmDeleteOpen(false);
-      },
-    });
+  async function handleConfirmDelete(): Promise<void> {
+    if (selectedItems.length === 0) return;
+    await bulkDelete.mutateAsync(selectedItems.map((s) => s.id));
+    setSelectedIds(new Set());
+    setConfirmDeleteOpen(false);
   }
 
   function closeConfirmDelete(): void {
     setConfirmDeleteOpen(false);
-    deleteServer.reset();
+    bulkDelete.reset();
   }
+
+  const deleteLabel = selectedItems.length > 1 ? `Eliminar (${selectedItems.length})` : 'Eliminar';
+  const deleteMessage =
+    selectedItems.length === 1
+      ? `Tem certeza que deseja eliminar o servidor "${singleSelected?.hostname}"? Esta acao nao pode ser desfeita.`
+      : `Tem certeza que deseja eliminar ${selectedItems.length} servidores? Esta acao nao pode ser desfeita.`;
 
   return (
     <div>
@@ -116,12 +120,12 @@ export function ServersPage() {
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
         title="Eliminar servidor"
-        message={`Tem certeza que deseja eliminar o servidor "${selectedServer?.hostname}"? Esta acao nao pode ser desfeita.`}
+        message={deleteMessage}
         confirmLabel="Eliminar"
         onConfirm={handleConfirmDelete}
         onCancel={closeConfirmDelete}
-        isPending={deleteServer.isPending}
-        error={deleteServer.isError ? (deleteServer.error?.message ?? 'Erro ao eliminar servidor') : null}
+        isPending={bulkDelete.isPending}
+        error={bulkDelete.isError ? (bulkDelete.error?.message ?? 'Erro ao eliminar servidor') : null}
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
@@ -142,9 +146,9 @@ export function ServersPage() {
           size="sm"
           variant="secondary"
           icon={<PencilIcon />}
-          disabled={!selectedServer}
-          onClick={handleEditSelected}
-          title={selectedServer ? `Editar ${selectedServer.hostname}` : 'Selecione um servidor para editar'}
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openEditDialog(singleSelected)}
+          title={singleSelected ? `Editar ${singleSelected.hostname}` : 'Selecione um servidor para editar'}
         >
           Editar
         </Button>
@@ -152,9 +156,9 @@ export function ServersPage() {
           size="sm"
           variant="secondary"
           icon={<CopyIcon />}
-          disabled={!selectedServer}
-          onClick={handleDuplicateSelected}
-          title={selectedServer ? `Duplicar ${selectedServer.hostname}` : 'Selecione um servidor para duplicar'}
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openDuplicateDialog(singleSelected)}
+          title={singleSelected ? `Duplicar ${singleSelected.hostname}` : 'Selecione um servidor para duplicar'}
         >
           Duplicar
         </Button>
@@ -162,32 +166,34 @@ export function ServersPage() {
           size="sm"
           variant="secondary"
           icon={<PowerIcon />}
-          disabled={!selectedServer || setServerStatus.isPending}
+          disabled={!singleSelected || setServerStatus.isPending}
           onClick={handleToggleStatusSelected}
           title={
-            selectedServer
-              ? selectedServer.status === 'deactivated'
-                ? `Ativar ${selectedServer.hostname}`
-                : `Desativar ${selectedServer.hostname}`
+            singleSelected
+              ? singleSelected.status === 'deactivated'
+                ? `Ativar ${singleSelected.hostname}`
+                : `Desativar ${singleSelected.hostname}`
               : 'Selecione um servidor para ativar ou desativar'
           }
         >
-          {selectedServer?.status === 'deactivated' ? 'Ativar' : 'Desativar'}
+          {singleSelected?.status === 'deactivated' ? 'Ativar' : 'Desativar'}
         </Button>
         <Button
           size="sm"
           variant="danger"
           icon={<TrashIcon />}
-          disabled={!selectedServer || deleteServer.isPending}
-          onClick={handleDeleteSelected}
-          title={selectedServer ? `Eliminar ${selectedServer.hostname}` : 'Selecione um servidor para eliminar'}
+          disabled={selectedItems.length === 0 || bulkDelete.isPending}
+          onClick={() => setConfirmDeleteOpen(true)}
+          title={selectedItems.length > 0 ? `Eliminar ${selectedItems.length} servidor(es)` : 'Selecione servidores para eliminar'}
         >
-          Eliminar
+          {deleteLabel}
         </Button>
         <span className="ml-auto text-xs text-slate-500">
-          {selectedServer
-            ? `Selecionado: ${selectedServer.hostname}`
-            : 'Selecione um servidor na lista para editar, ativar/desativar ou eliminar.'}
+          {selectedItems.length > 0
+            ? selectedItems.length === 1
+              ? `Selecionado: ${singleSelected?.hostname}`
+              : `${selectedItems.length} servidores selecionados`
+            : 'Selecione servidores na lista para editar, ativar/desativar ou eliminar.'}
         </span>
       </div>
 
@@ -197,16 +203,24 @@ export function ServersPage() {
           message={error instanceof Error ? error.message : 'Erro ao carregar servidores'}
         />
       )}
-      {data && data.items.length === 0 && (
+      {data && items.length === 0 && (
         <EmptyState title="Nenhum servidor encontrado" description="Cadastre o primeiro servidor." />
       )}
 
-      {data && data.items.length > 0 && (
+      {data && items.length > 0 && (
         <div className="overflow-hidden rounded-lg border border-slate-800">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-900 text-slate-400">
               <tr>
-                <th className="w-10 px-4 py-2" />
+                <th className="w-10 px-4 py-2">
+                  <input
+                    type="checkbox"
+                    checked={allVisible}
+                    onChange={toggleAll}
+                    className="h-4 w-4 accent-sky-500"
+                    aria-label="Selecionar todos"
+                  />
+                </th>
                 <th className="px-4 py-2 font-medium">Hostname</th>
                 <th className="px-4 py-2 font-medium">Nome</th>
                 <th className="px-4 py-2 font-medium">Tipo</th>
@@ -216,20 +230,20 @@ export function ServersPage() {
               </tr>
             </thead>
             <tbody>
-              {data.items.map((server) => (
+              {items.map((server) => (
                 <tr
                   key={server.id}
-                  onClick={() => setSelectedServerId(server.id)}
+                  onClick={() => toggleOne(server.id)}
                   className={`cursor-pointer border-t border-slate-800 ${
-                    server.id === selectedServerId ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
+                    selectedIds.has(server.id) ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
                   }`}
                 >
                   <td className="px-4 py-2">
                     <input
-                      type="radio"
-                      name="selected-server"
-                      checked={server.id === selectedServerId}
-                      onChange={() => setSelectedServerId(server.id)}
+                      type="checkbox"
+                      checked={selectedIds.has(server.id)}
+                      onChange={() => toggleOne(server.id)}
+                      onClick={(e) => e.stopPropagation()}
                       aria-label={`Selecionar ${server.hostname}`}
                       className="h-4 w-4 accent-sky-500"
                     />

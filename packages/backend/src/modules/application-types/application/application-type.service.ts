@@ -80,4 +80,19 @@ export class ApplicationTypeService {
       metadata: { slug: item.slug, name: item.name },
     });
   }
+
+  public async bulkDelete(ids: string[], audit: AuditContext): Promise<number> {
+    const count = await this.repository.bulkSoftDelete(ids);
+
+    await auditLogger.record({
+      actorUserId: audit.actorUserId,
+      action: 'application_type.bulk_deleted',
+      resourceType: 'application_type',
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+      metadata: { count, ids },
+    });
+
+    return count;
+  }
 }

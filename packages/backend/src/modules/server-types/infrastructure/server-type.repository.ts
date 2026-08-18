@@ -22,6 +22,7 @@ export interface IServerTypeRepository {
   create(data: CreateServerTypeData): Promise<ServerType>;
   update(id: string, data: UpdateServerTypeData): Promise<ServerType | null>;
   delete(id: string): Promise<boolean>;
+  bulkSoftDelete(ids: string[]): Promise<number>;
 }
 
 export class ServerTypeRepository implements IServerTypeRepository {
@@ -74,5 +75,14 @@ export class ServerTypeRepository implements IServerTypeRepository {
   async delete(id: string): Promise<boolean> {
     const count = await this.db('server_types').where({ id }).delete();
     return count > 0;
+  }
+
+  async bulkSoftDelete(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const affected = (await this.db('server_types')
+      .whereNull('deleted_at')
+      .whereIn('id', ids)
+      .update({ deleted_at: this.db.fn.now() })) as unknown as number;
+    return affected;
   }
 }

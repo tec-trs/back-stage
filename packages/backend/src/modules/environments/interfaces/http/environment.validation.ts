@@ -33,3 +33,7 @@ export const updateEnvironmentBodySchema = z
 export const environmentIdParamsSchema = z.object({
   id: z.string().uuid('ID invalido'),
 });
+
+export const bulkDeleteBodySchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(200),
+});

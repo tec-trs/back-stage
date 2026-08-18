@@ -8,6 +8,7 @@ import { validateMiddleware } from '../../../../shared/http/validate.middleware.
 import type { TeamController } from './team.controller.js';
 import {
   addMemberBodySchema,
+  bulkDeleteBodySchema,
   createTeamBodySchema,
   memberParamsSchema,
   teamIdParamsSchema,
@@ -50,6 +51,13 @@ export function createTeamRouter(controller: TeamController): Router {
     authorizeMiddleware(...ADMIN_ROLES),
     validateMiddleware({ params: teamIdParamsSchema }),
     asyncHandler(controller.remove),
+  );
+
+  router.post(
+    '/bulk-delete',
+    authorizeMiddleware(...ADMIN_ROLES),
+    validateMiddleware({ body: bulkDeleteBodySchema }),
+    asyncHandler(controller.bulkRemove),
   );
 
   // Member management

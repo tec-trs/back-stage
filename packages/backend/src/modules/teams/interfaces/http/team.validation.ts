@@ -36,3 +36,7 @@ export const memberParamsSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
 });
+
+export const bulkDeleteBodySchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(200),
+});

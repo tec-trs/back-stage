@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { ServerTypeFormDialog } from '../features/server-types/ServerTypeFormDialog';
-import { useDeleteServerType } from '../features/server-types/use-delete-server-type';
+import { useBulkDeleteServerTypes } from '../features/server-types/use-bulk-delete-server-types';
 import { useServerTypes } from '../features/server-types/use-server-types';
 import type { ServerTypeSummary } from '../features/server-types/use-server-types';
 import { useUpdateServerType } from '../features/server-types/use-update-server-type';
@@ -16,16 +16,34 @@ import { Spinner } from '../shared/components/Spinner';
 
 export function ServerTypesPage() {
   const { data, isLoading, isError, error } = useServerTypes();
-  const deleteServerType = useDeleteServerType();
+  const bulkDelete = useBulkDeleteServerTypes();
   const updateServerType = useUpdateServerType();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editing, setEditing] = useState<ServerTypeSummary | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const items = data ?? [];
-  const selected = items.find((e) => e.id === selectedId) ?? null;
+  const selectedItems = items.filter((i) => selectedIds.has(i.id));
+  const singleSelected = selectedItems.length === 1 ? selectedItems[0] : null;
+  const allVisible = items.length > 0 && items.every((i) => selectedIds.has(i.id));
+
+  function toggleAll(): void {
+    if (allVisible) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map((i) => i.id)));
+    }
+  }
+
+  function toggleOne(id: string): void {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
 
   function openCreate(): void {
     setEditing(null);
@@ -43,28 +61,27 @@ export function ServerTypesPage() {
   }
 
   function handleToggleActive(): void {
-    if (!selected) return;
-    updateServerType.mutate({ id: selected.id, isActive: !selected.isActive });
+    if (!singleSelected) return;
+    updateServerType.mutate({ id: singleSelected.id, isActive: !singleSelected.isActive });
   }
 
-  function handleDeleteSelected(): void {
-    if (selected) setConfirmDeleteOpen(true);
-  }
-
-  function handleConfirmDelete(): void {
-    if (!selected) return;
-    deleteServerType.mutate(selected.id, {
-      onSuccess: () => {
-        setSelectedId(null);
-        setConfirmDeleteOpen(false);
-      },
-    });
+  async function handleConfirmDelete(): Promise<void> {
+    if (selectedItems.length === 0) return;
+    await bulkDelete.mutateAsync(selectedItems.map((i) => i.id));
+    setSelectedIds(new Set());
+    setConfirmDeleteOpen(false);
   }
 
   function closeConfirmDelete(): void {
     setConfirmDeleteOpen(false);
-    deleteServerType.reset();
+    bulkDelete.reset();
   }
+
+  const deleteLabel = selectedItems.length > 1 ? `Eliminar (${selectedItems.length})` : 'Eliminar';
+  const deleteMessage =
+    selectedItems.length === 1
+      ? `Tem certeza que deseja eliminar o tipo "${singleSelected?.name}" (${singleSelected?.slug})? Servidores que referenciam este slug nao serao afetados imediatamente.`
+      : `Tem certeza que deseja eliminar ${selectedItems.length} tipos de maquina? Servidores que os referenciam nao serao afetados imediatamente.`;
 
   return (
     <div>
@@ -78,16 +95,12 @@ export function ServerTypesPage() {
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
         title="Eliminar tipo de maquina"
-        message={`Tem certeza que deseja eliminar o tipo "${selected?.name}" (${selected?.slug})? Servidores que referenciam este slug nao serao afetados imediatamente.`}
+        message={deleteMessage}
         confirmLabel="Eliminar"
         onConfirm={handleConfirmDelete}
         onCancel={closeConfirmDelete}
-        isPending={deleteServerType.isPending}
-        error={
-          deleteServerType.isError
-            ? (deleteServerType.error?.message ?? 'Erro ao eliminar tipo de maquina')
-            : null
-        }
+        isPending={bulkDelete.isPending}
+        error={bulkDelete.isError ? (bulkDelete.error?.message ?? 'Erro ao eliminar tipo de maquina') : null}
       />
 
       {/* Toolbar */}
@@ -100,8 +113,8 @@ export function ServerTypesPage() {
           size="sm"
           variant="secondary"
           icon={<PencilIcon />}
-          disabled={!selected}
-          onClick={() => selected && openEdit(selected)}
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openEdit(singleSelected)}
         >
           Editar
         </Button>
@@ -109,24 +122,26 @@ export function ServerTypesPage() {
           size="sm"
           variant="secondary"
           icon={<PowerIcon />}
-          disabled={!selected || updateServerType.isPending}
+          disabled={!singleSelected || updateServerType.isPending}
           onClick={handleToggleActive}
         >
-          {selected?.isActive ? 'Desativar' : 'Ativar'}
+          {singleSelected?.isActive ? 'Desativar' : 'Ativar'}
         </Button>
         <Button
           size="sm"
           variant="danger"
           icon={<TrashIcon />}
-          disabled={!selected || deleteServerType.isPending}
-          onClick={handleDeleteSelected}
+          disabled={selectedItems.length === 0 || bulkDelete.isPending}
+          onClick={() => setConfirmDeleteOpen(true)}
         >
-          Eliminar
+          {deleteLabel}
         </Button>
         <span className="ml-auto text-xs text-slate-500">
-          {selected
-            ? `Selecionado: ${selected.name} (${selected.slug})`
-            : 'Selecione um tipo para editar, ativar/desativar ou eliminar.'}
+          {selectedItems.length > 0
+            ? selectedItems.length === 1
+              ? `Selecionado: ${singleSelected?.name} (${singleSelected?.slug})`
+              : `${selectedItems.length} tipos selecionados`
+            : 'Selecione tipos para editar, ativar/desativar ou eliminar.'}
         </span>
       </div>
 
@@ -151,7 +166,15 @@ export function ServerTypesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/60">
-                <th className="w-10 px-4 py-3" />
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={allVisible}
+                    onChange={toggleAll}
+                    className="h-4 w-4 accent-sky-500"
+                    aria-label="Selecionar todos"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Nome</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Slug</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Descricao</th>
@@ -160,21 +183,21 @@ export function ServerTypesPage() {
             </thead>
             <tbody>
               {items.map((item) => {
-                const isSelected = item.id === selectedId;
+                const isSelected = selectedIds.has(item.id);
                 return (
                   <tr
                     key={item.id}
-                    onClick={() => setSelectedId(isSelected ? null : item.id)}
+                    onClick={() => toggleOne(item.id)}
                     className={`cursor-pointer border-b border-slate-800/50 transition-colors last:border-0 ${
                       isSelected ? 'bg-sky-950/40' : 'hover:bg-slate-900/60'
                     }`}
                   >
                     <td className="px-4 py-3">
                       <input
-                        type="radio"
-                        name="selected-server-type"
+                        type="checkbox"
                         checked={isSelected}
-                        onChange={() => setSelectedId(isSelected ? null : item.id)}
+                        onChange={() => toggleOne(item.id)}
+                        onClick={(e) => e.stopPropagation()}
                         aria-label={`Selecionar ${item.name}`}
                         className="h-4 w-4 accent-sky-500"
                       />

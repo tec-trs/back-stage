@@ -75,4 +75,14 @@ export class ServerController {
     });
     response.status(204).send();
   };
+
+  public bulkRemove = async (request: Request, response: Response): Promise<void> => {
+    const { ids } = request.body as { ids: string[] };
+    const count = await this.serverService.bulkDelete(ids, {
+      actorUserId: request.user?.id,
+      ipAddress: request.ip,
+      userAgent: request.header('user-agent'),
+    });
+    response.status(200).json({ deleted: count });
+  };
 }

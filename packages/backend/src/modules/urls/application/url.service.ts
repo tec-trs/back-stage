@@ -151,4 +151,19 @@ export class UrlService {
       userAgent: audit.userAgent,
     });
   }
+
+  public async bulkDelete(ids: string[], audit: AuditContext): Promise<number> {
+    const count = await this.urlRepository.bulkSoftDelete(ids);
+
+    await auditLogger.record({
+      actorUserId: audit.actorUserId,
+      action: 'url.bulk_deleted',
+      resourceType: 'url',
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+      metadata: { count, ids },
+    });
+
+    return count;
+  }
 }

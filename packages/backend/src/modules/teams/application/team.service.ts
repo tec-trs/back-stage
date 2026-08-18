@@ -82,6 +82,21 @@ export class TeamService {
     });
   }
 
+  async bulkDelete(ids: string[], audit: AuditContext): Promise<number> {
+    const count = await this.repository.bulkSoftDelete(ids);
+
+    await auditLogger.record({
+      actorUserId: audit.actorUserId,
+      action: 'team.bulk_deleted',
+      resourceType: 'team',
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+      metadata: { count, ids },
+    });
+
+    return count;
+  }
+
   async addMember(
     teamId: string,
     userId: string,

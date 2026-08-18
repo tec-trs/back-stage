@@ -22,6 +22,7 @@ export interface ITeamRepository {
   create(data: CreateTeamData): Promise<Team>;
   update(id: string, data: UpdateTeamData): Promise<Team | null>;
   softDelete(id: string): Promise<boolean>;
+  bulkSoftDelete(ids: string[]): Promise<number>;
   isMember(teamId: string, userId: string): Promise<boolean>;
   addMember(teamId: string, userId: string, role: TeamRole): Promise<void>;
   removeMember(teamId: string, userId: string): Promise<boolean>;
@@ -110,6 +111,15 @@ export class TeamRepository implements ITeamRepository {
       .whereNull('deleted_at')
       .update({ deleted_at: this.db.fn.now() });
     return count > 0;
+  }
+
+  async bulkSoftDelete(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const affected = (await this.db('teams')
+      .whereNull('deleted_at')
+      .whereIn('id', ids)
+      .update({ deleted_at: this.db.fn.now() })) as unknown as number;
+    return affected;
   }
 
   async isMember(teamId: string, userId: string): Promise<boolean> {

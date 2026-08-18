@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { useDeleteUrl } from '../features/urls/use-delete-url';
+import { useBulkDeleteUrls } from '../features/urls/use-bulk-delete-urls';
 import { useUrls } from '../features/urls/use-urls';
 import type { Url } from '../features/urls/use-urls';
 import { UrlFormDialog } from '../features/urls/UrlFormDialog';
@@ -31,9 +31,9 @@ const HEALTHCHECK_TONE: Record<string, 'success' | 'warning' | 'danger' | 'defau
 
 export function UrlsPage() {
   const { data, isLoading, isError, error } = useUrls({ page: 1, pageSize: 100 });
-  const deleteUrl = useDeleteUrl();
+  const bulkDelete = useBulkDeleteUrls();
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [editing, setEditing] = useState<Url | null>(null);
@@ -41,7 +41,25 @@ export function UrlsPage() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const items = data?.items ?? [];
-  const selected = items.find((u) => u.id === selectedId) ?? null;
+  const selectedItems = items.filter((u) => selectedIds.has(u.id));
+  const singleSelected = selectedItems.length === 1 ? selectedItems[0] : null;
+  const allVisible = items.length > 0 && items.every((u) => selectedIds.has(u.id));
+
+  function toggleAll(): void {
+    if (allVisible) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map((u) => u.id)));
+    }
+  }
+
+  function toggleOne(id: string): void {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
 
   function openCreate(): void {
     setEditing(null);
@@ -67,20 +85,23 @@ export function UrlsPage() {
     setDuplicating(null);
   }
 
-  function handleConfirmDelete(): void {
-    if (!selected) return;
-    deleteUrl.mutate(selected.id, {
-      onSuccess: () => {
-        setSelectedId(null);
-        setConfirmDeleteOpen(false);
-      },
-    });
+  async function handleConfirmDelete(): Promise<void> {
+    if (selectedItems.length === 0) return;
+    await bulkDelete.mutateAsync(selectedItems.map((u) => u.id));
+    setSelectedIds(new Set());
+    setConfirmDeleteOpen(false);
   }
 
   function closeConfirmDelete(): void {
     setConfirmDeleteOpen(false);
-    deleteUrl.reset();
+    bulkDelete.reset();
   }
+
+  const deleteLabel = selectedItems.length > 1 ? `Eliminar (${selectedItems.length})` : 'Eliminar';
+  const deleteMessage =
+    selectedItems.length === 1
+      ? `Tem certeza que deseja eliminar a URL "${singleSelected?.label}"? Esta acao nao pode ser desfeita.`
+      : `Tem certeza que deseja eliminar ${selectedItems.length} URLs? Esta acao nao pode ser desfeita.`;
 
   return (
     <div>
@@ -95,12 +116,12 @@ export function UrlsPage() {
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
         title="Eliminar URL"
-        message={`Tem certeza que deseja eliminar a URL "${selected?.label}"? Esta acao nao pode ser desfeita.`}
+        message={deleteMessage}
         confirmLabel="Eliminar"
         onConfirm={handleConfirmDelete}
         onCancel={closeConfirmDelete}
-        isPending={deleteUrl.isPending}
-        error={deleteUrl.isError ? (deleteUrl.error?.message ?? 'Erro ao eliminar') : null}
+        isPending={bulkDelete.isPending}
+        error={bulkDelete.isError ? (bulkDelete.error?.message ?? 'Erro ao eliminar') : null}
       />
 
       {/* Toolbar */}
@@ -122,8 +143,8 @@ export function UrlsPage() {
           size="sm"
           variant="secondary"
           icon={<PencilIcon />}
-          disabled={!selected}
-          onClick={() => selected && openEdit(selected)}
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openEdit(singleSelected)}
         >
           Editar
         </Button>
@@ -131,8 +152,8 @@ export function UrlsPage() {
           size="sm"
           variant="secondary"
           icon={<CopyIcon />}
-          disabled={!selected}
-          onClick={() => selected && openDuplicate(selected)}
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openDuplicate(singleSelected)}
         >
           Duplicar
         </Button>
@@ -140,15 +161,17 @@ export function UrlsPage() {
           size="sm"
           variant="danger"
           icon={<TrashIcon />}
-          disabled={!selected || deleteUrl.isPending}
+          disabled={selectedItems.length === 0 || bulkDelete.isPending}
           onClick={() => setConfirmDeleteOpen(true)}
         >
-          Eliminar
+          {deleteLabel}
         </Button>
         <span className="ml-auto text-xs text-slate-500">
-          {selected
-            ? `Selecionado: ${selected.label}`
-            : 'Selecione uma URL para editar ou eliminar.'}
+          {selectedItems.length > 0
+            ? selectedItems.length === 1
+              ? `Selecionado: ${singleSelected?.label}`
+              : `${selectedItems.length} URLs selecionadas`
+            : 'Selecione URLs para editar ou eliminar.'}
         </span>
         <Button
           size="sm"
@@ -195,7 +218,15 @@ export function UrlsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/60">
-                <th className="w-10 px-4 py-3" />
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={allVisible}
+                    onChange={toggleAll}
+                    className="h-4 w-4 accent-sky-500"
+                    aria-label="Selecionar todos"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Código</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">URL</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Tipo</th>
@@ -206,21 +237,21 @@ export function UrlsPage() {
             </thead>
             <tbody>
               {items.map((url) => {
-                const isSelected = url.id === selectedId;
+                const isSelected = selectedIds.has(url.id);
                 return (
                   <tr
                     key={url.id}
-                    onClick={() => setSelectedId(isSelected ? null : url.id)}
+                    onClick={() => toggleOne(url.id)}
                     className={`cursor-pointer border-b border-slate-800/50 transition-colors last:border-0 ${
                       isSelected ? 'bg-sky-950/40' : 'hover:bg-slate-900/60'
                     }`}
                   >
                     <td className="px-4 py-3">
                       <input
-                        type="radio"
-                        name="selected-url"
+                        type="checkbox"
                         checked={isSelected}
-                        onChange={() => setSelectedId(isSelected ? null : url.id)}
+                        onChange={() => toggleOne(url.id)}
+                        onClick={(e) => e.stopPropagation()}
                         aria-label={`Selecionar ${url.label}`}
                         className="h-4 w-4 accent-sky-500"
                       />

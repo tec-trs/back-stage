@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 
 import { db } from '../../database/connection.js';
+import { orgContext } from '../context/org-context.js';
 import { getRequestId } from '../context/request-context.js';
 
 export interface AuditLogEntry {
@@ -24,6 +25,7 @@ export class AuditLogger {
       resource_id: entry.resourceId ?? null,
       ip_address: entry.ipAddress ?? null,
       user_agent: entry.userAgent ?? null,
+      organization_id: orgContext.get(),
       metadata: JSON.stringify({ ...entry.metadata, requestId: getRequestId() }),
     });
   }

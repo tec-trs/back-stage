@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { DatabaseFormDialog } from '../features/databases/DatabaseFormDialog';
-import { useDeleteDatabase } from '../features/databases/use-delete-database';
+import { useBulkDeleteDatabases } from '../features/databases/use-bulk-delete-databases';
 import { useDatabases } from '../features/databases/use-databases';
 import type { Database } from '../features/databases/use-databases';
 import { Badge } from '../shared/components/Badge';
@@ -26,16 +26,34 @@ const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'default'> 
 
 export function DatabasesPage() {
   const { data, isLoading, isError, error } = useDatabases({ page: 1, pageSize: 100 });
-  const deleteDatabase = useDeleteDatabase();
+  const bulkDelete = useBulkDeleteDatabases();
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editing, setEditing] = useState<Database | null>(null);
   const [duplicating, setDuplicating] = useState<Database | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const items = data?.items ?? [];
-  const selected = items.find((d) => d.id === selectedId) ?? null;
+  const selectedItems = items.filter((d) => selectedIds.has(d.id));
+  const singleSelected = selectedItems.length === 1 ? selectedItems[0] : null;
+  const allVisible = items.length > 0 && items.every((d) => selectedIds.has(d.id));
+
+  function toggleAll(): void {
+    if (allVisible) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map((d) => d.id)));
+    }
+  }
+
+  function toggleOne(id: string): void {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
 
   function openCreate(): void {
     setEditing(null);
@@ -61,20 +79,24 @@ export function DatabasesPage() {
     setDuplicating(null);
   }
 
-  function handleConfirmDelete(): void {
-    if (!selected) return;
-    deleteDatabase.mutate(selected.id, {
-      onSuccess: () => {
-        setSelectedId(null);
-        setConfirmDeleteOpen(false);
-      },
-    });
+  async function handleConfirmDelete(): Promise<void> {
+    if (selectedItems.length === 0) return;
+    await bulkDelete.mutateAsync(selectedItems.map((d) => d.id));
+    setSelectedIds(new Set());
+    setConfirmDeleteOpen(false);
   }
 
   function closeConfirmDelete(): void {
     setConfirmDeleteOpen(false);
-    deleteDatabase.reset();
+    bulkDelete.reset();
   }
+
+  const deleteLabel = selectedItems.length > 1 ? `Eliminar (${selectedItems.length})` : 'Eliminar';
+  const singleName = singleSelected?.displayName ?? singleSelected?.name;
+  const deleteMessage =
+    selectedItems.length === 1
+      ? `Tem certeza que deseja eliminar o banco "${singleName}"? Esta acao nao pode ser desfeita.`
+      : `Tem certeza que deseja eliminar ${selectedItems.length} bancos de dados? Esta acao nao pode ser desfeita.`;
 
   return (
     <div>
@@ -88,12 +110,12 @@ export function DatabasesPage() {
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
         title="Eliminar Banco de Dados"
-        message={`Tem certeza que deseja eliminar o banco "${selected?.displayName ?? selected?.name}"? Esta acao nao pode ser desfeita.`}
+        message={deleteMessage}
         confirmLabel="Eliminar"
         onConfirm={handleConfirmDelete}
         onCancel={closeConfirmDelete}
-        isPending={deleteDatabase.isPending}
-        error={deleteDatabase.isError ? (deleteDatabase.error?.message ?? 'Erro ao eliminar') : null}
+        isPending={bulkDelete.isPending}
+        error={bulkDelete.isError ? (bulkDelete.error?.message ?? 'Erro ao eliminar') : null}
       />
 
       {/* Toolbar */}
@@ -106,8 +128,8 @@ export function DatabasesPage() {
           size="sm"
           variant="secondary"
           icon={<PencilIcon />}
-          disabled={!selected}
-          onClick={() => selected && openEdit(selected)}
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openEdit(singleSelected)}
         >
           Editar
         </Button>
@@ -115,8 +137,8 @@ export function DatabasesPage() {
           size="sm"
           variant="secondary"
           icon={<CopyIcon />}
-          disabled={!selected}
-          onClick={() => selected && openDuplicate(selected)}
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openDuplicate(singleSelected)}
         >
           Duplicar
         </Button>
@@ -124,15 +146,17 @@ export function DatabasesPage() {
           size="sm"
           variant="danger"
           icon={<TrashIcon />}
-          disabled={!selected || deleteDatabase.isPending}
+          disabled={selectedItems.length === 0 || bulkDelete.isPending}
           onClick={() => setConfirmDeleteOpen(true)}
         >
-          Eliminar
+          {deleteLabel}
         </Button>
         <span className="ml-auto text-xs text-slate-500">
-          {selected
-            ? `Selecionado: ${selected.displayName ?? selected.name}`
-            : 'Selecione um banco para editar ou eliminar.'}
+          {selectedItems.length > 0
+            ? selectedItems.length === 1
+              ? `Selecionado: ${singleSelected?.displayName ?? singleSelected?.name}`
+              : `${selectedItems.length} bancos selecionados`
+            : 'Selecione bancos para editar ou eliminar.'}
         </span>
         <Button
           size="sm"
@@ -179,7 +203,15 @@ export function DatabasesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/60">
-                <th className="w-10 px-4 py-3" />
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={allVisible}
+                    onChange={toggleAll}
+                    className="h-4 w-4 accent-sky-500"
+                    aria-label="Selecionar todos"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Nome</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Engine</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Servidor</th>
@@ -190,21 +222,21 @@ export function DatabasesPage() {
             </thead>
             <tbody>
               {items.map((db) => {
-                const isSelected = db.id === selectedId;
+                const isSelected = selectedIds.has(db.id);
                 return (
                   <tr
                     key={db.id}
-                    onClick={() => setSelectedId(isSelected ? null : db.id)}
+                    onClick={() => toggleOne(db.id)}
                     className={`cursor-pointer border-b border-slate-800/50 transition-colors last:border-0 ${
                       isSelected ? 'bg-sky-950/40' : 'hover:bg-slate-900/60'
                     }`}
                   >
                     <td className="px-4 py-3">
                       <input
-                        type="radio"
-                        name="selected-db"
+                        type="checkbox"
                         checked={isSelected}
-                        onChange={() => setSelectedId(isSelected ? null : db.id)}
+                        onChange={() => toggleOne(db.id)}
+                        onClick={(e) => e.stopPropagation()}
                         aria-label={`Selecionar ${db.displayName ?? db.name}`}
                         className="h-4 w-4 accent-sky-500"
                       />

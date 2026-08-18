@@ -60,7 +60,7 @@ export const env: EnvConfig = {
   logLevel: process.env.LOG_LEVEL ?? 'info',
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
   rateLimitWindowMs: parseNumber('RATE_LIMIT_WINDOW_MS', 60_000),
-  rateLimitMax: parseNumber('RATE_LIMIT_MAX', 100),
+  rateLimitMax: parseNumber('RATE_LIMIT_MAX', 500),
   jwtSecret: requireEnv('JWT_SECRET', DEV_INSECURE_JWT_SECRET),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '1h',
   githubWebhookSecret: requireEnv('GITHUB_WEBHOOK_SECRET', DEV_INSECURE_GITHUB_WEBHOOK_SECRET),

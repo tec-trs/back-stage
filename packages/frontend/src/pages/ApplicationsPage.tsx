@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 
 import { ApplicationFormDialog } from '../features/applications/ApplicationFormDialog';
 import { ApplicationImportDialog } from '../features/applications/ApplicationImportDialog';
+import { useBulkDeleteApplications } from '../features/applications/use-bulk-delete-applications';
 import { useApplications } from '../features/applications/use-applications';
 import type { ApplicationSummary } from '../features/applications/use-applications';
-import { useDeleteApplication } from '../features/applications/use-delete-application';
 import { useSetApplicationStatus } from '../features/applications/use-set-application-status';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
@@ -39,17 +39,35 @@ const CRITICALITY_TONE: Record<string, 'success' | 'warning' | 'danger' | 'defau
 export function ApplicationsPage() {
   const { data, isLoading, isError, error } = useApplications();
   const setApplicationStatus = useSetApplicationStatus();
-  const deleteApplication = useDeleteApplication();
+  const bulkDelete = useBulkDeleteApplications();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingApplication, setEditingApplication] = useState<ApplicationSummary | null>(null);
   const [duplicatingApplication, setDuplicatingApplication] = useState<ApplicationSummary | null>(null);
-  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
-  const selectedApplication =
-    data?.items.find((item) => item.id === selectedApplicationId) ?? null;
+  const items = data?.items ?? [];
+  const selectedItems = items.filter((a) => selectedIds.has(a.id));
+  const singleSelected = selectedItems.length === 1 ? selectedItems[0] : null;
+  const allVisible = items.length > 0 && items.every((a) => selectedIds.has(a.id));
+
+  function toggleAll(): void {
+    if (allVisible) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map((a) => a.id)));
+    }
+  }
+
+  function toggleOne(id: string): void {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
 
   function openCreateDialog(): void {
     setEditingApplication(null);
@@ -74,47 +92,32 @@ export function ApplicationsPage() {
     setDuplicatingApplication(null);
   }
 
-  function handleEditSelected(): void {
-    if (selectedApplication) {
-      openEditDialog(selectedApplication);
-    }
-  }
-
-  function handleDuplicateSelected(): void {
-    if (selectedApplication) {
-      openDuplicateDialog(selectedApplication);
-    }
-  }
-
   function handleToggleStatusSelected(): void {
-    if (selectedApplication) {
+    if (singleSelected) {
       setApplicationStatus.mutate({
-        id: selectedApplication.id,
-        status: selectedApplication.status === 'deactivated' ? 'active' : 'deactivated',
+        id: singleSelected.id,
+        status: singleSelected.status === 'deactivated' ? 'active' : 'deactivated',
       });
     }
   }
 
-  function handleDeleteSelected(): void {
-    if (selectedApplication) {
-      setConfirmDeleteOpen(true);
-    }
-  }
-
-  function handleConfirmDelete(): void {
-    if (!selectedApplication) return;
-    deleteApplication.mutate(selectedApplication.id, {
-      onSuccess: () => {
-        setSelectedApplicationId(null);
-        setConfirmDeleteOpen(false);
-      },
-    });
+  async function handleConfirmDelete(): Promise<void> {
+    if (selectedItems.length === 0) return;
+    await bulkDelete.mutateAsync(selectedItems.map((a) => a.id));
+    setSelectedIds(new Set());
+    setConfirmDeleteOpen(false);
   }
 
   function closeConfirmDelete(): void {
     setConfirmDeleteOpen(false);
-    deleteApplication.reset();
+    bulkDelete.reset();
   }
+
+  const deleteLabel = selectedItems.length > 1 ? `Eliminar (${selectedItems.length})` : 'Eliminar';
+  const deleteMessage =
+    selectedItems.length === 1
+      ? `Tem certeza que deseja eliminar a aplicacao "${singleSelected?.displayName}"? Esta acao nao pode ser desfeita.`
+      : `Tem certeza que deseja eliminar ${selectedItems.length} aplicacoes? Esta acao nao pode ser desfeita.`;
 
   return (
     <div>
@@ -125,12 +128,12 @@ export function ApplicationsPage() {
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
         title="Eliminar aplicacao"
-        message={`Tem certeza que deseja eliminar a aplicacao "${selectedApplication?.displayName}"? Esta acao nao pode ser desfeita.`}
+        message={deleteMessage}
         confirmLabel="Eliminar"
         onConfirm={handleConfirmDelete}
         onCancel={closeConfirmDelete}
-        isPending={deleteApplication.isPending}
-        error={deleteApplication.isError ? (deleteApplication.error?.message ?? 'Erro ao eliminar aplicacao') : null}
+        isPending={bulkDelete.isPending}
+        error={bulkDelete.isError ? (bulkDelete.error?.message ?? 'Erro ao eliminar aplicacao') : null}
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
@@ -151,13 +154,9 @@ export function ApplicationsPage() {
           size="sm"
           variant="secondary"
           icon={<PencilIcon />}
-          disabled={!selectedApplication}
-          onClick={handleEditSelected}
-          title={
-            selectedApplication
-              ? `Editar ${selectedApplication.displayName}`
-              : 'Selecione uma aplicacao para editar'
-          }
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openEditDialog(singleSelected)}
+          title={singleSelected ? `Editar ${singleSelected.displayName}` : 'Selecione uma aplicacao para editar'}
         >
           Editar
         </Button>
@@ -165,13 +164,9 @@ export function ApplicationsPage() {
           size="sm"
           variant="secondary"
           icon={<CopyIcon />}
-          disabled={!selectedApplication}
-          onClick={handleDuplicateSelected}
-          title={
-            selectedApplication
-              ? `Duplicar ${selectedApplication.displayName}`
-              : 'Selecione uma aplicacao para duplicar'
-          }
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openDuplicateDialog(singleSelected)}
+          title={singleSelected ? `Duplicar ${singleSelected.displayName}` : 'Selecione uma aplicacao para duplicar'}
         >
           Duplicar
         </Button>
@@ -179,36 +174,34 @@ export function ApplicationsPage() {
           size="sm"
           variant="secondary"
           icon={<PowerIcon />}
-          disabled={!selectedApplication || setApplicationStatus.isPending}
+          disabled={!singleSelected || setApplicationStatus.isPending}
           onClick={handleToggleStatusSelected}
           title={
-            selectedApplication
-              ? selectedApplication.status === 'deactivated'
-                ? `Ativar ${selectedApplication.displayName}`
-                : `Desativar ${selectedApplication.displayName}`
+            singleSelected
+              ? singleSelected.status === 'deactivated'
+                ? `Ativar ${singleSelected.displayName}`
+                : `Desativar ${singleSelected.displayName}`
               : 'Selecione uma aplicacao para ativar ou desativar'
           }
         >
-          {selectedApplication?.status === 'deactivated' ? 'Ativar' : 'Desativar'}
+          {singleSelected?.status === 'deactivated' ? 'Ativar' : 'Desativar'}
         </Button>
         <Button
           size="sm"
           variant="danger"
           icon={<TrashIcon />}
-          disabled={!selectedApplication || deleteApplication.isPending}
-          onClick={handleDeleteSelected}
-          title={
-            selectedApplication
-              ? `Eliminar ${selectedApplication.displayName}`
-              : 'Selecione uma aplicacao para eliminar'
-          }
+          disabled={selectedItems.length === 0 || bulkDelete.isPending}
+          onClick={() => setConfirmDeleteOpen(true)}
+          title={selectedItems.length > 0 ? `Eliminar ${selectedItems.length} aplicacao(oes)` : 'Selecione aplicacoes para eliminar'}
         >
-          Eliminar
+          {deleteLabel}
         </Button>
         <span className="ml-auto text-xs text-slate-500">
-          {selectedApplication
-            ? `Selecionado: ${selectedApplication.displayName}`
-            : 'Selecione uma aplicacao na lista para editar, duplicar, ativar/desativar ou eliminar.'}
+          {selectedItems.length > 0
+            ? selectedItems.length === 1
+              ? `Selecionado: ${singleSelected?.displayName}`
+              : `${selectedItems.length} aplicacoes selecionadas`
+            : 'Selecione aplicacoes na lista para editar, duplicar, ativar/desativar ou eliminar.'}
         </span>
       </div>
 
@@ -218,16 +211,24 @@ export function ApplicationsPage() {
           message={error instanceof Error ? error.message : 'Erro ao carregar aplicacoes'}
         />
       )}
-      {data && data.items.length === 0 && (
+      {data && items.length === 0 && (
         <EmptyState title="Nenhuma aplicacao encontrada" description="Cadastre a primeira aplicacao." />
       )}
 
-      {data && data.items.length > 0 && (
+      {data && items.length > 0 && (
         <div className="overflow-hidden rounded-lg border border-slate-800">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-900 text-slate-400">
               <tr>
-                <th className="w-10 px-4 py-2" />
+                <th className="w-10 px-4 py-2">
+                  <input
+                    type="checkbox"
+                    checked={allVisible}
+                    onChange={toggleAll}
+                    className="h-4 w-4 accent-sky-500"
+                    aria-label="Selecionar todos"
+                  />
+                </th>
                 <th className="px-4 py-2 font-medium">Código</th>
                 <th className="px-4 py-2 font-medium">Nome</th>
                 <th className="px-4 py-2 font-medium">Tipo</th>
@@ -236,20 +237,20 @@ export function ApplicationsPage() {
               </tr>
             </thead>
             <tbody>
-              {data.items.map((application) => (
+              {items.map((application) => (
                 <tr
                   key={application.id}
-                  onClick={() => setSelectedApplicationId(application.id)}
+                  onClick={() => toggleOne(application.id)}
                   className={`cursor-pointer border-t border-slate-800 ${
-                    application.id === selectedApplicationId ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
+                    selectedIds.has(application.id) ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
                   }`}
                 >
                   <td className="px-4 py-2">
                     <input
-                      type="radio"
-                      name="selected-application"
-                      checked={application.id === selectedApplicationId}
-                      onChange={() => setSelectedApplicationId(application.id)}
+                      type="checkbox"
+                      checked={selectedIds.has(application.id)}
+                      onChange={() => toggleOne(application.id)}
+                      onClick={(e) => e.stopPropagation()}
                       aria-label={`Selecionar ${application.displayName}`}
                       className="h-4 w-4 accent-sky-500"
                     />

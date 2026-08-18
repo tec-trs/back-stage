@@ -7,6 +7,7 @@ import { validateMiddleware } from '../../../../shared/http/validate.middleware.
 
 import type { ServerController } from './server.controller.js';
 import {
+  bulkDeleteBodySchema,
   createServerBodySchema,
   listServersQuerySchema,
   serverIdParamsSchema,
@@ -112,6 +113,13 @@ export function createServerRouter(controller: ServerController): Router {
     authorizeMiddleware(...DELETE_ROLES),
     validateMiddleware({ params: serverIdParamsSchema }),
     asyncHandler(controller.remove),
+  );
+
+  router.post(
+    '/bulk-delete',
+    authorizeMiddleware(...DELETE_ROLES),
+    validateMiddleware({ body: bulkDeleteBodySchema }),
+    asyncHandler(controller.bulkRemove),
   );
 
   return router;

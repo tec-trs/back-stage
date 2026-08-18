@@ -35,6 +35,8 @@ function buildRepositoryMock(overrides: Partial<IUserRepository> = {}): IUserRep
     update: vi.fn(),
     setActive: vi.fn(),
     softDelete: vi.fn(),
+    findUserOrganizations: vi.fn(),
+    setUserOrganizations: vi.fn(),
     ...overrides,
   };
 }

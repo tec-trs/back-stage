@@ -60,6 +60,12 @@ export function createApp(): Express {
       limit: env.rateLimitMax,
       standardHeaders: true,
       legacyHeaders: false,
+      message: {
+        error: {
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: 'Muitas requisicoes. Aguarde um momento e tente novamente.',
+        },
+      },
     }),
   );
 

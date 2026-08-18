@@ -7,6 +7,7 @@ import { validateMiddleware } from '../../../../shared/http/validate.middleware.
 
 import type { EnvironmentController } from './environment.controller.js';
 import {
+  bulkDeleteBodySchema,
   createEnvironmentBodySchema,
   environmentIdParamsSchema,
   updateEnvironmentBodySchema,
@@ -77,6 +78,13 @@ export function createEnvironmentRouter(controller: EnvironmentController): Rout
     authorizeMiddleware(...DELETE_ROLES),
     validateMiddleware({ params: environmentIdParamsSchema }),
     asyncHandler(controller.remove),
+  );
+
+  router.post(
+    '/bulk-delete',
+    authorizeMiddleware(...DELETE_ROLES),
+    validateMiddleware({ body: bulkDeleteBodySchema }),
+    asyncHandler(controller.bulkRemove),
   );
 
   return router;

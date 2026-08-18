@@ -82,4 +82,19 @@ export class EnvironmentService {
       metadata: { slug: env.slug, name: env.name },
     });
   }
+
+  public async bulkDelete(ids: string[], audit: AuditContext): Promise<number> {
+    const count = await this.environmentRepository.bulkSoftDelete(ids);
+
+    await auditLogger.record({
+      actorUserId: audit.actorUserId,
+      action: 'environment.bulk_deleted',
+      resourceType: 'environment',
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+      metadata: { count, ids },
+    });
+
+    return count;
+  }
 }

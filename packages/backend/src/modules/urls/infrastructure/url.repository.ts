@@ -48,6 +48,7 @@ export interface IUrlRepository {
   update(id: string, input: UpdateUrlInput): Promise<Url | undefined>;
   setStatus(id: string, status: string): Promise<Url | undefined>;
   softDelete(id: string): Promise<boolean>;
+  bulkSoftDelete(ids: string[]): Promise<number>;
   validateOwnerResourceExists(ownerResourceType: string, ownerResourceId: string): Promise<boolean>;
 }
 
@@ -187,6 +188,15 @@ export class UrlRepository implements IUrlRepository {
   public async softDelete(id: string): Promise<boolean> {
     const result = await this.db(TABLE_NAME).where({ id }).update({ deleted_at: this.db.fn.now() });
     return result > 0;
+  }
+
+  public async bulkSoftDelete(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const affected = (await this.db(TABLE_NAME)
+      .whereNull('deleted_at')
+      .whereIn('id', ids)
+      .update({ deleted_at: this.db.fn.now() })) as unknown as number;
+    return affected;
   }
 
   public async validateOwnerResourceExists(

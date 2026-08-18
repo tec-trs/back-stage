@@ -8,6 +8,7 @@ import { validateMiddleware } from '../../../../shared/http/validate.middleware.
 import type { ApplicationController } from './application.controller.js';
 import {
   applicationIdParamsSchema,
+  bulkDeleteBodySchema,
   createApplicationBodySchema,
   listApplicationsQuerySchema,
   setApplicationStatusBodySchema,
@@ -112,6 +113,13 @@ export function createApplicationRouter(controller: ApplicationController): Rout
     authorizeMiddleware(...DELETE_ROLES),
     validateMiddleware({ params: applicationIdParamsSchema }),
     asyncHandler(controller.remove),
+  );
+
+  router.post(
+    '/bulk-delete',
+    authorizeMiddleware(...DELETE_ROLES),
+    validateMiddleware({ body: bulkDeleteBodySchema }),
+    asyncHandler(controller.bulkRemove),
   );
 
   return router;

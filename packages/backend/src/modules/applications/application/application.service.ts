@@ -131,4 +131,26 @@ export class ApplicationService {
       userAgent: audit.userAgent,
     });
   }
+
+  public async bulkDelete(ids: string[], audit: AuditContext): Promise<number> {
+    const blocked = await this.applicationRepository.applicationsWithDeployments(ids);
+    if (blocked.length > 0) {
+      throw new ConflictError(
+        `${blocked.length} aplicacao(oes) nao podem ser eliminadas pois possuem implantacoes ativas. Remova as implantacoes antes de eliminar.`,
+      );
+    }
+
+    const count = await this.applicationRepository.bulkSoftDelete(ids);
+
+    await auditLogger.record({
+      actorUserId: audit.actorUserId,
+      action: 'application.bulk_deleted',
+      resourceType: 'application',
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+      metadata: { count, ids },
+    });
+
+    return count;
+  }
 }

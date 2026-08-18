@@ -87,6 +87,8 @@ export interface IServerRepository {
   update(id: string, input: UpdateServerInput): Promise<Server | undefined>;
   setStatus(id: string, status: string): Promise<Server | undefined>;
   softDelete(id: string): Promise<boolean>;
+  bulkSoftDelete(ids: string[]): Promise<number>;
+  serversWithLinkedApplications(ids: string[]): Promise<string[]>;
   hasLinkedApplications(id: string): Promise<boolean>;
 }
 
@@ -309,6 +311,27 @@ export class ServerRepository implements IServerRepository {
       .where('id', id)
       .update({ deleted_at: this.db.fn.now() })) as unknown as number;
     return affected > 0;
+  }
+
+  public async bulkSoftDelete(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const affected = (await this.db(TABLE_NAME)
+      .whereNull('deleted_at')
+      .whereIn('id', ids)
+      .update({ deleted_at: this.db.fn.now() })) as unknown as number;
+    return affected;
+  }
+
+  public async serversWithLinkedApplications(ids: string[]): Promise<string[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.db('application_deployments')
+      .join('applications', 'applications.id', 'application_deployments.application_id')
+      .whereNull('application_deployments.deleted_at')
+      .whereNull('applications.deleted_at')
+      .whereIn('application_deployments.server_id', ids)
+      .distinct('application_deployments.server_id')
+      .select('application_deployments.server_id as id');
+    return rows.map((r: { id: string }) => r.id);
   }
 
   public async hasLinkedApplications(id: string): Promise<boolean> {

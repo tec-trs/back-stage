@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { TeamFormDialog } from '../features/teams/TeamFormDialog';
 import { TeamMembersDialog } from '../features/teams/TeamMembersDialog';
-import { useDeleteTeam } from '../features/teams/use-delete-team';
+import { useBulkDeleteTeams } from '../features/teams/use-bulk-delete-teams';
 import { useTeams } from '../features/teams/use-teams';
 import type { TeamSummary } from '../features/teams/use-teams';
 import { Badge } from '../shared/components/Badge';
@@ -16,16 +16,34 @@ import { Spinner } from '../shared/components/Spinner';
 
 export function TeamsPage() {
   const { data, isLoading, isError, error } = useTeams();
-  const deleteTeam = useDeleteTeam();
+  const bulkDelete = useBulkDeleteTeams();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editing, setEditing] = useState<TeamSummary | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [membersTeam, setMembersTeam] = useState<TeamSummary | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const items = data ?? [];
-  const selected = items.find((t) => t.id === selectedId) ?? null;
+  const selectedItems = items.filter((t) => selectedIds.has(t.id));
+  const singleSelected = selectedItems.length === 1 ? selectedItems[0] : null;
+  const allVisible = items.length > 0 && items.every((t) => selectedIds.has(t.id));
+
+  function toggleAll(): void {
+    if (allVisible) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map((t) => t.id)));
+    }
+  }
+
+  function toggleOne(id: string): void {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
 
   function openCreate(): void {
     setEditing(null);
@@ -50,30 +68,27 @@ export function TeamsPage() {
     setMembersTeam(null);
   }
 
-  function handleDeleteSelected(): void {
-    if (selected) setConfirmDeleteOpen(true);
-  }
-
-  function handleConfirmDelete(): void {
-    if (!selected) return;
-    deleteTeam.mutate(selected.id, {
-      onSuccess: () => {
-        setSelectedId(null);
-        setConfirmDeleteOpen(false);
-      },
-    });
+  async function handleConfirmDelete(): Promise<void> {
+    if (selectedItems.length === 0) return;
+    await bulkDelete.mutateAsync(selectedItems.map((t) => t.id));
+    setSelectedIds(new Set());
+    setConfirmDeleteOpen(false);
   }
 
   function closeConfirmDelete(): void {
     setConfirmDeleteOpen(false);
-    deleteTeam.reset();
+    bulkDelete.reset();
   }
 
-  // When the members dialog is open we want to pass the freshest version
-  // of the team (so role changes/additions are reflected immediately).
   const freshMembersTeam = membersTeam
     ? (items.find((t) => t.id === membersTeam.id) ?? membersTeam)
     : null;
+
+  const deleteLabel = selectedItems.length > 1 ? `Eliminar (${selectedItems.length})` : 'Eliminar';
+  const deleteMessage =
+    selectedItems.length === 1
+      ? `Tem certeza que deseja eliminar o time "${singleSelected?.name}" (${singleSelected?.slug})? Os membros serao desvinculados.`
+      : `Tem certeza que deseja eliminar ${selectedItems.length} times? Os membros serao desvinculados.`;
 
   return (
     <div>
@@ -95,16 +110,12 @@ export function TeamsPage() {
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
         title="Eliminar time"
-        message={`Tem certeza que deseja eliminar o time "${selected?.name}" (${selected?.slug})? Os membros serao desvinculados.`}
+        message={deleteMessage}
         confirmLabel="Eliminar"
         onConfirm={handleConfirmDelete}
         onCancel={closeConfirmDelete}
-        isPending={deleteTeam.isPending}
-        error={
-          deleteTeam.isError
-            ? (deleteTeam.error?.message ?? 'Erro ao eliminar time')
-            : null
-        }
+        isPending={bulkDelete.isPending}
+        error={bulkDelete.isError ? (bulkDelete.error?.message ?? 'Erro ao eliminar time') : null}
       />
 
       {/* Toolbar */}
@@ -117,8 +128,8 @@ export function TeamsPage() {
           size="sm"
           variant="secondary"
           icon={<PencilIcon />}
-          disabled={!selected}
-          onClick={() => selected && openEdit(selected)}
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openEdit(singleSelected)}
         >
           Editar
         </Button>
@@ -126,8 +137,8 @@ export function TeamsPage() {
           size="sm"
           variant="secondary"
           icon={<UsersIcon />}
-          disabled={!selected}
-          onClick={() => selected && openMembers(selected)}
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openMembers(singleSelected)}
         >
           Membros
         </Button>
@@ -135,15 +146,17 @@ export function TeamsPage() {
           size="sm"
           variant="danger"
           icon={<TrashIcon />}
-          disabled={!selected || deleteTeam.isPending}
-          onClick={handleDeleteSelected}
+          disabled={selectedItems.length === 0 || bulkDelete.isPending}
+          onClick={() => setConfirmDeleteOpen(true)}
         >
-          Eliminar
+          {deleteLabel}
         </Button>
         <span className="ml-auto text-xs text-slate-500">
-          {selected
-            ? `Selecionado: ${selected.name} (${selected.slug})`
-            : 'Selecione um time para editar, gerenciar membros ou eliminar.'}
+          {selectedItems.length > 0
+            ? selectedItems.length === 1
+              ? `Selecionado: ${singleSelected?.name} (${singleSelected?.slug})`
+              : `${selectedItems.length} times selecionados`
+            : 'Selecione times para editar, gerenciar membros ou eliminar.'}
         </span>
       </div>
 
@@ -168,7 +181,15 @@ export function TeamsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/60">
-                <th className="w-10 px-4 py-3" />
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={allVisible}
+                    onChange={toggleAll}
+                    className="h-4 w-4 accent-sky-500"
+                    aria-label="Selecionar todos"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Nome</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Slug</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Descricao</th>
@@ -177,21 +198,21 @@ export function TeamsPage() {
             </thead>
             <tbody>
               {items.map((team) => {
-                const isSelected = team.id === selectedId;
+                const isSelected = selectedIds.has(team.id);
                 return (
                   <tr
                     key={team.id}
-                    onClick={() => setSelectedId(isSelected ? null : team.id)}
+                    onClick={() => toggleOne(team.id)}
                     className={`cursor-pointer border-b border-slate-800/50 transition-colors last:border-0 ${
                       isSelected ? 'bg-sky-950/40' : 'hover:bg-slate-900/60'
                     }`}
                   >
                     <td className="px-4 py-3">
                       <input
-                        type="radio"
-                        name="selected-team"
+                        type="checkbox"
                         checked={isSelected}
-                        onChange={() => setSelectedId(isSelected ? null : team.id)}
+                        onChange={() => toggleOne(team.id)}
+                        onClick={(e) => e.stopPropagation()}
                         aria-label={`Selecionar ${team.name}`}
                         className="h-4 w-4 accent-sky-500"
                       />

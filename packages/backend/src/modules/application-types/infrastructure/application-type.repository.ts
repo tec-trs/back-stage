@@ -22,6 +22,7 @@ export interface IApplicationTypeRepository {
   create(data: CreateApplicationTypeData): Promise<ApplicationType>;
   update(id: string, data: UpdateApplicationTypeData): Promise<ApplicationType | null>;
   delete(id: string): Promise<boolean>;
+  bulkSoftDelete(ids: string[]): Promise<number>;
 }
 
 export class ApplicationTypeRepository implements IApplicationTypeRepository {
@@ -74,5 +75,14 @@ export class ApplicationTypeRepository implements IApplicationTypeRepository {
   async delete(id: string): Promise<boolean> {
     const count = await this.db('application_types').where({ id }).delete();
     return count > 0;
+  }
+
+  async bulkSoftDelete(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const affected = (await this.db('application_types')
+      .whereNull('deleted_at')
+      .whereIn('id', ids)
+      .update({ deleted_at: this.db.fn.now() })) as unknown as number;
+    return affected;
   }
 }

@@ -7,6 +7,7 @@ import { validateMiddleware } from '../../../../shared/http/validate.middleware.
 
 import type { UrlController } from './url.controller.js';
 import {
+  bulkDeleteBodySchema,
   createUrlBodySchema,
   listUrlsQuerySchema,
   setUrlStatusBodySchema,
@@ -104,6 +105,13 @@ export function createUrlRouter(controller: UrlController): Router {
     authorizeMiddleware(...DELETE_ROLES),
     validateMiddleware({ params: urlIdParamsSchema }),
     asyncHandler(controller.remove),
+  );
+
+  router.post(
+    '/bulk-delete',
+    authorizeMiddleware(...DELETE_ROLES),
+    validateMiddleware({ body: bulkDeleteBodySchema }),
+    asyncHandler(controller.bulkRemove),
   );
 
   return router;

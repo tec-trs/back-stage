@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { EnvironmentFormDialog } from '../features/environments/EnvironmentFormDialog';
-import { useDeleteEnvironment } from '../features/environments/use-delete-environment';
+import { useBulkDeleteEnvironments } from '../features/environments/use-bulk-delete-environments';
 import { useEnvironments } from '../features/environments/use-environments';
 import type { EnvironmentSummary } from '../features/environments/use-environments';
 import { useUpdateEnvironment } from '../features/environments/use-update-environment';
@@ -23,16 +23,34 @@ const COLOR_LABEL: Record<string, string> = {
 
 export function EnvironmentsPage() {
   const { data, isLoading, isError, error } = useEnvironments();
-  const deleteEnvironment = useDeleteEnvironment();
+  const bulkDelete = useBulkDeleteEnvironments();
   const updateEnvironment = useUpdateEnvironment();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEnvironment, setEditingEnvironment] = useState<EnvironmentSummary | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const items = data ?? [];
-  const selected = items.find((e) => e.id === selectedId) ?? null;
+  const selectedItems = items.filter((e) => selectedIds.has(e.id));
+  const singleSelected = selectedItems.length === 1 ? selectedItems[0] : null;
+  const allVisible = items.length > 0 && items.every((e) => selectedIds.has(e.id));
+
+  function toggleAll(): void {
+    if (allVisible) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map((e) => e.id)));
+    }
+  }
+
+  function toggleOne(id: string): void {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
 
   function openCreate(): void {
     setEditingEnvironment(null);
@@ -50,31 +68,30 @@ export function EnvironmentsPage() {
   }
 
   function handleToggleActive(): void {
-    if (!selected) return;
+    if (!singleSelected) return;
     updateEnvironment.mutate({
-      id: selected.id,
-      isActive: !selected.isActive,
+      id: singleSelected.id,
+      isActive: !singleSelected.isActive,
     });
   }
 
-  function handleDeleteSelected(): void {
-    if (selected) setConfirmDeleteOpen(true);
-  }
-
-  function handleConfirmDelete(): void {
-    if (!selected) return;
-    deleteEnvironment.mutate(selected.id, {
-      onSuccess: () => {
-        setSelectedId(null);
-        setConfirmDeleteOpen(false);
-      },
-    });
+  async function handleConfirmDelete(): Promise<void> {
+    if (selectedItems.length === 0) return;
+    await bulkDelete.mutateAsync(selectedItems.map((e) => e.id));
+    setSelectedIds(new Set());
+    setConfirmDeleteOpen(false);
   }
 
   function closeConfirmDelete(): void {
     setConfirmDeleteOpen(false);
-    deleteEnvironment.reset();
+    bulkDelete.reset();
   }
+
+  const deleteLabel = selectedItems.length > 1 ? `Eliminar (${selectedItems.length})` : 'Eliminar';
+  const deleteMessage =
+    selectedItems.length === 1
+      ? `Tem certeza que deseja eliminar o ambiente "${singleSelected?.name}" (${singleSelected?.slug})? Servidores e implantacoes que referenciam este slug nao serao afetados imediatamente.`
+      : `Tem certeza que deseja eliminar ${selectedItems.length} ambientes? Servidores e implantacoes que os referenciam nao serao afetados imediatamente.`;
 
   return (
     <div>
@@ -92,16 +109,12 @@ export function EnvironmentsPage() {
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
         title="Eliminar ambiente"
-        message={`Tem certeza que deseja eliminar o ambiente "${selected?.name}" (${selected?.slug})? Servidores e implantacoes que referenciam este slug nao serao afetados imediatamente.`}
+        message={deleteMessage}
         confirmLabel="Eliminar"
         onConfirm={handleConfirmDelete}
         onCancel={closeConfirmDelete}
-        isPending={deleteEnvironment.isPending}
-        error={
-          deleteEnvironment.isError
-            ? (deleteEnvironment.error?.message ?? 'Erro ao eliminar ambiente')
-            : null
-        }
+        isPending={bulkDelete.isPending}
+        error={bulkDelete.isError ? (bulkDelete.error?.message ?? 'Erro ao eliminar ambiente') : null}
       />
 
       {/* Toolbar */}
@@ -114,9 +127,9 @@ export function EnvironmentsPage() {
           size="sm"
           variant="secondary"
           icon={<PencilIcon />}
-          disabled={!selected}
-          onClick={() => selected && openEdit(selected)}
-          title={selected ? `Editar ${selected.name}` : 'Selecione um ambiente para editar'}
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openEdit(singleSelected)}
+          title={singleSelected ? `Editar ${singleSelected.name}` : 'Selecione um ambiente para editar'}
         >
           Editar
         </Button>
@@ -124,32 +137,34 @@ export function EnvironmentsPage() {
           size="sm"
           variant="secondary"
           icon={<PowerIcon />}
-          disabled={!selected || updateEnvironment.isPending}
+          disabled={!singleSelected || updateEnvironment.isPending}
           onClick={handleToggleActive}
           title={
-            selected
-              ? selected.isActive
-                ? `Desativar ${selected.name}`
-                : `Ativar ${selected.name}`
+            singleSelected
+              ? singleSelected.isActive
+                ? `Desativar ${singleSelected.name}`
+                : `Ativar ${singleSelected.name}`
               : 'Selecione um ambiente'
           }
         >
-          {selected?.isActive ? 'Desativar' : 'Ativar'}
+          {singleSelected?.isActive ? 'Desativar' : 'Ativar'}
         </Button>
         <Button
           size="sm"
           variant="danger"
           icon={<TrashIcon />}
-          disabled={!selected || deleteEnvironment.isPending}
-          onClick={handleDeleteSelected}
-          title={selected ? `Eliminar ${selected.name}` : 'Selecione um ambiente para eliminar'}
+          disabled={selectedItems.length === 0 || bulkDelete.isPending}
+          onClick={() => setConfirmDeleteOpen(true)}
+          title={selectedItems.length > 0 ? `Eliminar ${selectedItems.length} ambiente(s)` : 'Selecione ambientes para eliminar'}
         >
-          Eliminar
+          {deleteLabel}
         </Button>
         <span className="ml-auto text-xs text-slate-500">
-          {selected
-            ? `Selecionado: ${selected.name} (${selected.slug})`
-            : 'Selecione um ambiente para editar, ativar/desativar ou eliminar.'}
+          {selectedItems.length > 0
+            ? selectedItems.length === 1
+              ? `Selecionado: ${singleSelected?.name} (${singleSelected?.slug})`
+              : `${selectedItems.length} ambientes selecionados`
+            : 'Selecione ambientes para editar, ativar/desativar ou eliminar.'}
         </span>
       </div>
 
@@ -174,7 +189,15 @@ export function EnvironmentsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/60">
-                <th className="w-10 px-4 py-3" />
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={allVisible}
+                    onChange={toggleAll}
+                    className="h-4 w-4 accent-sky-500"
+                    aria-label="Selecionar todos"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Nome</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Slug</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Descricao</th>
@@ -184,21 +207,21 @@ export function EnvironmentsPage() {
             </thead>
             <tbody>
               {items.map((env) => {
-                const isSelected = env.id === selectedId;
+                const isSelected = selectedIds.has(env.id);
                 return (
                   <tr
                     key={env.id}
-                    onClick={() => setSelectedId(isSelected ? null : env.id)}
+                    onClick={() => toggleOne(env.id)}
                     className={`cursor-pointer border-b border-slate-800/50 transition-colors last:border-0 ${
                       isSelected ? 'bg-sky-950/40' : 'hover:bg-slate-900/60'
                     }`}
                   >
                     <td className="px-4 py-3">
                       <input
-                        type="radio"
-                        name="selected-env"
+                        type="checkbox"
                         checked={isSelected}
-                        onChange={() => setSelectedId(isSelected ? null : env.id)}
+                        onChange={() => toggleOne(env.id)}
+                        onClick={(e) => e.stopPropagation()}
                         aria-label={`Selecionar ${env.name}`}
                         className="h-4 w-4 accent-sky-500"
                       />

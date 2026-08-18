@@ -26,6 +26,7 @@ export interface IEnvironmentRepository {
   create(input: CreateEnvironmentInput): Promise<Environment>;
   update(id: string, input: UpdateEnvironmentInput): Promise<Environment | null>;
   delete(id: string): Promise<void>;
+  bulkSoftDelete(ids: string[]): Promise<number>;
 }
 
 export class EnvironmentRepository implements IEnvironmentRepository {
@@ -75,5 +76,14 @@ export class EnvironmentRepository implements IEnvironmentRepository {
 
   public async delete(id: string): Promise<void> {
     await this.knex<EnvironmentRow>(TABLE_NAME).where('id', id).delete();
+  }
+
+  public async bulkSoftDelete(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const affected = (await this.knex(TABLE_NAME)
+      .whereNull('deleted_at')
+      .whereIn('id', ids)
+      .update({ deleted_at: this.knex.fn.now() })) as unknown as number;
+    return affected;
   }
 }

@@ -33,11 +33,31 @@ export function OrganizationsPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editing, setEditing] = useState<OrganizationSummary | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkPending, setIsBulkPending] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const items = data ?? [];
-  const selected = items.find((o) => o.id === selectedId) ?? null;
+  const selectedItems = items.filter((o) => selectedIds.has(o.id));
+  const singleSelected = selectedItems.length === 1 ? selectedItems[0] : null;
+  const deletableItems = selectedItems.filter((o) => o.slug !== 'default');
+  const allVisible = items.length > 0 && items.every((o) => selectedIds.has(o.id));
+
+  function toggleAll(): void {
+    if (allVisible) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map((o) => o.id)));
+    }
+  }
+
+  function toggleOne(id: string): void {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
 
   function openCreate(): void {
     setEditing(null);
@@ -54,15 +74,25 @@ export function OrganizationsPage() {
     setEditing(null);
   }
 
-  function handleConfirmDelete(): void {
-    if (!selected) return;
-    deleteOrg.mutate(selected.id, {
-      onSuccess: () => {
-        setSelectedId(null);
-        setConfirmDeleteOpen(false);
-      },
-    });
+  async function handleConfirmDelete(): Promise<void> {
+    if (deletableItems.length === 0) return;
+    setIsBulkPending(true);
+    try {
+      for (const org of deletableItems) {
+        await deleteOrg.mutateAsync(org.id);
+      }
+      setSelectedIds(new Set());
+      setConfirmDeleteOpen(false);
+    } finally {
+      setIsBulkPending(false);
+    }
   }
+
+  const deleteLabel = deletableItems.length > 1 ? `Remover (${deletableItems.length})` : 'Remover';
+  const deleteMessage =
+    deletableItems.length === 1
+      ? `Tem certeza que deseja remover a organizacao "${deletableItems[0]?.name}" (${deletableItems[0]?.slug})? Esta acao nao pode ser desfeita.`
+      : `Tem certeza que deseja remover ${deletableItems.length} organizacoes? Esta acao nao pode ser desfeita.`;
 
   return (
     <div>
@@ -76,11 +106,11 @@ export function OrganizationsPage() {
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
         title="Remover organizacao"
-        message={`Tem certeza que deseja remover a organizacao "${selected?.name}" (${selected?.slug})? Esta acao nao pode ser desfeita.`}
+        message={deleteMessage}
         confirmLabel="Remover"
         onConfirm={handleConfirmDelete}
         onCancel={() => { setConfirmDeleteOpen(false); deleteOrg.reset(); }}
-        isPending={deleteOrg.isPending}
+        isPending={isBulkPending || deleteOrg.isPending}
         error={deleteOrg.isError ? (deleteOrg.error?.message ?? 'Erro ao remover') : null}
       />
 
@@ -94,8 +124,8 @@ export function OrganizationsPage() {
           size="sm"
           variant="secondary"
           icon={<PencilIcon />}
-          disabled={!selected}
-          onClick={() => selected && openEdit(selected)}
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openEdit(singleSelected)}
         >
           Editar
         </Button>
@@ -103,16 +133,22 @@ export function OrganizationsPage() {
           size="sm"
           variant="danger"
           icon={<TrashIcon />}
-          disabled={!selected || deleteOrg.isPending || selected.slug === 'default'}
+          disabled={deletableItems.length === 0 || isBulkPending}
           onClick={() => setConfirmDeleteOpen(true)}
-          title={selected?.slug === 'default' ? 'A organizacao padrao nao pode ser removida' : undefined}
+          title={
+            selectedItems.length > 0 && deletableItems.length === 0
+              ? 'A organizacao padrao nao pode ser removida'
+              : undefined
+          }
         >
-          Remover
+          {deleteLabel}
         </Button>
         <span className="ml-auto text-xs text-slate-500">
-          {selected
-            ? `Selecionado: ${selected.name}`
-            : 'Selecione uma organizacao para editar ou remover.'}
+          {selectedItems.length > 0
+            ? selectedItems.length === 1
+              ? `Selecionado: ${singleSelected?.name}`
+              : `${selectedItems.length} organizacoes selecionadas`
+            : 'Selecione organizacoes para editar ou remover.'}
         </span>
       </div>
 
@@ -136,7 +172,15 @@ export function OrganizationsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/60">
-                <th className="w-10 px-4 py-3" />
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={allVisible}
+                    onChange={toggleAll}
+                    className="h-4 w-4 accent-sky-500"
+                    aria-label="Selecionar todos"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Slug</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Nome</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Plano</th>
@@ -145,21 +189,21 @@ export function OrganizationsPage() {
             </thead>
             <tbody>
               {items.map((org) => {
-                const isSelected = org.id === selectedId;
+                const isSelected = selectedIds.has(org.id);
                 return (
                   <tr
                     key={org.id}
-                    onClick={() => setSelectedId(isSelected ? null : org.id)}
+                    onClick={() => toggleOne(org.id)}
                     className={`cursor-pointer border-b border-slate-800/50 transition-colors last:border-0 ${
                       isSelected ? 'bg-sky-950/40' : 'hover:bg-slate-900/60'
                     }`}
                   >
                     <td className="px-4 py-3">
                       <input
-                        type="radio"
-                        name="selected-org"
+                        type="checkbox"
                         checked={isSelected}
-                        onChange={() => setSelectedId(isSelected ? null : org.id)}
+                        onChange={() => toggleOne(org.id)}
+                        onClick={(e) => e.stopPropagation()}
                         aria-label={`Selecionar ${org.name}`}
                         className="h-4 w-4 accent-sky-500"
                       />

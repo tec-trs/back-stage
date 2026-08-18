@@ -52,6 +52,12 @@ export class TeamController {
     response.status(204).send();
   };
 
+  bulkRemove = async (request: Request, response: Response): Promise<void> => {
+    const { ids } = request.body as { ids: string[] };
+    const count = await this.service.bulkDelete(ids, audit(request));
+    response.status(200).json({ deleted: count });
+  };
+
   addMember = async (request: Request, response: Response): Promise<void> => {
     const body = request.body as AddMemberBody;
     const team = await this.service.addMember(
