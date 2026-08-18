@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useState } from 'react';
 
 import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
@@ -14,6 +14,7 @@ import { useServers } from '../servers/use-servers';
 
 import type { ApplicationStatus, ApplicationSummary, AppType, Criticality, DeployEnvironment } from './use-applications';
 import { useApplications } from './use-applications';
+import { DeploymentEditModal } from './DeploymentEditModal';
 import type { DeploymentInput } from './use-create-application';
 import { useCreateApplication } from './use-create-application';
 import { useUpdateApplication } from './use-update-application';
@@ -146,6 +147,10 @@ export function ApplicationFormDialog({
   const [deployments, setDeployments] = useState<DeploymentInput[]>([]);
   const [dependsOnIds, setDependsOnIds] = useState<string[]>([]);
   const [codeError, setCodeError] = useState<string | null>(null);
+  const [editingDeployment, setEditingDeployment] = useState<{
+    deployment: DeploymentInput;
+    index: number | null;
+  } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -173,19 +178,28 @@ export function ApplicationFormDialog({
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function addDeployment(): void {
-    const firstServerId = servers.data?.items[0]?.id ?? '';
-    setDeployments((current) => [
-      ...current,
-      { serverId: firstServerId, environment: 'production' },
-    ]);
+  function openAddDeployment(): void {
+    setEditingDeployment({
+      deployment: { serverId: '', environment: 'production' as DeployEnvironment },
+      index: null,
+    });
   }
 
-  function updateDeployment(index: number, patch: Partial<DeploymentInput>): void {
-    setDeployments((current) =>
-      current.map((deployment, i) => (i === index ? { ...deployment, ...patch } : deployment)),
-    );
+  function openEditDeployment(index: number): void {
+    setEditingDeployment({ deployment: { ...deployments[index] }, index });
   }
+
+  const saveDeployment = useCallback(
+    (updated: DeploymentInput, index: number | null): void => {
+      if (index === null) {
+        setDeployments((current) => [...current, updated]);
+      } else {
+        setDeployments((current) => current.map((d, i) => (i === index ? updated : d)));
+      }
+      setEditingDeployment(null);
+    },
+    [],
+  );
 
   function removeDeployment(index: number): void {
     setDeployments((current) => current.filter((_, i) => i !== index));
@@ -254,6 +268,17 @@ export function ApplicationFormDialog({
   );
 
   return (
+    <>
+    {editingDeployment && (
+      <DeploymentEditModal
+        deployment={editingDeployment.deployment}
+        index={editingDeployment.index}
+        servers={servers.data?.items ?? []}
+        environments={environments ?? []}
+        onSave={saveDeployment}
+        onCancel={() => setEditingDeployment(null)}
+      />
+    )}
     <Modal
       title={isEditMode ? 'Editar Aplicacao' : isDuplicateMode ? 'Duplicar Aplicacao' : 'Incluir Aplicacao'}
       isOpen={isOpen}
@@ -437,7 +462,7 @@ export function ApplicationFormDialog({
                   <legend className="text-sm font-medium text-slate-300">
                     Implantacoes em maquinas
                   </legend>
-                  <Button type="button" variant="secondary" size="sm" onClick={addDeployment}>
+                  <Button type="button" variant="secondary" size="sm" onClick={openAddDeployment}>
                     + Implantacao
                   </Button>
                 </div>
@@ -445,101 +470,50 @@ export function ApplicationFormDialog({
                 {deployments.length === 0 ? (
                   <p className="text-xs text-slate-500">Nenhuma implantacao adicionada.</p>
                 ) : (
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2">
                     {deployments.map((deployment, index) => {
-                      const serverName =
-                        (servers.data?.items ?? []).find((s) => s.id === deployment.serverId)
-                          ?.hostname ?? '—';
+                      const server = (servers.data?.items ?? []).find(
+                        (s) => s.id === deployment.serverId,
+                      );
+                      const serverName = server?.hostname ?? '—';
                       const envName =
                         (environments ?? []).find((e) => e.slug === deployment.environment)
                           ?.name ?? deployment.environment;
                       return (
                         <div
                           key={index}
-                          className="rounded-md border border-slate-800 bg-slate-900/40 p-3"
+                          className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/40 px-3 py-2"
                         >
-                          {/* Header do card */}
-                          <div className="mb-3 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-mono text-slate-500">#{index + 1}</span>
-                              <span className="text-sm font-medium text-slate-200">{serverName}</span>
-                              {envName && (
-                                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
-                                  {envName}
-                                </span>
-                              )}
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost-danger"
-                              size="sm"
-                              onClick={() => removeDeployment(index)}
-                            >
-                              Remover
-                            </Button>
-                          </div>
-
-                          {/* Campos em grid 2 colunas */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <label className="flex flex-col gap-1 text-xs">
-                              <span className="text-slate-500">Maquina *</span>
-                              <select
-                                value={deployment.serverId}
-                                onChange={(event) =>
-                                  updateDeployment(index, { serverId: event.target.value })
-                                }
-                                className={`${inputClass} py-1.5 text-sm`}
-                              >
-                                <option value="">Selecione a maquina...</option>
-                                {(servers.data?.items ?? []).map((server) => (
-                                  <option key={server.id} value={server.id}>
-                                    {server.hostname}
-                                    {server.displayName ? ` — ${server.displayName}` : ''}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="flex flex-col gap-1 text-xs">
-                              <span className="text-slate-500">Ambiente *</span>
-                              <select
-                                value={deployment.environment}
-                                onChange={(event) =>
-                                  updateDeployment(index, {
-                                    environment: event.target.value as DeployEnvironment,
-                                  })
-                                }
-                                className={`${inputClass} py-1.5 text-sm`}
-                              >
-                                {(environments ?? []).map((env) => (
-                                  <option key={env.slug} value={env.slug}>
-                                    {env.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="flex flex-col gap-1 text-xs">
-                              <span className="text-slate-500">Versao implantada</span>
-                              <input
-                                value={deployment.deployedVersion ?? ''}
-                                onChange={(event) =>
-                                  updateDeployment(index, { deployedVersion: event.target.value })
-                                }
-                                placeholder="1.0.0"
-                                className={`${inputClass} py-1.5 text-sm`}
-                              />
-                            </label>
-                            <label className="flex flex-col gap-1 text-xs">
-                              <span className="text-slate-500">URL de acesso</span>
-                              <input
-                                value={deployment.accessUrl ?? ''}
-                                onChange={(event) =>
-                                  updateDeployment(index, { accessUrl: event.target.value || null })
-                                }
-                                placeholder="https://app.example.com"
-                                className={`${inputClass} py-1.5 text-sm`}
-                              />
-                            </label>
-                          </div>
+                          <span className="font-mono text-xs text-slate-500">
+                            #{index + 1}
+                          </span>
+                          <span className="flex-1 truncate text-sm font-medium text-slate-200">
+                            {serverName}
+                          </span>
+                          <span className="shrink-0 rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
+                            {envName}
+                          </span>
+                          {deployment.deployedVersion && (
+                            <span className="shrink-0 font-mono text-xs text-slate-500">
+                              v{deployment.deployedVersion}
+                            </span>
+                          )}
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => openEditDeployment(index)}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost-danger"
+                            size="sm"
+                            onClick={() => removeDeployment(index)}
+                          >
+                            Remover
+                          </Button>
                         </div>
                       );
                     })}
@@ -682,5 +656,6 @@ export function ApplicationFormDialog({
         </div>
       </form>
     </Modal>
+    </>
   );
 }
