@@ -75,6 +75,9 @@ const InventoryPage = lazy(() =>
 const ImpactPage = lazy(() =>
   import('../pages/ImpactPage').then((m) => ({ default: m.ImpactPage })),
 );
+const OrganizationsPage = lazy(() =>
+  import('../pages/OrganizationsPage').then((m) => ({ default: m.OrganizationsPage })),
+);
 
 function withSuspense(element: ReactNode) {
   return <Suspense fallback={<Spinner />}>{element}</Suspense>;
@@ -114,6 +117,7 @@ export const router = createBrowserRouter([
           { path: '/application-types', element: withSuspense(<ApplicationTypesPage />) },
           { path: '/inventory', element: withSuspense(<InventoryPage />) },
           { path: '/impact/:resourceType/:resourceId', element: withSuspense(<ImpactPage />) },
+          { path: '/organizations', element: withSuspense(<OrganizationsPage />) },
           { path: '/settings', element: withSuspense(<SettingsPage />) },
         ],
       },

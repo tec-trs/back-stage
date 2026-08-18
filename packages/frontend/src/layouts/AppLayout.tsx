@@ -78,6 +78,7 @@ const NAV_ITEMS: NavItem[] = [
   { kind: 'link', to: '/urls', label: 'URLs', icon: <NetworkIcon /> },
   { kind: 'link', to: '/ecosystem', label: 'Ecossistema', icon: <NetworkIcon /> },
   { kind: 'link', to: '/settings', label: 'Configuracoes', icon: <SettingsIcon /> },
+  { kind: 'link', to: '/organizations', label: 'Organizacoes', icon: <GroupIcon />, adminOnly: true },
 ];
 
 const LINK_CLASS = 'flex items-center gap-2 rounded-md px-3 py-2 text-sm';

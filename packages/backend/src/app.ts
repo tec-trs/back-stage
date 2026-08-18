@@ -17,6 +17,7 @@ import { registerEnvironmentsModule } from './modules/environments/environments.
 import { registerServerTypesModule } from './modules/server-types/server-types.module.js';
 import { registerTeamsModule } from './modules/teams/teams.module.js';
 import { registerAuthModule } from './modules/auth/auth.module.js';
+import { registerOrganizationsModule } from './modules/organizations/organizations.module.js';
 import { registerCatalogModule } from './modules/catalog/catalog.module.js';
 import { registerDeploymentsModule } from './modules/deployments/deployments.module.js';
 import { registerEcosystemModule } from './modules/ecosystem/ecosystem.module.js';
@@ -79,6 +80,7 @@ export function createApp(): Express {
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
   app.use('/api', registerHealthModule());
   app.use('/api/auth', registerAuthModule());
+  app.use('/api/organizations', registerOrganizationsModule());
   app.use('/api/services', registerServiceCatalogModule());
   app.use('/api/governance', registerGovernanceModule());
   app.use('/api', registerSearchModule());
