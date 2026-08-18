@@ -91,8 +91,6 @@ function parseAndValidate(csvText: string): ParsedRow[] {
 
     if (!url) {
       errors.push('url obrigatoria');
-    } else {
-      try { new URL(url); } catch { errors.push('url invalida — deve ser uma URL completa (ex: https://...)'); }
     }
 
     if (!urlType) {

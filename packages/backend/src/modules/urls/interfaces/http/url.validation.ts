@@ -5,7 +5,7 @@ const statusEnum = z.enum(['active', 'inactive', 'deprecated', 'error']);
 const methodEnum = z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']).nullable().optional();
 
 const baseFields = {
-  url: z.string().url().max(2048),
+  url: z.string().min(1).max(2048),
   urlType: urlTypeEnum,
   description: z.string().nullable().optional(),
   method: methodEnum,

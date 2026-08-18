@@ -222,10 +222,9 @@ export function UrlFormDialog({
               <span className="text-slate-400">URL *</span>
               <input
                 required
-                type="url"
                 value={form.url}
                 onChange={(e) => setField('url', e.target.value)}
-                placeholder="https://api.example.com/v1"
+                placeholder="lstotvs.unimedpoa.com.br ou https://api.example.com"
                 className={inputClass}
               />
             </label>
