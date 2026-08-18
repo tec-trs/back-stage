@@ -18,7 +18,7 @@ const hostnameSchema = z
   .string()
   .min(1)
   .max(255)
-  .regex(/^[a-z0-9.-]+$/, 'hostname deve conter apenas letras minusculas, numeros, ponto e hifen');
+  .regex(/^[a-zA-Z0-9._-]+$/, 'hostname deve conter apenas letras, numeros, ponto, hifen e underscore');
 
 const serverServiceSchema = z.object({
   seq: z.coerce.number().int().positive(),

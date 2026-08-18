@@ -1,0 +1,9 @@
+code,displayName,appType,criticality,status,language,framework,currentVersion,ownerTeam,businessCategory,description
+crm,CRM Comercial,web_app,high,active,TypeScript,React,2.1.0,TI,Comercial,Sistema de gestao de relacionamento com clientes
+api-pedidos,API de Pedidos,api_backend,critical,active,Java,Spring Boot,1.5.2,Backend,Pedidos,API REST de processamento de pedidos e integracao com ERP
+app-mobile,App Mobile,mobile,high,active,Dart,Flutter,3.0.0,Mobile,Comercial,Aplicativo de vendas para clientes externos
+job-relatorios,Job Relatorios,batch_job,medium,active,Python,,1.2.0,TI,Financeiro,Geracao de relatorios financeiros noturnos via agendamento
+gateway-api,API Gateway,middleware,critical,active,Go,,2.0.0,Infra,Plataforma,Gateway de roteamento e autenticacao para microsservicos
+lib-utils,Biblioteca Utilitaria,internal_library,low,active,TypeScript,,0.9.0,TI,Plataforma,Biblioteca interna compartilhada com funcoes utilitarias
+monolito-legado,Sistema Legado,monolith,high,maintenance,PHP,Laravel,5.8.0,TI,ERP,Sistema monolitico legado em processo de migracao
+ms-notificacoes,Microsservico de Notificacoes,microservice,medium,developing,Node.js,NestJS,,Backend,Plataforma,Envio de emails e SMS para usuarios

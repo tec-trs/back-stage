@@ -5,12 +5,13 @@ import { useDeleteUrl } from '../features/urls/use-delete-url';
 import { useUrls } from '../features/urls/use-urls';
 import type { Url } from '../features/urls/use-urls';
 import { UrlFormDialog } from '../features/urls/UrlFormDialog';
+import { UrlImportDialog } from '../features/urls/UrlImportDialog';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
 import { ConfirmDialog } from '../shared/components/ConfirmDialog';
 import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
-import { CopyIcon, PencilIcon, PlusIcon, TrashIcon } from '../shared/components/icons';
+import { CopyIcon, PencilIcon, PlusIcon, TrashIcon, UploadIcon } from '../shared/components/icons';
 import { exportToCsv } from '../shared/utils/export-csv';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Spinner } from '../shared/components/Spinner';
@@ -34,6 +35,7 @@ export function UrlsPage() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editing, setEditing] = useState<Url | null>(null);
   const [duplicating, setDuplicating] = useState<Url | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -88,6 +90,7 @@ export function UrlsPage() {
       />
 
       <UrlFormDialog isOpen={isFormOpen} onClose={closeForm} url={editing} prefill={duplicating} />
+      <UrlImportDialog isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
 
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
@@ -104,6 +107,15 @@ export function UrlsPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
         <Button size="sm" icon={<PlusIcon />} onClick={openCreate}>
           Incluir URL
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<UploadIcon />}
+          onClick={() => setIsImportOpen(true)}
+          title="Importar URLs em massa a partir de arquivo CSV"
+        >
+          Importar
         </Button>
         <div className="mx-1 h-6 w-px bg-slate-800" />
         <Button
@@ -184,7 +196,7 @@ export function UrlsPage() {
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/60">
                 <th className="w-10 px-4 py-3" />
-                <th className="px-4 py-3 text-left font-medium text-slate-400">Label</th>
+                <th className="px-4 py-3 text-left font-medium text-slate-400">Código</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">URL</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Tipo</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Recurso</th>

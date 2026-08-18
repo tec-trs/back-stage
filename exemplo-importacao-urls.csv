@@ -1,0 +1,8 @@
+label,url,urlType,ownerResourceType,ownerResourceId,method,authRequired,authMethod,status,description
+Portal Clientes,https://portal.empresa.com,web,application,00000000-0000-0000-0000-000000000001,GET,true,oauth2,active,Portal de acesso para clientes externos
+API Pedidos v2,https://api.empresa.com/v2/pedidos,api,application,00000000-0000-0000-0000-000000000002,POST,true,jwt,active,Endpoint de criacao de pedidos
+API Pedidos List,https://api.empresa.com/v2/pedidos,api,application,00000000-0000-0000-0000-000000000002,GET,true,jwt,active,Listagem de pedidos com paginacao
+Health API,https://api.empresa.com/health,healthcheck,application,00000000-0000-0000-0000-000000000002,GET,false,,active,Health check da API de pedidos
+Webhook Pagamentos,https://api.empresa.com/webhooks/pagamentos,webhook,application,00000000-0000-0000-0000-000000000002,POST,true,hmac,active,Recebe notificacoes de pagamento do gateway
+Docs API,https://docs.empresa.com/api,documentation,application,00000000-0000-0000-0000-000000000002,GET,false,,active,Documentacao Swagger da API
+Admin DB,https://db-admin.interno.empresa.com,web,server,00000000-0000-0000-0000-000000000003,GET,true,basic,inactive,Painel administrativo do banco de dados (apenas intranet)

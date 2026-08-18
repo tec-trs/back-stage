@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { ApplicationFormDialog } from '../features/applications/ApplicationFormDialog';
+import { ApplicationImportDialog } from '../features/applications/ApplicationImportDialog';
 import { useApplications } from '../features/applications/use-applications';
 import type { ApplicationSummary } from '../features/applications/use-applications';
 import { useDeleteApplication } from '../features/applications/use-delete-application';
@@ -11,7 +12,7 @@ import { Button } from '../shared/components/Button';
 import { ConfirmDialog } from '../shared/components/ConfirmDialog';
 import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
-import { CopyIcon, PencilIcon, PlusIcon, PowerIcon, TrashIcon } from '../shared/components/icons';
+import { CopyIcon, PencilIcon, PlusIcon, PowerIcon, TrashIcon, UploadIcon } from '../shared/components/icons';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Spinner } from '../shared/components/Spinner';
 import {
@@ -41,6 +42,7 @@ export function ApplicationsPage() {
   const deleteApplication = useDeleteApplication();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingApplication, setEditingApplication] = useState<ApplicationSummary | null>(null);
   const [duplicatingApplication, setDuplicatingApplication] = useState<ApplicationSummary | null>(null);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
@@ -119,6 +121,7 @@ export function ApplicationsPage() {
       <PageHeader title="Aplicacoes" description="Catalogo de aplicacoes da plataforma" />
 
       <ApplicationFormDialog isOpen={isFormOpen} onClose={closeDialog} application={editingApplication} duplicateFrom={duplicatingApplication} />
+      <ApplicationImportDialog isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
         title="Eliminar aplicacao"
@@ -133,6 +136,15 @@ export function ApplicationsPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
         <Button size="sm" icon={<PlusIcon />} onClick={openCreateDialog} title="Incluir uma nova aplicacao">
           Incluir Aplicacao
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<UploadIcon />}
+          onClick={() => setIsImportOpen(true)}
+          title="Importar aplicacoes em massa a partir de arquivo CSV"
+        >
+          Importar
         </Button>
         <div className="mx-1 h-6 w-px bg-slate-800" />
         <Button
@@ -216,6 +228,7 @@ export function ApplicationsPage() {
             <thead className="bg-slate-900 text-slate-400">
               <tr>
                 <th className="w-10 px-4 py-2" />
+                <th className="px-4 py-2 font-medium">Código</th>
                 <th className="px-4 py-2 font-medium">Nome</th>
                 <th className="px-4 py-2 font-medium">Tipo</th>
                 <th className="px-4 py-2 font-medium">Criticidade</th>
@@ -241,6 +254,7 @@ export function ApplicationsPage() {
                       className="h-4 w-4 accent-sky-500"
                     />
                   </td>
+                  <td className="px-4 py-2 font-mono text-slate-300">{application.code}</td>
                   <td className="px-4 py-2">
                     <Link
                       to={`/applications/${application.id}`}

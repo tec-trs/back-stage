@@ -9,7 +9,7 @@ const codeSchema = z
   .string()
   .min(3)
   .max(100)
-  .regex(/^[a-z0-9._-]+$/, 'codigo deve conter apenas letras minusculas, numeros, ponto, hifen e underscore');
+  .regex(/^[a-zA-Z0-9._-]+$/, 'codigo deve conter apenas letras, numeros, ponto, hifen e underscore');
 
 const deploymentSchema = z.object({
   serverId: z.string().uuid(),

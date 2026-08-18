@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { useApplication } from '../features/applications/use-application';
@@ -37,6 +37,9 @@ export function ApplicationDetailPage() {
     2,
   );
   const [isRelationshipDialogOpen, setIsRelationshipDialogOpen] = useState(false);
+  const [simulationSourceId, setSimulationSourceId] = useState<string | undefined>();
+  const [impactedByDepth, setImpactedByDepth] = useState<Map<string, number>>(new Map());
+  const impactedNodeIds = useMemo(() => new Set(impactedByDepth.keys()), [impactedByDepth]);
 
   return (
     <div>
@@ -184,7 +187,9 @@ export function ApplicationDetailPage() {
                   nodes={subgraph.nodes}
                   edges={subgraph.edges}
                   mode="subgraph"
-                  impactedNodeIds={new Set<string>()}
+                  impactedNodeIds={impactedNodeIds}
+                  impactedByDepth={impactedByDepth}
+                  simulationSourceId={simulationSourceId}
                   onNodeNavigate={(nodeId, resourceType) => {
                     navigate(
                       `/${resourceType === 'server' ? 'servers' : resourceType + 's'}/${nodeId}`,
@@ -203,6 +208,16 @@ export function ApplicationDetailPage() {
             resourceType="application"
             resourceId={data.id}
             resourceLabel={data.displayName}
+            onResult={(result, sourceId) => {
+              setSimulationSourceId(sourceId);
+              setImpactedByDepth(
+                new Map(result.impactedResources.map((r) => [r.resourceId, r.depth])),
+              );
+            }}
+            onReset={() => {
+              setSimulationSourceId(undefined);
+              setImpactedByDepth(new Map());
+            }}
           />
 
           <AuditTimeline resourceId={data.id} resourceType="application" />

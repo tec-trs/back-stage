@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { useServer } from '../features/servers/use-server';
@@ -35,6 +35,9 @@ export function ServerDetailPage() {
   const { data, isLoading, isError, error } = useServer(id);
   const { data: subgraph, isLoading: isSubgraphLoading } = useSubgraph('server', id ?? null, 2);
   const [isRelationshipDialogOpen, setIsRelationshipDialogOpen] = useState(false);
+  const [simulationSourceId, setSimulationSourceId] = useState<string | undefined>();
+  const [impactedByDepth, setImpactedByDepth] = useState<Map<string, number>>(new Map());
+  const impactedNodeIds = useMemo(() => new Set(impactedByDepth.keys()), [impactedByDepth]);
 
   return (
     <div>
@@ -252,7 +255,9 @@ export function ServerDetailPage() {
                   nodes={subgraph.nodes}
                   edges={subgraph.edges}
                   mode="subgraph"
-                  impactedNodeIds={new Set<string>()}
+                  impactedNodeIds={impactedNodeIds}
+                  impactedByDepth={impactedByDepth}
+                  simulationSourceId={simulationSourceId}
                   onNodeNavigate={(nodeId, resourceType) => {
                     navigate(
                       `/${resourceType === 'server' ? 'servers' : resourceType + 's'}/${nodeId}`,
@@ -271,6 +276,16 @@ export function ServerDetailPage() {
             resourceType="server"
             resourceId={data.id}
             resourceLabel={data.displayName ?? data.hostname}
+            onResult={(result, sourceId) => {
+              setSimulationSourceId(sourceId);
+              setImpactedByDepth(
+                new Map(result.impactedResources.map((r) => [r.resourceId, r.depth])),
+              );
+            }}
+            onReset={() => {
+              setSimulationSourceId(undefined);
+              setImpactedByDepth(new Map());
+            }}
           />
 
           <section>

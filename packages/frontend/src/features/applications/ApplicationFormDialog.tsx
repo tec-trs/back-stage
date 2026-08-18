@@ -18,7 +18,7 @@ import type { DeploymentInput } from './use-create-application';
 import { useCreateApplication } from './use-create-application';
 import { useUpdateApplication } from './use-update-application';
 
-const CODE_PATTERN = /^[a-z0-9._-]+$/;
+const CODE_PATTERN = /^[a-zA-Z0-9._-]+$/;
 const CRITICALITIES = Object.keys(CRITICALITY_LABELS) as Criticality[];
 const STATUSES = Object.keys(APPLICATION_STATUS_LABELS) as ApplicationStatus[];
 
@@ -205,7 +205,7 @@ export function ApplicationFormDialog({
     event.preventDefault();
 
     if (!isEditMode && !CODE_PATTERN.test(form.code)) {
-      setCodeError('O codigo deve conter apenas letras minusculas, numeros, ponto, hifen e underscore');
+      setCodeError('O codigo deve conter apenas letras, numeros, ponto, hifen e underscore');
       setActiveTab('identification');
       return;
     }

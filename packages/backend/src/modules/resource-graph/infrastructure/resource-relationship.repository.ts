@@ -264,22 +264,35 @@ export class ResourceRelationshipRepository {
         : `(rr.source_type = t.target_type AND rr.source_id = t.target_id) OR (rr.target_type = t.source_type AND rr.target_id = t.source_id)`;
 
     const { rows } = await this.db.raw<{ rows: TraversalRow[] }>(`
-      WITH RECURSIVE traversal(source_type, source_id, target_type, target_id, relation_type, depth, path) AS (
-        SELECT source_type, source_id, target_type, target_id, relation_type, 1,
-               ARRAY[source_type || ':' || source_id]
+      WITH RECURSIVE
+      all_edges(source_type, source_id, target_type, target_id, relation_type) AS (
+        SELECT source_type::text, source_id::text, target_type::text, target_id::text, relation_type
         FROM ${TABLE_NAME}
         WHERE deleted_at IS NULL
-          AND (${baseWhere})
+        UNION ALL
+        SELECT 'server', ad.server_id::text, 'application', ad.application_id::text, 'hosts'
+        FROM application_deployments ad
+        JOIN applications a ON a.id = ad.application_id AND a.deleted_at IS NULL
+        WHERE ad.deleted_at IS NULL
+        UNION ALL
+        SELECT u.owner_resource_type::text, u.owner_resource_id::text, 'url', u.id::text, 'exposes'
+        FROM urls u
+        WHERE u.deleted_at IS NULL
+      ),
+      traversal(source_type, source_id, target_type, target_id, relation_type, depth, path) AS (
+        SELECT source_type, source_id, target_type, target_id, relation_type, 1,
+               ARRAY[source_type || ':' || source_id]
+        FROM all_edges
+        WHERE (${baseWhere})
           ${relationFilter}
         UNION ALL
-        SELECT rr.source_type, rr.source_id, rr.target_type, rr.target_id, rr.relation_type, t.depth + 1,
-               t.path || (rr.source_type || ':' || rr.source_id)
-        FROM ${TABLE_NAME} rr
-        JOIN traversal t ON ${recursiveJoin}
-        WHERE rr.deleted_at IS NULL
-          AND t.depth < :maxDepth
+        SELECT ae.source_type, ae.source_id, ae.target_type, ae.target_id, ae.relation_type, t.depth + 1,
+               t.path || (ae.source_type || ':' || ae.source_id)
+        FROM all_edges ae
+        JOIN traversal t ON ${recursiveJoin.replace(/rr\./g, 'ae.')}
+        WHERE t.depth < :maxDepth
           ${relationFilter}
-          AND NOT ((rr.source_type || ':' || rr.source_id) = ANY(t.path))
+          AND NOT ((ae.source_type || ':' || ae.source_id) = ANY(t.path))
       )
       SELECT DISTINCT source_type, source_id, target_type, target_id, relation_type, depth FROM traversal
     `, { rootType, rootId, maxDepth, ...(relationType ? { relationType } : {}) });

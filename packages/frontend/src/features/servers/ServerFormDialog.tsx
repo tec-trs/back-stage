@@ -27,7 +27,7 @@ import type {
 } from './use-servers';
 import { useUpdateServer } from './use-update-server';
 
-const HOSTNAME_PATTERN = /^[a-z0-9.-]+$/;
+const HOSTNAME_PATTERN = /^[a-zA-Z0-9._-]+$/;
 const STATUSES = Object.keys(SERVER_STATUS_LABELS) as ServerStatus[];
 const DISK_TYPES = Object.keys(DISK_TYPE_LABELS) as DiskType[];
 const DISK_PURPOSES = Object.keys(DISK_PURPOSE_LABELS) as DiskPurpose[];
@@ -262,7 +262,7 @@ export function ServerFormDialog({
     event.preventDefault();
 
     if (!HOSTNAME_PATTERN.test(form.hostname)) {
-      setHostnameError('O hostname deve conter apenas letras minusculas, numeros, ponto e hifen');
+      setHostnameError('O hostname deve conter apenas letras, numeros, ponto, hifen e underscore');
       setActiveTab('identification');
       return;
     }
@@ -340,7 +340,7 @@ export function ServerFormDialog({
                   onBlur={(event) => {
                     const val = event.target.value;
                     if (val && !HOSTNAME_PATTERN.test(val)) {
-                      setHostnameError('O hostname deve conter apenas letras minusculas, numeros, ponto e hifen');
+                      setHostnameError('O hostname deve conter apenas letras, numeros, ponto, hifen e underscore');
                     } else {
                       setHostnameError(null);
                     }

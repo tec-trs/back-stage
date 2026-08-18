@@ -208,6 +208,7 @@ export function ServersPage() {
               <tr>
                 <th className="w-10 px-4 py-2" />
                 <th className="px-4 py-2 font-medium">Hostname</th>
+                <th className="px-4 py-2 font-medium">Nome</th>
                 <th className="px-4 py-2 font-medium">Tipo</th>
                 <th className="px-4 py-2 font-medium">Provedor</th>
                 <th className="px-4 py-2 font-medium">Ambiente</th>
@@ -237,11 +238,12 @@ export function ServersPage() {
                     <Link
                       to={`/servers/${server.id}`}
                       onClick={(event) => event.stopPropagation()}
-                      className="text-slate-100 hover:underline"
+                      className="font-mono text-slate-100 hover:underline"
                     >
-                      {server.displayName ?? server.hostname}
+                      {server.hostname}
                     </Link>
                   </td>
+                  <td className="px-4 py-2 text-slate-400">{server.displayName ?? '-'}</td>
                   <td className="px-4 py-2 text-slate-400">{translateServerType(server.serverType)}</td>
                   <td className="px-4 py-2 text-slate-400">{translateProvider(server.provider)}</td>
                   <td className="px-4 py-2 text-slate-400">{translateEnvironment(server.environment)}</td>
