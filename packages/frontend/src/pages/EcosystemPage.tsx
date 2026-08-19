@@ -397,6 +397,21 @@ export function EcosystemPage() {
     );
   }
 
+  const isGraphLimited = data.pagination.total > 500;
+  if (isGraphLimited) {
+    return (
+      <div>
+        <PageHeader
+          title="Ecossistema"
+          description="Grafo completo de recursos: servidores, aplicacoes, bancos de dados e URLs"
+        />
+        <ErrorMessage
+          message={`Grafo muito grande (${data.pagination.total} recursos). Aplique filtros para reduzir o tamanho. Ex: selecione apenas um ambiente, um tipo de recurso, ou criticalidade.`}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="-mx-6 -mt-6 flex flex-col" style={{ height: 'calc(100vh - 61px)' }}>
       {/* ── Cabeçalho compacto com legenda horizontal ──────────────── */}
