@@ -56,16 +56,27 @@ const EDGE_LABEL: Record<string, string> = {
 
 function layoutGraph(
   nodeIds: string[],
-  edgePairs: { source: string; target: string }[],
+  edgePairs: { source: string; target: string; relationType: string }[],
 ): Map<string, { x: number; y: number }> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g = new (dagre as any).graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: 'LR', nodesep: 60, ranksep: 100 });
+  g.setGraph({ rankdir: 'TB', nodesep: 70, ranksep: 120 });
 
   nodeIds.forEach((id) => g.setNode(id, { width: NODE_W, height: NODE_H }));
-  // Natural direction: server→application→url, so servers rank leftmost in LR layout
-  edgePairs.forEach(({ source, target }) => g.setEdge(source, target));
+
+  // hosts/exposes: source provides to target → source ranks above target (correct TB)
+  // depends_on/connects_to/consumes: source depends on target → invert so the
+  //   provider (dependency) ranks above the consumer in the layout, keeping the
+  //   visual hierarchy: infrastructure base at top, end services at bottom
+  const DEPENDENCY_TYPES = new Set(['depends_on', 'connects_to', 'consumes']);
+  edgePairs.forEach(({ source, target, relationType }) => {
+    if (DEPENDENCY_TYPES.has(relationType)) {
+      g.setEdge(target, source);
+    } else {
+      g.setEdge(source, target);
+    }
+  });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (dagre as any).layout(g);
@@ -183,7 +194,7 @@ function ResourceNode({ data, selected, id }: NodeProps) {
     >
       <Handle
         type="target"
-        position={Position.Left}
+        position={Position.Top}
         style={{ background: '#64748b', border: 'none', width: 8, height: 8 }}
       />
 
@@ -246,7 +257,7 @@ function ResourceNode({ data, selected, id }: NodeProps) {
 
       <Handle
         type="source"
-        position={Position.Right}
+        position={Position.Bottom}
         style={{ background: '#64748b', border: 'none', width: 8, height: 8 }}
       />
     </div>
@@ -316,7 +327,7 @@ export function ResourceGraph({
     }
     const posMap = layoutGraph(
       propNodes.map((n) => n.id),
-      propEdges.map((e) => ({ source: e.sourceId, target: e.targetId })),
+      propEdges.map((e) => ({ source: e.sourceId, target: e.targetId, relationType: e.relationType })),
     );
     setRfNodes(
       propNodes.map((n) => ({

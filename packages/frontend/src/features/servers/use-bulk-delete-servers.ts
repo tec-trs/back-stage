@@ -13,6 +13,7 @@ export function useBulkDeleteServers(): UseMutationResult<{ deleted: number }, E
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['servers'] });
+      void queryClient.invalidateQueries({ queryKey: ['resource-graph'] });
     },
   });
 }

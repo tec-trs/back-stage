@@ -13,6 +13,7 @@ export function useBulkDeleteApplications(): UseMutationResult<{ deleted: number
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['applications'] });
+      void queryClient.invalidateQueries({ queryKey: ['resource-graph'] });
     },
   });
 }

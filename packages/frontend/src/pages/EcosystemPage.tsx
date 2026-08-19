@@ -181,145 +181,146 @@ export function EcosystemPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Ecossistema"
-        description="Grafo completo de recursos: servidores, aplicacoes, bancos de dados e URLs"
-      />
+    <div className="-mx-6 -mt-6 flex flex-col" style={{ height: 'calc(100vh - 61px)' }}>
+      {/* ── Cabeçalho compacto com legenda horizontal ──────────────── */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-slate-800 bg-slate-900/60 px-4 py-2">
+        <div className="shrink-0">
+          <h1 className="text-sm font-semibold text-slate-100">Ecossistema</h1>
+          <p className="text-xs text-slate-500">Duplo clique no nó para abrir detalhes</p>
+        </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-        {/* ── Grafo ────────────────────────────────────────────────── */}
-        <div className="lg:col-span-3">
-          {simulationSourceId && (
-            <div className="mb-2 flex items-center gap-3 rounded-md border border-red-900/50 bg-red-950/30 px-4 py-2 text-sm">
-              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-              <span className="text-red-300 font-medium">Modo simulacao ativo</span>
-              <span className="text-slate-400 flex-1">
-                — {impactedNodeIds.size} recurso{impactedNodeIds.size !== 1 ? 's' : ''} afetado{impactedNodeIds.size !== 1 ? 's' : ''}
+        <div className="mx-2 hidden h-6 w-px bg-slate-700 lg:block" />
+
+        {/* Legenda tipos de recurso */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          {Object.entries(NODE_COLORS).map(([type, color]) => (
+            <div key={type} className="flex items-center gap-1.5">
+              <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: color }} />
+              <span className="text-xs text-slate-400">{NODE_LABELS[type] ?? type}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Legenda impacto — só aparece em modo simulação */}
+        {simulationSourceId && (
+          <>
+            <div className="mx-2 h-6 w-px bg-slate-700" />
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <div className="flex items-center gap-1.5">
+                <div className="h-2.5 w-2.5 rounded-sm bg-red-500" />
+                <span className="text-xs text-red-400">Offline</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="h-2.5 w-2.5 rounded-sm bg-orange-500" />
+                <span className="text-xs text-orange-400">Impacto direto</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="h-2.5 w-2.5 rounded-sm bg-amber-500" />
+                <span className="text-xs text-amber-400">Impacto indireto</span>
+              </div>
+            </div>
+            <div className="ml-auto flex items-center gap-3 rounded-md border border-red-900/50 bg-red-950/30 px-3 py-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-xs text-red-300 font-medium">
+                Simulacao ativa — {impactedNodeIds.size} afetado{impactedNodeIds.size !== 1 ? 's' : ''}
               </span>
               <button
                 type="button"
                 onClick={handleImpactReset}
                 className="text-xs text-slate-400 hover:text-slate-200 underline"
               >
-                Encerrar simulacao
+                Encerrar
               </button>
             </div>
-          )}
-          <div style={{ height: '600px' }} className="overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
-            <ResourceGraph
-              nodes={graphNodes}
-              edges={graphEdges}
-              mode="overview"
-              impactedNodeIds={impactedNodeIds}
-              impactedByDepth={impactedByDepth}
-              simulationSourceId={simulationSourceId}
-              onNodeSelect={handleNodeSelect}
-              onNodeNavigate={handleNodeNavigate}
-              isLoading={isLoading}
-            />
-          </div>
+          </>
+        )}
+      </div>
+
+      {/* ── Área principal: grafo + painel inferior ──────────────────── */}
+      <div className="relative flex flex-1 overflow-hidden">
+        {/* Grafo — largura total */}
+        <div className="flex-1 overflow-hidden bg-slate-950">
+          <ResourceGraph
+            nodes={graphNodes}
+            edges={graphEdges}
+            mode="overview"
+            impactedNodeIds={impactedNodeIds}
+            impactedByDepth={impactedByDepth}
+            simulationSourceId={simulationSourceId}
+            onNodeSelect={handleNodeSelect}
+            onNodeNavigate={handleNodeNavigate}
+            isLoading={isLoading}
+          />
         </div>
 
-        {/* ── Painel lateral ───────────────────────────────────────── */}
-        <div className="flex flex-col gap-4 lg:col-span-1">
-          {/* Legenda */}
-          <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
-            <h3 className="mb-3 text-sm font-semibold text-slate-300">Legenda</h3>
-            <div className="flex flex-col gap-2 text-sm">
-              {Object.entries(NODE_COLORS).map(([type, color]) => (
-                <div key={type} className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded" style={{ backgroundColor: color }} />
-                  <span className="text-slate-400">{NODE_LABELS[type] ?? type}</span>
-                </div>
-              ))}
-              {simulationSourceId && (
-                <>
-                  <div className="mt-2 border-t border-slate-800 pt-2 flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded bg-red-500" />
-                      <span className="text-red-400 text-xs">Offline (simulado)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded bg-orange-500" />
-                      <span className="text-orange-400 text-xs">Impacto direto</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded bg-amber-500" />
-                      <span className="text-amber-400 text-xs">Impacto indireto</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded bg-slate-700 opacity-30" />
-                      <span className="text-slate-600 text-xs">Sem impacto</span>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Node selecionado */}
-          {selectedNode && (
-            <div className="flex flex-col gap-3 rounded-lg border border-slate-800 bg-slate-900/50 p-4">
+        {/* Painel flutuante do nó selecionado — canto direito */}
+        {selectedNode && (
+          <div className="absolute right-3 top-3 z-10 flex w-64 flex-col gap-3 rounded-lg border border-slate-700 bg-slate-900/95 p-4 shadow-xl backdrop-blur">
+            <div className="flex items-start justify-between gap-2">
               <div>
-                <h3 className="font-semibold text-slate-100">{selectedNode.label}</h3>
-                <Badge tone="default" className="mt-1 inline-block">
+                <h3 className="font-semibold text-slate-100 text-sm leading-tight">{selectedNode.label}</h3>
+                <Badge tone="default" className="mt-1 inline-block text-xs">
                   {selectedNode.resourceType}
                 </Badge>
               </div>
+              <button
+                type="button"
+                onClick={() => setSelectedNodeId(null)}
+                className="text-slate-500 hover:text-slate-300 mt-0.5 text-sm leading-none"
+              >
+                ✕
+              </button>
+            </div>
 
-              <dl className="flex flex-col gap-1 text-sm">
+            {(selectedNode.status || selectedNode.environment) && (
+              <dl className="flex flex-col gap-1 text-xs border-t border-slate-800 pt-2">
                 {selectedNode.status && (
-                  <>
+                  <div className="flex justify-between">
                     <dt className="text-slate-500">Status</dt>
                     <dd className="text-slate-200">{selectedNode.status}</dd>
-                  </>
+                  </div>
                 )}
                 {selectedNode.environment && (
-                  <>
+                  <div className="flex justify-between">
                     <dt className="text-slate-500">Ambiente</dt>
                     <dd className="text-slate-200">{selectedNode.environment}</dd>
-                  </>
+                  </div>
                 )}
               </dl>
+            )}
 
-              <Button
-                variant="secondary"
-                size="sm"
-                className="w-full"
-                onClick={() => handleNodeNavigate(selectedNode.id, selectedNode.resourceType)}
-              >
-                Ver Detalhes
-              </Button>
-            </div>
-          )}
-
-          {/* Lista de bancos para nó db-group */}
-          {selectedNode?.resourceType === 'db-group' && selectedNode.dbLabels && (
-            <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
-              <h3 className="mb-2 text-sm font-semibold text-slate-300">Bancos agrupados</h3>
-              <ul className="flex flex-col gap-1">
+            {selectedNode.resourceType === 'db-group' && selectedNode.dbLabels && (
+              <ul className="flex flex-col gap-0.5 text-xs border-t border-slate-800 pt-2">
                 {selectedNode.dbLabels.map((name, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm text-slate-300">
-                    <span className="text-pink-400">🗄</span>
-                    {name}
-                  </li>
+                  <li key={i} className="text-slate-300">• {name}</li>
                 ))}
               </ul>
-            </div>
-          )}
+            )}
 
-          {/* Analise de impacto */}
-          {selectedNodeId && selectedNodeType && selectedNode?.resourceType !== 'db-group' && (
-            <ImpactAnalysisPanel
-              resourceType={selectedNodeType}
-              resourceId={selectedNodeId}
-              resourceLabel={selectedNode?.label ?? selectedNodeId}
-              onResult={handleImpactResult}
-              onReset={handleImpactReset}
-            />
-          )}
-        </div>
+            <div className="flex flex-col gap-2 border-t border-slate-800 pt-2">
+              {selectedNode.resourceType !== 'db-group' && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => handleNodeNavigate(selectedNode.id, selectedNode.resourceType)}
+                >
+                  Ver Detalhes
+                </Button>
+              )}
+
+              {selectedNodeId && selectedNodeType && selectedNode.resourceType !== 'db-group' && (
+                <ImpactAnalysisPanel
+                  resourceType={selectedNodeType}
+                  resourceId={selectedNodeId}
+                  resourceLabel={selectedNode.label ?? selectedNodeId}
+                  onResult={handleImpactResult}
+                  onReset={handleImpactReset}
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

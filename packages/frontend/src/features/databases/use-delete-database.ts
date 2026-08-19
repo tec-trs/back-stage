@@ -9,6 +9,7 @@ export function useDeleteDatabase(): UseMutationResult<void, Error, string> {
     mutationFn: (id: string) => apiRequest<void>(`/api/databases/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['databases'] });
+      void queryClient.invalidateQueries({ queryKey: ['resource-graph'] });
     },
   });
 }

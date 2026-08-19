@@ -9,6 +9,7 @@ export function useDeleteServer(): UseMutationResult<void, Error, string> {
     mutationFn: (id: string) => apiRequest<void>(`/api/servers/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['servers'] });
+      void queryClient.invalidateQueries({ queryKey: ['resource-graph'] });
     },
   });
 }

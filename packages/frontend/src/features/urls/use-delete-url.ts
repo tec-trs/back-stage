@@ -9,6 +9,7 @@ export function useDeleteUrl(): UseMutationResult<void, Error, string> {
     mutationFn: (id: string) => apiRequest<void>(`/api/urls/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['urls'] });
+      void queryClient.invalidateQueries({ queryKey: ['resource-graph'] });
     },
   });
 }

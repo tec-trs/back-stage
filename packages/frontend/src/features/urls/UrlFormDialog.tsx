@@ -6,6 +6,7 @@ import {
   useDeleteRelationship,
   useResourceRelationships,
 } from '../resource-graph/use-resource-graph';
+import { useUrls } from './use-urls';
 import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
@@ -86,6 +87,7 @@ export function UrlFormDialog({
   const mutation = isEditMode ? updateUrl : createUrl;
 
   const { data: applicationsData } = useApplications();
+  const { data: urlsData } = useUrls({ pageSize: 200 });
 
   // Existing depends_on relationships for this URL (edit mode only)
   const { data: existingRelationships } = useResourceRelationships(
@@ -98,12 +100,23 @@ export function UrlFormDialog({
   const [tags, setTags] = useState<string[]>([]);
   // IDs of applications this URL depends on
   const [dependsOnAppIds, setDependsOnAppIds] = useState<string[]>([]);
+  // IDs of other URLs this URL depends on
+  const [dependsOnUrlIds, setDependsOnUrlIds] = useState<string[]>([]);
   // Map from appId → relationshipId (to delete when unchecked in edit mode)
   const existingRelMapRef = useRef<Map<string, string>>(new Map());
+  // Map from urlId → relationshipId for URL→URL dependencies
+  const existingUrlRelMapRef = useRef<Map<string, string>>(new Map());
 
   const allApplications = useMemo(
     () => (applicationsData?.items ?? []).map((a) => ({ id: a.id, label: a.displayName ?? a.code })),
     [applicationsData],
+  );
+
+  const allUrls = useMemo(
+    () => (urlsData?.items ?? [])
+      .filter((u) => u.id !== url?.id)
+      .map((u) => ({ id: u.id, label: u.label, urlValue: u.url })),
+    [urlsData, url?.id],
   );
 
   // Populate form fields when dialog opens
@@ -113,7 +126,9 @@ export function UrlFormDialog({
       setForm(base);
       setTags(url?.tags ?? prefill?.tags ?? []);
       setDependsOnAppIds([]);
+      setDependsOnUrlIds([]);
       existingRelMapRef.current = new Map();
+      existingUrlRelMapRef.current = new Map();
       createUrl.reset();
       updateUrl.reset();
     }
@@ -124,8 +139,11 @@ export function UrlFormDialog({
   useEffect(() => {
     if (isOpen && existingRelationships) {
       const appRels = existingRelationships.filter((r) => r.targetType === 'application');
+      const urlRels = existingRelationships.filter((r) => r.targetType === 'url');
       setDependsOnAppIds(appRels.map((r) => r.targetId));
+      setDependsOnUrlIds(urlRels.map((r) => r.targetId));
       existingRelMapRef.current = new Map(appRels.map((r) => [r.targetId, r.id]));
+      existingUrlRelMapRef.current = new Map(urlRels.map((r) => [r.targetId, r.id]));
     }
   }, [isOpen, existingRelationships]);
 
@@ -139,22 +157,45 @@ export function UrlFormDialog({
     );
   }
 
-  async function syncRelationships(urlId: string): Promise<void> {
-    const oldMap = existingRelMapRef.current;
-    const oldIds = new Set(oldMap.keys());
-    const newIds = new Set(dependsOnAppIds);
+  function toggleDependencyUrl(targetUrlId: string): void {
+    setDependsOnUrlIds((prev) =>
+      prev.includes(targetUrlId) ? prev.filter((id) => id !== targetUrlId) : [...prev, targetUrlId],
+    );
+  }
 
-    const toDelete = [...oldIds].filter((id) => !newIds.has(id));
-    const toCreate = [...newIds].filter((id) => !oldIds.has(id));
+  async function syncRelationships(urlId: string): Promise<void> {
+    // App dependencies
+    const oldAppMap = existingRelMapRef.current;
+    const oldAppIds = new Set(oldAppMap.keys());
+    const newAppIds = new Set(dependsOnAppIds);
+    const appsToDelete = [...oldAppIds].filter((id) => !newAppIds.has(id));
+    const appsToCreate = [...newAppIds].filter((id) => !oldAppIds.has(id));
+
+    // URL dependencies
+    const oldUrlMap = existingUrlRelMapRef.current;
+    const oldUrlIds = new Set(oldUrlMap.keys());
+    const newUrlIds = new Set(dependsOnUrlIds);
+    const urlsToDelete = [...oldUrlIds].filter((id) => !newUrlIds.has(id));
+    const urlsToCreate = [...newUrlIds].filter((id) => !oldUrlIds.has(id));
 
     await Promise.all([
-      ...toDelete.map((appId) => deleteRelationship.mutateAsync(oldMap.get(appId)!)),
-      ...toCreate.map((appId) =>
+      ...appsToDelete.map((appId) => deleteRelationship.mutateAsync(oldAppMap.get(appId)!)),
+      ...appsToCreate.map((appId) =>
         createRelationship.mutateAsync({
           sourceType: 'url',
           sourceId: urlId,
           targetType: 'application',
           targetId: appId,
+          relationType: 'depends_on',
+        }),
+      ),
+      ...urlsToDelete.map((targetId) => deleteRelationship.mutateAsync(oldUrlMap.get(targetId)!)),
+      ...urlsToCreate.map((targetId) =>
+        createRelationship.mutateAsync({
+          sourceType: 'url',
+          sourceId: urlId,
+          targetType: 'url',
+          targetId,
           relationType: 'depends_on',
         }),
       ),
@@ -291,6 +332,40 @@ export function UrlFormDialog({
                         className="h-4 w-4 accent-sky-500"
                       />
                       <span className="text-sm text-slate-200">{app.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </fieldset>
+
+          {/* Depende de (outras URLs) */}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Depende de (URLs)
+            </legend>
+            <p className="text-xs text-slate-500">
+              Selecione as URLs que esta URL precisa para funcionar — ex: um VIP que depende de um servico de licenca.
+            </p>
+            {allUrls.length === 0 ? (
+              <p className="text-xs text-slate-600">Nenhuma outra URL cadastrada.</p>
+            ) : (
+              <div className="flex flex-col gap-1 rounded-md border border-slate-800 p-2">
+                {allUrls.map((u) => {
+                  const checked = dependsOnUrlIds.includes(u.id);
+                  return (
+                    <label
+                      key={u.id}
+                      className="flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 hover:bg-slate-900/60"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleDependencyUrl(u.id)}
+                        className="h-4 w-4 accent-amber-500"
+                      />
+                      <span className="text-sm text-slate-200">{u.label}</span>
+                      <span className="ml-auto text-xs text-slate-500 truncate max-w-[140px]">{u.urlValue}</span>
                     </label>
                   );
                 })}

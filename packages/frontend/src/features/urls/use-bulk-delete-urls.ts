@@ -13,6 +13,7 @@ export function useBulkDeleteUrls(): UseMutationResult<{ deleted: number }, Erro
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['urls'] });
+      void queryClient.invalidateQueries({ queryKey: ['resource-graph'] });
     },
   });
 }

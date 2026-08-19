@@ -189,11 +189,14 @@ export class ResourceRelationshipRepository {
       .whereRaw('(SELECT deleted_at FROM applications WHERE id = application_id) IS NULL') as DeploymentRow[];
 
     // Implicit edges from urls (owner_resource → exposes → url)
+    // Only include rows where owner fields were explicitly set (columns are nullable since v044)
     interface UrlRow { id: string; owner_resource_type: string; owner_resource_id: string }
     const urlEdges = await this.db('urls')
       .select('id', 'owner_resource_type', 'owner_resource_id')
       .where('organization_id', orgId)
-      .whereNull('deleted_at') as UrlRow[];
+      .whereNull('deleted_at')
+      .whereNotNull('owner_resource_type')
+      .whereNotNull('owner_resource_id') as UrlRow[];
 
     const mappedExplicit = explicitEdges.map((e) => ({
       id: e.id,
@@ -232,18 +235,27 @@ export class ResourceRelationshipRepository {
       (e) => !implicitKeys.has(`${e.sourceId}:${e.targetId}:${e.relationType}`),
     );
 
+    const mappedNodes = nodes.map((n) => ({
+      id: n.id,
+      resourceType: n.type,
+      label: n.label,
+      status: n.status,
+      criticality: n.criticality,
+      environment: n.environment,
+      hostedOnServerId: n.hosted_on_server_id,
+      monitoringUrl: n.monitoring_url,
+    }));
+
+    // Drop any edge whose source or target no longer exists in the node set
+    // (avoids phantom edges from soft-deleted resources lingering in resource_relationships)
+    const nodeIdSet = new Set(mappedNodes.map((n) => n.id));
+    const allEdges = [...deduped, ...mappedDeployments, ...mappedUrls].filter(
+      (e) => nodeIdSet.has(e.sourceId) && nodeIdSet.has(e.targetId),
+    );
+
     return {
-      nodes: nodes.map((n) => ({
-        id: n.id,
-        resourceType: n.type,
-        label: n.label,
-        status: n.status,
-        criticality: n.criticality,
-        environment: n.environment,
-        hostedOnServerId: n.hosted_on_server_id,
-        monitoringUrl: n.monitoring_url,
-      })),
-      edges: [...deduped, ...mappedDeployments, ...mappedUrls],
+      nodes: mappedNodes,
+      edges: allEdges,
       total,
     };
   }
@@ -286,6 +298,7 @@ export class ResourceRelationshipRepository {
         SELECT u.owner_resource_type::text, u.owner_resource_id::text, 'url', u.id::text, 'exposes'
         FROM urls u
         WHERE u.deleted_at IS NULL AND u.organization_id = :orgId
+          AND u.owner_resource_type IS NOT NULL AND u.owner_resource_id IS NOT NULL
       ),
       traversal(source_type, source_id, target_type, target_id, relation_type, depth, path) AS (
         SELECT source_type, source_id, target_type, target_id, relation_type, 1,
@@ -370,6 +383,7 @@ export class ResourceRelationshipRepository {
         SELECT u.owner_resource_type::text, u.owner_resource_id::text, 'url', u.id::text, 'exposes'
         FROM urls u
         WHERE u.deleted_at IS NULL AND u.organization_id = :orgId
+          AND u.owner_resource_type IS NOT NULL AND u.owner_resource_id IS NOT NULL
       ),
       impact(resource_type, resource_id, depth, path) AS (
         SELECT
