@@ -136,16 +136,6 @@ export function EcosystemPage() {
   const { data, isLoading, isError, error } = useFullGraph({ page: 1, pageSize: 500 });
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (data) {
-      console.log('[EcosystemPage] Grafo carregado:', {
-        nodes: data.nodes.length,
-        edges: data.edges.length,
-        total: data.pagination.total,
-        nodeTypes: data.nodes.reduce((acc, n) => ({ ...acc, [n.resourceType]: (acc[n.resourceType as any] ?? 0) + 1 }), {})
-      });
-    }
-  }, [data]);
 
   const [selectedNodeId,   setSelectedNodeId]   = useState<string | null>(null);
   const [selectedNodeType, setSelectedNodeType] = useState<ResourceType | null>(null);
@@ -239,10 +229,6 @@ export function EcosystemPage() {
   const { graphNodes, graphEdges, dbGroups } = useMemo(() => {
     if (!data) return { graphNodes: [], graphEdges: [], dbGroups: [] };
 
-    console.log('[EcosystemPage] Início de processamento:', {
-      dataNodesCount: data.nodes.length,
-      visibleTypes: Array.from(visibleTypes),
-    });
 
     // Mapa appId → edges de banco (sourceId=app, targetId=db)
     const appDbEdgeMap = new Map<string, typeof data.edges>();
@@ -299,10 +285,6 @@ export function EcosystemPage() {
       ...syntheticNodes.filter(() => visibleTypes.has('database')), // db-group só aparece se database visível
     ] as EcoNode[];
 
-    console.log('[EcosystemPage] Após filtros:', {
-      filteredNodesCount: filteredNodes.length,
-      nodesByType: filteredNodes.reduce((acc, n) => ({ ...acc, [n.resourceType]: (acc[n.resourceType as any] ?? 0) + 1 }), {}),
-    });
 
     const filteredNodeIds = new Set(filteredNodes.map((n) => n.id));
     const filteredEdges = [
@@ -332,10 +314,6 @@ export function EcosystemPage() {
       });
     }
 
-    console.log('[EcosystemPage] Nós finais para renderizar:', {
-      finalNodesCount: finalNodes.length,
-      finalEdgesCount: filteredEdges.length,
-    });
 
     return {
       graphNodes: finalNodes,
