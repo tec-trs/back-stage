@@ -222,6 +222,11 @@ export function EcosystemPage() {
   const { graphNodes, graphEdges, dbGroups } = useMemo(() => {
     if (!data) return { graphNodes: [], graphEdges: [], dbGroups: [] };
 
+    console.log('[EcosystemPage] Início de processamento:', {
+      dataNodesCount: data.nodes.length,
+      visibleTypes: Array.from(visibleTypes),
+    });
+
     // Mapa appId → edges de banco (sourceId=app, targetId=db)
     const appDbEdgeMap = new Map<string, typeof data.edges>();
     for (const edge of data.edges) {
@@ -277,6 +282,11 @@ export function EcosystemPage() {
       ...syntheticNodes.filter(() => visibleTypes.has('database')), // db-group só aparece se database visível
     ] as EcoNode[];
 
+    console.log('[EcosystemPage] Após filtros:', {
+      filteredNodesCount: filteredNodes.length,
+      nodesByType: filteredNodes.reduce((acc, n) => ({ ...acc, [n.resourceType]: (acc[n.resourceType as any] ?? 0) + 1 }), {}),
+    });
+
     const filteredNodeIds = new Set(filteredNodes.map((n) => n.id));
     const filteredEdges = [
       ...data.edges.filter((e) => !hiddenEdgeIds.has(e.id) && filteredNodeIds.has(e.sourceId) && filteredNodeIds.has(e.targetId)),
@@ -304,6 +314,11 @@ export function EcosystemPage() {
         return n;
       });
     }
+
+    console.log('[EcosystemPage] Nós finais para renderizar:', {
+      finalNodesCount: finalNodes.length,
+      finalEdgesCount: filteredEdges.length,
+    });
 
     return {
       graphNodes: finalNodes,
