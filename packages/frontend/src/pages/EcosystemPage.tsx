@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { ImpactAnalysisPanel } from '../features/resource-graph/ImpactAnalysisPanel';
