@@ -480,30 +480,14 @@ export class ResourceRelationshipRepository {
     relationType?: string;
   }): Promise<GraphEdge[]> {
     let query = this.db(TABLE_NAME)
-      .select(
-        `${TABLE_NAME}.id`,
-        `${TABLE_NAME}.source_type`,
-        `${TABLE_NAME}.source_id`,
-        `${TABLE_NAME}.target_type`,
-        `${TABLE_NAME}.target_id`,
-        `${TABLE_NAME}.relation_type`,
-        `${TABLE_NAME}.metadata`,
-        `${TABLE_NAME}.reason`,
-        `${TABLE_NAME}.created_by_user_id`,
-        `${TABLE_NAME}.created_at`,
-        this.db.raw('COALESCE(users.name, \'Unknown\') as created_by_name'),
-      )
-      .leftJoin('users', (join) => {
-        join
-          .on('users.id', '=', `${TABLE_NAME}.created_by_user_id`);
-      })
-      .where(`${TABLE_NAME}.organization_id`, orgContext.getOrThrow())
-      .whereNull(`${TABLE_NAME}.deleted_at`);
-    if (filters.sourceType) query = query.where(`${TABLE_NAME}.source_type`, filters.sourceType);
-    if (filters.sourceId)   query = query.where(`${TABLE_NAME}.source_id`,   filters.sourceId);
-    if (filters.targetType) query = query.where(`${TABLE_NAME}.target_type`, filters.targetType);
-    if (filters.targetId)   query = query.where(`${TABLE_NAME}.target_id`,   filters.targetId);
-    if (filters.relationType) query = query.where(`${TABLE_NAME}.relation_type`, filters.relationType);
+      .select('*')
+      .where('organization_id', orgContext.getOrThrow())
+      .whereNull('deleted_at');
+    if (filters.sourceType) query = query.where('source_type', filters.sourceType);
+    if (filters.sourceId)   query = query.where('source_id',   filters.sourceId);
+    if (filters.targetType) query = query.where('target_type', filters.targetType);
+    if (filters.targetId)   query = query.where('target_id',   filters.targetId);
+    if (filters.relationType) query = query.where('relation_type', filters.relationType);
 
     const rows = (await query) as RelationshipRow[];
     return rows.map((r) => ({
