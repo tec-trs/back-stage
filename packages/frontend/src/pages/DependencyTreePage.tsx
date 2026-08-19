@@ -101,10 +101,16 @@ export function DependencyTreePage() {
 
           // Agrupar servidores por display_group
           const serversByGroup = new Map<string, string[]>();
+          console.log('📋 Servidores dependentes da URL:', dependents.map(id => {
+            const srv = nodeMap.get(id);
+            return { id, label: srv?.label, displayGroup: srv?.displayGroup };
+          }));
+
           for (const serverId of dependents) {
             const server = nodeMap.get(serverId);
             if (server) {
               const group = server.displayGroup || 'Sem grupo';
+              console.log(`🏷️ Servidor ${server.label} pertence ao grupo: ${group}`);
               if (!serversByGroup.has(group)) {
                 serversByGroup.set(group, []);
               }
@@ -112,8 +118,16 @@ export function DependencyTreePage() {
             }
           }
 
+          console.log('👥 Servidores agrupados:', Object.fromEntries(
+            [...serversByGroup.entries()].map(([group, servers]) => [
+              group,
+              servers.map(id => nodeMap.get(id)?.label)
+            ])
+          ));
+
           // Criar nós de grupo virtuais
           for (const [groupName, serverIds] of serversByGroup) {
+            console.log(`✨ Criando nó de grupo: ${groupName} com ${serverIds.length} servidores`);
             const groupNode: TreeNode = {
               id: `group:${groupName}`,
               label: groupName,
@@ -122,6 +136,7 @@ export function DependencyTreePage() {
                 .map(serverId => buildTree(serverId, new Set(visited)))
                 .filter((n): n is TreeNode => n !== null),
             };
+            console.log(`   └─ Grupo tem ${groupNode.children.length} filhos`);
             children.push(groupNode);
           }
         } else {
