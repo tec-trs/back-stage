@@ -1,0 +1,237 @@
+import { useState, useMemo } from 'react';
+import { useFullGraph } from '../features/resource-graph/use-resource-graph';
+import { useSimulateImpact } from '../features/resource-graph/use-resource-graph';
+import { PageHeader } from '../shared/components/PageHeader';
+import { Spinner } from '../shared/components/Spinner';
+import { ErrorMessage } from '../shared/components/ErrorMessage';
+import { Button } from '../shared/components/Button';
+
+interface TreeNode {
+  id: string;
+  label: string;
+  resourceType: string;
+  children: TreeNode[];
+  dependsOn?: string[];
+}
+
+const RESOURCE_ICONS: Record<string, string> = {
+  server: '🖥️',
+  application: '📱',
+  database: '📊',
+  url: '🔗',
+};
+
+export function DependencyTreePage() {
+  const { data, isLoading, isError, error } = useFullGraph({ page: 1, pageSize: 500 });
+  const simulateImpact = useSimulateImpact();
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [impactedResources, setImpactedResources] = useState<Set<string>>(new Set());
+  const [simulationSourceId, setSimulationSourceId] = useState<string | null>(null);
+
+  const tree = useMemo(() => {
+    if (!data) return null;
+
+    const nodeMap = new Map(data.nodes.map(n => [n.id, n]));
+    const edgesBySource = new Map<string, string[]>();
+    const edgesByTarget = new Map<string, string[]>();
+
+    for (const edge of data.edges) {
+      if (!edgesBySource.has(edge.sourceId)) edgesBySource.set(edge.sourceId, []);
+      if (!edgesByTarget.has(edge.targetId)) edgesByTarget.set(edge.targetId, []);
+      edgesBySource.get(edge.sourceId)!.push(edge.targetId);
+      edgesByTarget.get(edge.targetId)!.push(edge.sourceId);
+    }
+
+    const buildTree = (nodeId: string, visited = new Set<string>()): TreeNode | null => {
+      if (visited.has(nodeId)) return null;
+      visited.add(nodeId);
+
+      const node = nodeMap.get(nodeId);
+      if (!node) return null;
+
+      const deps = edgesBySource.get(nodeId) || [];
+      const children = deps
+        .map(depId => buildTree(depId, new Set(visited)))
+        .filter((n): n is TreeNode => n !== null);
+
+      return {
+        id: nodeId,
+        label: node.label,
+        resourceType: node.resourceType,
+        children,
+        dependsOn: deps,
+      };
+    };
+
+    // Build trees from root resources (ones with incoming dependencies)
+    const roots = data.nodes.filter(n => !edgesByTarget.has(n.id));
+    return roots
+      .map(root => buildTree(root.id))
+      .filter((n): n is TreeNode => n !== null);
+  }, [data]);
+
+  const toggleNode = (nodeId: string) => {
+    const newExpanded = new Set(expandedNodes);
+    if (newExpanded.has(nodeId)) {
+      newExpanded.delete(nodeId);
+    } else {
+      newExpanded.add(nodeId);
+    }
+    setExpandedNodes(newExpanded);
+  };
+
+  const handleSimulate = async (nodeId: string, resourceType: string) => {
+    setSimulationSourceId(nodeId);
+    setImpactedResources(new Set());
+
+    try {
+      const result = await simulateImpact.mutateAsync({
+        resourceType: resourceType as any,
+        resourceId: nodeId,
+      });
+
+      const affected = new Set(result.impactedResources.map(r => r.resourceId));
+      affected.add(nodeId);
+      setImpactedResources(affected);
+    } catch (err) {
+      console.error('Simulation error:', err);
+    }
+  };
+
+  const renderTreeNode = (node: TreeNode, depth: number = 0): JSX.Element => {
+    const isExpanded = expandedNodes.has(node.id);
+    const isAffected = impactedResources.has(node.id);
+    const icon = RESOURCE_ICONS[node.resourceType] || '📦';
+
+    return (
+      <div key={node.id} style={{ marginLeft: `${depth * 20}px` }}>
+        <div
+          style={{
+            padding: '8px',
+            marginBottom: '4px',
+            borderRadius: '4px',
+            backgroundColor: isAffected ? '#7f1d1d' : 'transparent',
+            border: isAffected ? '1px solid #dc2626' : '1px solid #374151',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <button
+            onClick={() => toggleNode(node.id)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '12px',
+              color: '#9ca3af',
+              padding: 0,
+              width: '20px',
+            }}
+          >
+            {node.children.length > 0 ? (isExpanded ? '▼' : '▶') : '·'}
+          </button>
+          <span style={{ fontSize: '16px' }}>{icon}</span>
+          <span style={{ flex: 1, color: isAffected ? '#fca5a5' : '#e5e7eb' }}>
+            {node.label}
+          </span>
+          {simulationSourceId !== node.id && (
+            <Button
+              size="sm"
+              variant={isAffected ? 'secondary' : 'secondary'}
+              onClick={() => handleSimulate(node.id, node.resourceType)}
+              style={{ fontSize: '12px', padding: '4px 8px' }}
+            >
+              Simular
+            </Button>
+          )}
+          {isAffected && (
+            <span style={{ fontSize: '12px', color: '#fca5a5', fontWeight: 'bold' }}>
+              AFETADO ⚠️
+            </span>
+          )}
+        </div>
+        {isExpanded && node.children.length > 0 && (
+          <div>
+            {node.children.map(child => renderTreeNode(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (isError) {
+    return (
+      <div>
+        <PageHeader
+          title="Árvore de Dependências"
+          description="Visualize a hierarquia de dependências entre recursos"
+        />
+        <ErrorMessage message={error instanceof Error ? error.message : 'Erro ao carregar'} />
+      </div>
+    );
+  }
+
+  if (isLoading) return <Spinner />;
+
+  if (!tree || tree.length === 0) {
+    return (
+      <div>
+        <PageHeader
+          title="Árvore de Dependências"
+          description="Visualize a hierarquia de dependências entre recursos"
+        />
+        <ErrorMessage message="Nenhum recurso encontrado" />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: '16px', maxWidth: '1200px', margin: '0 auto' }}>
+      <PageHeader
+        title="Árvore de Dependências"
+        description="Visualize a hierarquia de dependências e simule o impacto de paradas"
+      />
+
+      {simulationSourceId && (
+        <div
+          style={{
+            marginBottom: '16px',
+            padding: '12px',
+            borderRadius: '4px',
+            backgroundColor: '#1f2937',
+            border: '1px solid #dc2626',
+            color: '#fca5a5',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>
+              Simulação ativa: {impactedResources.size} recurso(s) seria(m) afetado(s)
+            </span>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setSimulationSourceId(null);
+                setImpactedResources(new Set());
+              }}
+            >
+              Limpar simulação
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div
+        style={{
+          backgroundColor: '#111827',
+          border: '1px solid #374151',
+          borderRadius: '8px',
+          padding: '16px',
+        }}
+      >
+        {tree.map(node => renderTreeNode(node))}
+      </div>
+    </div>
+  );
+}
