@@ -127,6 +127,12 @@ export function EcosystemPage() {
   const [selectedNodeId,   setSelectedNodeId]   = useState<string | null>(null);
   const [selectedNodeType, setSelectedNodeType] = useState<ResourceType | null>(null);
 
+  // Compact mode and filters
+  const [compactMode, setCompactMode] = useState(true);
+  const [visibleTypes, setVisibleTypes] = useState<Set<string>>(
+    new Set(['server', 'application', 'database', 'url'])
+  );
+
   // Edit-mode (drag-and-drop relationship creation)
   const [editMode,       setEditMode]       = useState(false);
   const [pendingConn,    setPendingConn]    = useState<PendingConn | null>(null);
@@ -140,6 +146,15 @@ export function EcosystemPage() {
 
   const impactedNodeIds = useMemo(() => new Set(impactedByDepth.keys()), [impactedByDepth]);
 
+  const toggleTypeFilter = useCallback((type: string) => {
+    setVisibleTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  }, []);
+
   // ── Opção A: agrupar bancos quando aplicação tem ≥ 2 ──────────────────────
   const { graphNodes, graphEdges, dbGroups } = useMemo(() => {
     if (!data) return { graphNodes: [], graphEdges: [], dbGroups: [] };
@@ -147,8 +162,8 @@ export function EcosystemPage() {
     // Mapa appId → edges de banco (sourceId=app, targetId=db)
     const appDbEdgeMap = new Map<string, typeof data.edges>();
     for (const edge of data.edges) {
-      const src = data.nodes.find((n) => n.id === edge.sourceId);
-      const tgt = data.nodes.find((n) => n.id === edge.targetId);
+      const src = data.nodes.find((s) => s.id === edge.sourceId);
+      const tgt = data.nodes.find((t) => t.id === edge.targetId);
       if (src?.resourceType === 'application' && tgt?.resourceType === 'database') {
         if (!appDbEdgeMap.has(edge.sourceId)) appDbEdgeMap.set(edge.sourceId, []);
         appDbEdgeMap.get(edge.sourceId)!.push(edge);
@@ -167,8 +182,8 @@ export function EcosystemPage() {
       const groupId = `db-group-${appId}`;
       const dbIds = dbEdges.map((e) => e.targetId);
       const dbLabels = dbIds.map((id) => {
-        const n = data.nodes.find((nn) => nn.id === id);
-        return n?.label ?? id;
+        const node = data.nodes.find((nn) => nn.id === id);
+        return node?.label ?? id;
       });
 
       groups.push({ id: groupId, dbIds, dbLabels });
@@ -193,29 +208,36 @@ export function EcosystemPage() {
       for (const e of dbEdges) hiddenEdgeIds.add(e.id);
     }
 
+    // Apply type filters
+    const filteredNodes = [
+      ...(data.nodes.filter((n) => !hiddenNodeIds.has(n.id) && visibleTypes.has(n.resourceType)) as EcoNode[]),
+      ...syntheticNodes.filter(() => visibleTypes.has('database')), // db-group só aparece se database visível
+    ] as EcoNode[];
+
+    const filteredNodeIds = new Set(filteredNodes.map((n) => n.id));
+    const filteredEdges = [
+      ...data.edges.filter((e) => !hiddenEdgeIds.has(e.id) && filteredNodeIds.has(e.sourceId) && filteredNodeIds.has(e.targetId)),
+      ...syntheticEdges.filter((e) => filteredNodeIds.has(e.sourceId) && filteredNodeIds.has(e.targetId)),
+    ];
+
     return {
-      graphNodes: [
-        ...(data.nodes.filter((n) => !hiddenNodeIds.has(n.id)) as EcoNode[]),
-        ...syntheticNodes,
-      ] as EcoNode[],
-      graphEdges: [
-        ...data.edges.filter((e) => !hiddenEdgeIds.has(e.id)),
-        ...syntheticEdges,
-      ],
+      graphNodes: filteredNodes,
+      graphEdges: filteredEdges,
       dbGroups: groups,
     };
-  }, [data]);
+  }, [data, visibleTypes]);
 
   const selectedNode = graphNodes.find((n) => n.id === selectedNodeId);
 
   const handleNodeSelect = useCallback((nodeId: string, resourceType: string) => {
+    if (resourceType === 'server-group') return; // container visual — sem painel
     setSelectedNodeId(nodeId);
     if (VALID_RESOURCE_TYPES.has(resourceType)) setSelectedNodeType(resourceType as ResourceType);
   }, []);
 
   const handleNodeNavigate = useCallback(
     (nodeId: string, resourceType: string) => {
-      if (resourceType === 'db-group') return; // grupo virtual — sem pagina de detalhe
+      if (resourceType === 'db-group' || resourceType === 'server-group') return;
       const pathMap: Record<string, string> = {
         server:      'servers',
         application: 'applications',
@@ -313,10 +335,24 @@ export function EcosystemPage() {
           </p>
         </div>
 
+        {/* Modo compacto */}
+        <button
+          type="button"
+          onClick={() => setCompactMode((prev) => !prev)}
+          className={`shrink-0 rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
+            compactMode
+              ? 'border-purple-700 bg-purple-900/40 text-purple-300 hover:bg-purple-900/60'
+              : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'
+          }`}
+          title={compactMode ? 'Modo compacto ativado · nós menores e labels reduzidos' : 'Modo expandido'}
+        >
+          {compactMode ? '⊡ Compacto' : '⊞ Expandido'}
+        </button>
+
         <button
           type="button"
           onClick={() => setEditMode((prev) => {
-            if (!prev) setSelectedNodeId(null); // fecha painel ao entrar em edit mode
+            if (!prev) setSelectedNodeId(null);
             return !prev;
           })}
           className={`shrink-0 rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
@@ -339,14 +375,26 @@ export function EcosystemPage() {
 
         <div className="mx-2 hidden h-6 w-px bg-slate-700 lg:block" />
 
-        {/* Legenda tipos de recurso */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          {Object.entries(NODE_COLORS).map(([type, color]) => (
-            <div key={type} className="flex items-center gap-1.5">
-              <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: color }} />
-              <span className="text-xs text-slate-400">{NODE_LABELS[type] ?? type}</span>
-            </div>
-          ))}
+        {/* Filtros por tipo de recurso */}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          {Object.entries(NODE_COLORS)
+            .filter(([type]) => type !== 'db-group')
+            .map(([type, color]) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => toggleTypeFilter(type)}
+                className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-all ${
+                  visibleTypes.has(type)
+                    ? 'bg-slate-700'
+                    : 'opacity-40 hover:opacity-60'
+                }`}
+                title={`${visibleTypes.has(type) ? 'Ocultar' : 'Mostrar'} ${NODE_LABELS[type] ?? type}`}
+              >
+                <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: color }} />
+                <span className="text-slate-300">{NODE_LABELS[type] ?? type}</span>
+              </button>
+            ))}
         </div>
 
         {/* Legenda impacto — só aparece em modo simulação */}
@@ -399,6 +447,7 @@ export function EcosystemPage() {
             onNodeNavigate={editMode ? undefined : handleNodeNavigate}
             isLoading={isLoading}
             editMode={editMode}
+            compactMode={compactMode}
             onConnect={handleConnect}
             onEdgeDelete={handleEdgeDelete}
             storageKey="ecosystem-graph-positions"

@@ -10,6 +10,7 @@ export interface GraphNode {
   environment?: string;
   hostedOnServerId?: string | null;
   monitoringUrl?: string | null;
+  displayGroup?: string | null;
 }
 
 export interface GraphEdge {

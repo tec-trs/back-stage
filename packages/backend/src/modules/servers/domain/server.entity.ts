@@ -107,6 +107,7 @@ export interface ServerRow {
   monthly_cost_estimate: string | null;
   monitoring_url: string | null;
   observations: string | null;
+  display_group: string | null;
   tags: string[];
   services: ServerService[];
   metadata: Record<string, unknown>;
@@ -151,6 +152,7 @@ export class Server {
   public readonly monthlyCostEstimate: number | null;
   public readonly monitoringUrl: string | null;
   public readonly observations: string | null;
+  public readonly displayGroup: string | null;
   public readonly tags: string[];
   public readonly services: ServerService[];
   public readonly metadata: Record<string, unknown>;
@@ -195,6 +197,7 @@ export class Server {
     this.monthlyCostEstimate = row.monthly_cost_estimate ? Number(row.monthly_cost_estimate) : null;
     this.monitoringUrl = row.monitoring_url;
     this.observations = row.observations;
+    this.displayGroup = row.display_group;
     this.tags = row.tags ?? [];
     this.services = (row.services as ServerService[]) ?? [];
     this.metadata = row.metadata;
@@ -241,6 +244,7 @@ export class Server {
       monthlyCostEstimate: this.monthlyCostEstimate,
       monitoringUrl: this.monitoringUrl,
       observations: this.observations,
+      displayGroup: this.displayGroup,
       tags: this.tags,
       services: this.services,
       metadata: this.metadata,

@@ -24,6 +24,7 @@ interface ResourceRow {
   environment?: string;
   hosted_on_server_id?: string | null;
   monitoring_url?: string | null;
+  display_group?: string | null;
 }
 
 interface RelationshipRow {
@@ -114,13 +115,13 @@ export class ResourceRelationshipRepository {
 
   private buildResourceUnion(orgId: string): string {
     return `
-      SELECT id, 'server' as type, hostname as label, status, null::text as criticality, environment, null::uuid as hosted_on_server_id, monitoring_url FROM servers WHERE deleted_at IS NULL AND organization_id = '${orgId}'
+      SELECT id, 'server' as type, hostname as label, status, null::text as criticality, environment, null::uuid as hosted_on_server_id, monitoring_url, display_group FROM servers WHERE deleted_at IS NULL AND organization_id = '${orgId}'
       UNION ALL
-      SELECT id, 'application' as type, display_name as label, status, criticality, null::text as environment, null::uuid as hosted_on_server_id, monitoring_url FROM applications WHERE deleted_at IS NULL AND organization_id = '${orgId}'
+      SELECT id, 'application' as type, display_name as label, status, criticality, null::text as environment, null::uuid as hosted_on_server_id, monitoring_url, null::text as display_group FROM applications WHERE deleted_at IS NULL AND organization_id = '${orgId}'
       UNION ALL
-      SELECT id, 'database' as type, display_name as label, status, criticality, environment, hosted_on_server_id, monitoring_url FROM databases WHERE deleted_at IS NULL AND organization_id = '${orgId}'
+      SELECT id, 'database' as type, display_name as label, status, criticality, environment, hosted_on_server_id, monitoring_url, null::text as display_group FROM databases WHERE deleted_at IS NULL AND organization_id = '${orgId}'
       UNION ALL
-      SELECT id, 'url' as type, label, status, null::text as criticality, null::text as environment, null::uuid as hosted_on_server_id, null::text as monitoring_url FROM urls WHERE deleted_at IS NULL AND organization_id = '${orgId}'
+      SELECT id, 'url' as type, label, status, null::text as criticality, null::text as environment, null::uuid as hosted_on_server_id, null::text as monitoring_url, null::text as display_group FROM urls WHERE deleted_at IS NULL AND organization_id = '${orgId}'
     `;
   }
 
@@ -132,7 +133,7 @@ export class ResourceRelationshipRepository {
     const orgId = orgContext.getOrThrow();
 
     let nodeQuery = this.db
-      .select('id', 'type', 'label', 'status', 'criticality', 'environment', 'hosted_on_server_id', 'monitoring_url')
+      .select('id', 'type', 'label', 'status', 'criticality', 'environment', 'hosted_on_server_id', 'monitoring_url', 'display_group')
       .from(this.db.raw(`(${this.buildResourceUnion(orgId)}) as all_resources`));
 
     if (filters.resourceTypes && filters.resourceTypes.length > 0) {
@@ -244,6 +245,7 @@ export class ResourceRelationshipRepository {
       environment: n.environment,
       hostedOnServerId: n.hosted_on_server_id,
       monitoringUrl: n.monitoring_url,
+      displayGroup: n.display_group ?? null,
     }));
 
     // Drop any edge whose source or target no longer exists in the node set

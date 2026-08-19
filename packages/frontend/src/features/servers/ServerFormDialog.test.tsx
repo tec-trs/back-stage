@@ -72,6 +72,7 @@ describe('ServerFormDialog', () => {
         monthlyCostEstimate: null,
         monitoringUrl: null,
         observations: null,
+        displayGroup: null,
         tags: [],
         services: [],
         metadata: {},

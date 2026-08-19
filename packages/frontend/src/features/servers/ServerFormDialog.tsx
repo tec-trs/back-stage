@@ -78,6 +78,7 @@ interface FormState {
   accessMethod: string;
   accessUser: string;
   observations: string;
+  displayGroup: string;
   ownerTeamSlugs: string[];
 }
 
@@ -102,6 +103,7 @@ function emptyForm(): FormState {
     accessMethod: '',
     accessUser: '',
     observations: '',
+    displayGroup: '',
     ownerTeamSlugs: [],
   };
 }
@@ -126,6 +128,7 @@ function formFromServer(server: ServerSummary): FormState {
     accessMethod: server.accessMethod ?? '',
     accessUser: server.accessUser ?? '',
     observations: server.observations ?? '',
+    displayGroup: server.displayGroup ?? '',
     ownerTeamSlugs: server.ownerTeam ? server.ownerTeam.split(',').map((s) => s.trim()).filter(Boolean) : [],
   };
 }
@@ -281,6 +284,7 @@ export function ServerFormDialog({
       accessMethod: form.accessMethod.trim() || null,
       accessUser: form.accessUser.trim() || null,
       observations: form.observations.trim() || null,
+      displayGroup: form.displayGroup.trim() || null,
       tags: tags.map((t) => t.trim()).filter(Boolean),
       services: services.map((svc) => ({
         seq: svc.seq,
@@ -358,6 +362,15 @@ export function ServerFormDialog({
                 <input
                   value={form.displayName}
                   onChange={(event) => setField('displayName', event.target.value)}
+                  className={inputClass}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-slate-400">Grupo (ecossistema)</span>
+                <input
+                  value={form.displayGroup}
+                  onChange={(event) => setField('displayGroup', event.target.value)}
+                  placeholder="Ex: License Server, PASOE + TOMCAT..."
                   className={inputClass}
                 />
               </label>

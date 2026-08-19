@@ -66,6 +66,7 @@ export interface ServerSummary {
   monthlyCostEstimate: number | null;
   monitoringUrl: string | null;
   observations: string | null;
+  displayGroup: string | null;
   tags: string[];
   services: ServerService[];
   metadata: Record<string, unknown>;

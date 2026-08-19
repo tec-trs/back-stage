@@ -71,6 +71,7 @@ export interface CreateServerInput {
   monthlyCostEstimate?: number | null;
   monitoringUrl?: string | null;
   observations?: string | null;
+  displayGroup?: string | null;
   tags?: string[];
   services?: ServiceInput[];
   metadata?: Record<string, unknown>;
@@ -236,6 +237,7 @@ export class ServerRepository implements IServerRepository {
         monthly_cost_estimate: input.monthlyCostEstimate ?? null,
         monitoring_url: input.monitoringUrl ?? null,
         observations: input.observations ?? null,
+        display_group: input.displayGroup ?? null,
         tags: input.tags ?? [],
         services: JSON.stringify(input.services ?? []),
         metadata: JSON.stringify(input.metadata ?? {}),
@@ -287,6 +289,7 @@ export class ServerRepository implements IServerRepository {
     if (input.monthlyCostEstimate !== undefined) patch.monthly_cost_estimate = input.monthlyCostEstimate;
     if (input.monitoringUrl !== undefined) patch.monitoring_url = input.monitoringUrl;
     if (input.observations !== undefined) patch.observations = input.observations;
+    if (input.displayGroup !== undefined) patch.display_group = input.displayGroup;
     if (input.tags !== undefined) patch.tags = input.tags;
     if (input.services !== undefined) patch.services = JSON.stringify(input.services);
     if (input.metadata !== undefined) patch.metadata = JSON.stringify(input.metadata);

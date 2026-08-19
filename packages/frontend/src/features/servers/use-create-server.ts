@@ -52,6 +52,7 @@ export interface CreateServerInput {
   backupPolicy?: string | null;
   monthlyCostEstimate?: number | null;
   monitoringUrl?: string | null;
+  displayGroup?: string | null;
   disks?: ServerDiskInput[];
 }
 

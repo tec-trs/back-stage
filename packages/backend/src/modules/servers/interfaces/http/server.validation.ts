@@ -76,6 +76,7 @@ const baseFields = {
   monitoringUrl: z.string().url().max(2048).nullable().optional(),
   metadata: z.record(z.unknown()).optional(),
   disks: z.array(diskSchema).optional(),
+  displayGroup: z.string().max(255).nullable().optional(),
 };
 
 export const createServerBodySchema = z.object({
