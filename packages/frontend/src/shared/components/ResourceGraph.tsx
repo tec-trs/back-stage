@@ -36,11 +36,12 @@ const NODE_H_EXPANDED = 68;
 
 // Server-container layout constants
 const SERVER_HEADER_H = 60; // height of the server header inside the container
-const INNER_PAD       = 12; // padding inside server container
+const INNER_PAD       = 10; // padding inside server container
 const SERVER_SPACING  = 16; // gap between server containers within a group
 const GROUP_PAD       = 24; // padding inside group container
 const GROUP_LABEL_H   = 28; // height of the group label area
-const APP_GAP         = 8;  // gap between apps in grid
+const CHIP_H          = 28; // height of each hosted-app chip
+const CHIP_GAP        = 6;  // vertical gap between chips
 
 const TYPE_STYLE = {
   server:         { bg: '#0d1f33', border: '#3b82f6', text: '#93c5fd' },
@@ -123,9 +124,19 @@ function layoutGraph(
   (dagre as any).layout(g);
 
   const posMap = new Map<string, { x: number; y: number }>();
+  let maxY = 0;
   nodes.forEach(({ id, width = NODE_W, height = NODE_H }) => {
     const pos = g.node(id);
-    if (pos) posMap.set(id, { x: pos.x - width / 2, y: pos.y - height / 2 });
+    if (pos) {
+      const x = pos.x - width / 2;
+      const y = pos.y - height / 2;
+      posMap.set(id, { x, y });
+      maxY = Math.max(maxY, y + height);
+    } else {
+      // Fallback: if dagre didn't calculate position, place at bottom
+      posMap.set(id, { x: 100, y: maxY + 100 });
+      maxY += 200;
+    }
   });
   return posMap;
 }
@@ -139,6 +150,7 @@ interface NodeData extends Record<string, unknown> {
   impactDepth: number | undefined;
   simulationActive: boolean;
   dbLabels?: string[];
+  hostedApps?: { id: string; label: string; status?: string }[];
   editMode: boolean;
   compactMode?: boolean;
   isHighlighted?: boolean;
@@ -435,12 +447,10 @@ function ResourceNode({ data, selected, id }: NodeProps) {
 
 /* ── Custom node: server-container (server hosting apps) ────────────────── */
 
-function ServerContainerNode({ data, id }: NodeProps) {
+function ServerContainerNode({ data }: NodeProps) {
   const d = data as NodeData;
-  const updateNodeInternals = useUpdateNodeInternals();
-  useEffect(() => { updateNodeInternals(id); }, [id, updateNodeInternals, d.editMode]);
-
   const palette = TYPE_STYLE.server;
+  const appPalette = TYPE_STYLE.application;
 
   return (
     <div
@@ -452,20 +462,22 @@ function ServerContainerNode({ data, id }: NodeProps) {
         borderRadius: 8,
         boxSizing:    'border-box',
         position:     'relative',
+        display:      'flex',
+        flexDirection: 'column',
       }}
     >
       <Handle
         type="target"
         position={Position.Top}
         style={{
-          background:  d.editMode ? '#3b82f6' : '#475569',
-          border:      d.editMode ? '3px solid #93c5fd' : '2px solid #64748b',
-          width:       d.editMode ? 20 : 8,
-          height:      d.editMode ? 20 : 8,
-          top:         d.editMode ? -10 : -4,
-          transition:  'all 0.25s',
-          cursor:      d.editMode ? 'crosshair' : 'default',
-          zIndex:      20,
+          background: d.editMode ? '#3b82f6' : '#475569',
+          border:     d.editMode ? '3px solid #93c5fd' : '2px solid #64748b',
+          width:      d.editMode ? 20 : 8,
+          height:     d.editMode ? 20 : 8,
+          top:        d.editMode ? -10 : -4,
+          transition: 'all 0.25s',
+          cursor:     d.editMode ? 'crosshair' : 'default',
+          zIndex:     20,
         }}
       />
 
@@ -475,6 +487,7 @@ function ServerContainerNode({ data, id }: NodeProps) {
           padding:      '8px 10px 6px',
           borderBottom: '1px solid rgba(59,130,246,0.20)',
           height:       SERVER_HEADER_H,
+          flexShrink:   0,
           boxSizing:    'border-box',
         }}
       >
@@ -484,16 +497,7 @@ function ServerContainerNode({ data, id }: NodeProps) {
             server
           </span>
         </div>
-        <p style={{
-          fontSize:     13,
-          fontWeight:   600,
-          color:        palette.text,
-          marginTop:    2,
-          lineHeight:   1.2,
-          overflow:     'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace:   'nowrap',
-        }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: palette.text, marginTop: 2, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {d.label}
         </p>
         {d.status && (
@@ -503,20 +507,50 @@ function ServerContainerNode({ data, id }: NodeProps) {
         )}
       </div>
 
-      {/* Children (app nodes) are placed here by ReactFlow */}
+      {/* Hosted app chips */}
+      {d.hostedApps && d.hostedApps.length > 0 && (
+        <div style={{ padding: `${INNER_PAD}px`, display: 'flex', flexDirection: 'column', gap: CHIP_GAP }}>
+          {d.hostedApps.map((app) => (
+            <div
+              key={app.id}
+              style={{
+                height:         CHIP_H,
+                display:        'flex',
+                alignItems:     'center',
+                gap:            6,
+                background:     appPalette.bg,
+                border:         `1px solid ${appPalette.border}`,
+                borderRadius:   6,
+                padding:        '0 8px',
+                boxSizing:      'border-box',
+              }}
+            >
+              <span style={{ fontSize: 11 }}>⚙</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: appPalette.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {app.label}
+              </span>
+              {app.status && (
+                <span style={{ fontSize: 9, color: '#64748b', marginLeft: 'auto', flexShrink: 0, textTransform: 'capitalize' }}>
+                  {app.status}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       <Handle
         type="source"
         position={Position.Bottom}
         style={{
-          background:  d.editMode ? '#3b82f6' : '#475569',
-          border:      d.editMode ? '3px solid #93c5fd' : '2px solid #64748b',
-          width:       d.editMode ? 20 : 8,
-          height:      d.editMode ? 20 : 8,
-          bottom:      d.editMode ? -10 : -4,
-          transition:  'all 0.25s',
-          cursor:      d.editMode ? 'crosshair' : 'default',
-          zIndex:      20,
+          background: d.editMode ? '#3b82f6' : '#475569',
+          border:     d.editMode ? '3px solid #93c5fd' : '2px solid #64748b',
+          width:      d.editMode ? 20 : 8,
+          height:     d.editMode ? 20 : 8,
+          bottom:     d.editMode ? -10 : -4,
+          transition: 'all 0.25s',
+          cursor:     d.editMode ? 'crosshair' : 'default',
+          zIndex:     20,
         }}
       />
     </div>
@@ -566,6 +600,8 @@ const NODE_TYPES = {
   'server-group':     ServerGroupNode,
 };
 
+const EMPTY_SET = new Set<string>();
+
 /* ── Props ──────────────────────────────────────────────────────────────── */
 
 export interface ConnPayload {
@@ -614,10 +650,10 @@ interface ResourceGraphProps {
 export function ResourceGraph({
   nodes: propNodes,
   edges: propEdges,
-  impactedNodeIds = new Set(),
+  impactedNodeIds = EMPTY_SET,
   impactedByDepth,
   simulationSourceId,
-  highlightedNodeIds = new Set(),
+  highlightedNodeIds = EMPTY_SET,
   onNodeSelect,
   onNodeNavigate,
   isLoading = false,
@@ -633,6 +669,7 @@ export function ResourceGraph({
 
   const editModeRef     = useRef(editMode);
   const onEdgeDeleteRef = useRef(onEdgeDelete);
+  const hostedAppIdsRef = useRef<Set<string>>(new Set());
   editModeRef.current     = editMode;
   onEdgeDeleteRef.current = onEdgeDelete;
 
@@ -645,26 +682,46 @@ export function ResourceGraph({
 
   // ── Effect 1: recompute layout when graph data changes ─────────────────
   useEffect(() => {
-    if (!propNodes.length) {
-      setRfNodes([]);
-      setRfEdges([]);
-      return;
-    }
+    try {
+      if (!propNodes.length) {
+        setRfNodes([]);
+        setRfEdges([]);
+        return;
+      }
 
     const NODE_W = editMode ? NODE_W_EXPANDED : (compactMode ? NODE_W_COMPACT : NODE_W_EXPANDED);
     const NODE_H = editMode ? NODE_H_EXPANDED : (compactMode ? NODE_H_COMPACT : NODE_H_EXPANDED);
 
-    // ── 1. Build server→apps and app→server maps from 'hosts' edges ──────
-    const serverToApps = new Map<string, string[]>();
-    const appToServer  = new Map<string, string>();
+    // ── 1. Build server→apps map and determine which apps are chip-only ───
+    // Apps are shown as chips inside each server container.
+    // Apps with non-hosts edges are ALSO kept as free-floating RF nodes.
+    const serverToApps = new Map<string, string[]>(); // serverId → [appId, ...]
     for (const e of propEdges) {
       if (e.relationType === 'hosts' && e.sourceType === 'server' && e.targetType === 'application') {
         if (!serverToApps.has(e.sourceId)) serverToApps.set(e.sourceId, []);
         serverToApps.get(e.sourceId)!.push(e.targetId);
-        appToServer.set(e.targetId, e.sourceId);
       }
     }
-    const hostedAppIds = new Set(appToServer.keys());
+
+    // Apps that appear in any non-hosts edge stay as free-floating RF nodes too
+    const appHasOtherEdges = new Set<string>();
+    const appNodeIds = new Set(propNodes.filter((n) => n.resourceType === 'application').map((n) => n.id));
+    for (const e of propEdges) {
+      if (e.relationType === 'hosts') continue;
+      if (appNodeIds.has(e.sourceId)) appHasOtherEdges.add(e.sourceId);
+      if (appNodeIds.has(e.targetId)) appHasOtherEdges.add(e.targetId);
+    }
+
+    // chipAppIds: hosted apps shown only as chips (no standalone RF node)
+    const chipAppIds = new Set<string>();
+    for (const appIds of serverToApps.values()) {
+      for (const appId of appIds) {
+        if (!appHasOtherEdges.has(appId)) chipAppIds.add(appId);
+      }
+    }
+    // hostedAppIds = chipAppIds (these are suppressed as standalone RF nodes)
+    const hostedAppIds = chipAppIds;
+    hostedAppIdsRef.current = hostedAppIds;
 
     // ── 2. Build group→servers and server→group maps ──────────────────────
     const groupToServers = new Map<string, string[]>();
@@ -678,28 +735,24 @@ export function ResourceGraph({
     }
     const serversInGroups = new Set(serverToGroup.keys());
 
-    // ── 3. Helper: compute server-container size and app layout ───────────
-    function getAppLayout(numApps: number) {
-      if (numApps === 0) return { cols: 0, rows: 0, w: NODE_W, h: NODE_H };
-      // Up to 4 apps: 1 column (vertical)
-      // More than 4: 2 columns (grid)
-      const cols = numApps <= 4 ? 1 : 2;
-      const rows = Math.ceil(numApps / cols);
-      const w = cols * NODE_W + (cols + 1) * INNER_PAD;
-      const h = SERVER_HEADER_H + rows * NODE_H + (rows + 1) * APP_GAP + INNER_PAD;
-      return { cols, rows, w, h };
-    }
-
-    function containerSize(numApps: number) {
-      const layout = getAppLayout(numApps);
-      if (numApps === 0) return { w: NODE_W, h: NODE_H };
-      return { w: layout.w, h: layout.h };
+    // ── 3. Helper: server-container size based on chip count ─────────────
+    function containerSize(serverId: string): { w: number; h: number } {
+      const chips = (serverToApps.get(serverId) ?? []).filter((id) => chipAppIds.has(id));
+      const numChips = chips.length;
+      if (numChips === 0) {
+        // Server with no hosted apps: use default node size
+        return { w: NODE_W, h: NODE_H };
+      }
+      // Server with chips: add space for the chips
+      const w = Math.max(NODE_W, 200);
+      const h = SERVER_HEADER_H + INNER_PAD + numChips * CHIP_H + Math.max(0, numChips - 1) * CHIP_GAP + INNER_PAD;
+      return { w: Math.max(w, NODE_W), h: Math.max(h, NODE_H) };
     }
 
     // ── 4. Compute group bounding sizes (arrange server containers in a row)
     const groupSize = new Map<string, { w: number; h: number }>();
     for (const [groupName, serverIds] of groupToServers) {
-      const sizes = serverIds.map((id) => containerSize(serverToApps.get(id)?.length ?? 0));
+      const sizes = serverIds.map((id) => containerSize(id));
       const maxH  = Math.max(...sizes.map((s) => s.h));
       const totalW = sizes.reduce((sum, s) => sum + s.w, 0) + Math.max(0, serverIds.length - 1) * SERVER_SPACING;
       groupSize.set(groupName, {
@@ -709,29 +762,29 @@ export function ResourceGraph({
     }
 
     // ── 5. Build dagre input ──────────────────────────────────────────────
-    // Top-level dagre nodes: groups, standalone server-containers, standalone servers, free nodes
     const dagreNodes: { id: string; width?: number; height?: number }[] = [];
     for (const [groupName, _servers] of groupToServers) {
       const gs = groupSize.get(groupName)!;
       dagreNodes.push({ id: `server-group:${groupName}`, width: gs.w, height: gs.h });
     }
     for (const n of propNodes) {
-      if (serversInGroups.has(n.id)) continue;    // grouped servers → represented by their group
-      if (hostedAppIds.has(n.id)) continue;        // hosted apps → inside server container
+      if (serversInGroups.has(n.id)) continue;
+      if (hostedAppIds.has(n.id)) continue; // chip-only apps: no standalone RF node
       if (n.resourceType === 'server' && serverToApps.has(n.id)) {
-        // Standalone server-container
-        const { w, h } = containerSize(serverToApps.get(n.id)!.length);
+        const { w, h } = containerSize(n.id);
         dagreNodes.push({ id: n.id, width: w, height: h });
       } else {
-        dagreNodes.push({ id: n.id }); // default NODE_W × NODE_H
+        dagreNodes.push({ id: n.id });
       }
     }
 
-    // Dagre edges: replace server/app IDs with their top-level dagre node ID
+    // Dagre edges: map chip-only app IDs to their server's top-level dagre node
     function topLevelId(nodeId: string): string {
+      // chip-only apps: map to the first server that hosts them (or their group)
       if (hostedAppIds.has(nodeId)) {
-        const srv = appToServer.get(nodeId);
-        if (srv) return topLevelId(srv);
+        for (const [srv, apps] of serverToApps) {
+          if (apps.includes(nodeId)) return serverToGroup.get(srv) ?? srv;
+        }
       }
       return serverToGroup.get(nodeId) ?? nodeId;
     }
@@ -778,10 +831,20 @@ export function ResourceGraph({
       };
     }
 
-    // 7a. Group containers → then server-containers within them → then app children
+    // Helper: build hostedApps list for a server (chip-only apps only)
+    function serverHostedApps(serverId: string) {
+      return (serverToApps.get(serverId) ?? [])
+        .filter((id) => chipAppIds.has(id))
+        .map((id) => {
+          const n = nodeMap.get(id);
+          return { id, label: n?.label ?? id, status: n?.status };
+        });
+    }
+
+    // 7a. Group containers → server nodes inside them
     for (const [groupName, serverIds] of groupToServers) {
-      const groupId = `server-group:${groupName}`;
-      const gs      = groupSize.get(groupName)!;
+      const groupId  = `server-group:${groupName}`;
+      const gs       = groupSize.get(groupName)!;
       const groupPos = saved[groupId] ?? posMap.get(groupId) ?? { x: 0, y: 0 };
 
       newRfNodes.push({
@@ -799,22 +862,20 @@ export function ResourceGraph({
         } as NodeData,
       } as RFNode<NodeData>);
 
-      // Arrange server-containers horizontally inside the group
       let xCursor = GROUP_PAD;
       const yInner = GROUP_LABEL_H + GROUP_PAD;
 
       for (const serverId of serverIds) {
         const n = nodeMap.get(serverId);
         if (!n) continue;
-        const numApps   = serverToApps.get(serverId)?.length ?? 0;
-        const { w: cW, h: cH } = containerSize(numApps);
-        const isContainer = numApps > 0;
-
-        // Relative position within group (persisted in localStorage)
+        const { w: cW, h: cH } = containerSize(serverId);
+        const chips       = serverHostedApps(serverId);
+        const isContainer = chips.length > 0;
         const defaultRelPos = { x: xCursor, y: yInner };
         const serverRelPos  = saved[serverId] ?? defaultRelPos;
         xCursor += cW + SERVER_SPACING;
 
+        const nd = { ...nodeData(n), hostedApps: isContainer ? chips : undefined } as NodeData;
         newRfNodes.push({
           id:       serverId,
           type:     isContainer ? 'server-container' : 'resource',
@@ -822,43 +883,19 @@ export function ResourceGraph({
           extent:   'parent',
           position: serverRelPos,
           ...(isContainer ? { style: { width: cW, height: cH } } : {}),
-          data:     nodeData(n) as NodeData,
+          data:     nd,
         } as RFNode<NodeData>);
-
-        // 7b. App nodes inside this server-container (grid layout: 1 col or 2 cols)
-        if (isContainer) {
-          const appIds = serverToApps.get(serverId) ?? [];
-          const layout = getAppLayout(appIds.length);
-          appIds.forEach((appId, i) => {
-            const appNode = nodeMap.get(appId);
-            if (!appNode) return;
-            const col = i % layout.cols;
-            const row = Math.floor(i / layout.cols);
-            newRfNodes.push({
-              id:        appId,
-              type:      'resource',
-              parentId:  serverId,
-              extent:    'parent',
-              draggable: false,
-              position:  {
-                x: INNER_PAD + col * (NODE_W + INNER_PAD),
-                y: SERVER_HEADER_H + INNER_PAD + row * (NODE_H + APP_GAP),
-              },
-              data: nodeData(appNode) as NodeData,
-            } as RFNode<NodeData>);
-          });
-        }
       }
     }
 
-    // 7c. Standalone server-containers (not in any group but have hosted apps)
+    // 7c. Standalone server-containers (not in any group but have chip apps)
     for (const n of propNodes) {
       if (n.resourceType !== 'server') continue;
       if (serversInGroups.has(n.id)) continue;
-      if (!serverToApps.has(n.id)) continue;
+      const chips = serverHostedApps(n.id);
+      if (chips.length === 0) continue;
 
-      const numApps = serverToApps.get(n.id)!.length;
-      const { w: cW, h: cH } = containerSize(numApps);
+      const { w: cW, h: cH } = containerSize(n.id);
       const pos = saved[n.id] ?? posMap.get(n.id) ?? { x: 0, y: 0 };
 
       newRfNodes.push({
@@ -866,36 +903,28 @@ export function ResourceGraph({
         type:     'server-container',
         position: pos,
         style:    { width: cW, height: cH },
-        data:     nodeData(n) as NodeData,
+        data:     { ...nodeData(n), hostedApps: chips } as NodeData,
       } as RFNode<NodeData>);
-
-      const appIds = serverToApps.get(n.id) ?? [];
-      const layout = getAppLayout(appIds.length);
-      appIds.forEach((appId, i) => {
-        const appNode = nodeMap.get(appId);
-        if (!appNode) return;
-        const col = i % layout.cols;
-        const row = Math.floor(i / layout.cols);
-        newRfNodes.push({
-          id:        appId,
-          type:      'resource',
-          parentId:  n.id,
-          extent:    'parent',
-          draggable: false,
-          position:  {
-            x: INNER_PAD + col * (NODE_W + INNER_PAD),
-            y: SERVER_HEADER_H + INNER_PAD + row * (NODE_H + APP_GAP),
-          },
-          data: nodeData(appNode) as NodeData,
-        } as RFNode<NodeData>);
-      });
     }
 
     // 7d. All remaining free-floating nodes
+    const skippedNodes = [];
     for (const n of propNodes) {
-      if (serversInGroups.has(n.id)) continue;   // grouped server
-      if (hostedAppIds.has(n.id)) continue;       // hosted app
-      if (n.resourceType === 'server' && serverToApps.has(n.id)) continue; // standalone container (already added)
+      // Skip grouped servers (added in 7a as children of groups)
+      if (serversInGroups.has(n.id)) {
+        skippedNodes.push({ id: n.id, reason: 'serversInGroups' });
+        continue;
+      }
+      // Skip chip-only apps (rendered inside containers, not as RF nodes)
+      if (hostedAppIds.has(n.id)) {
+        skippedNodes.push({ id: n.id, reason: 'hostedAppIds' });
+        continue;
+      }
+      // Skip standalone server-containers (already added in 7c with container styling)
+      if (n.resourceType === 'server' && serverHostedApps(n.id).length > 0) {
+        skippedNodes.push({ id: n.id, reason: 'serverContainer' });
+        continue;
+      }
 
       newRfNodes.push({
         id:       n.id,
@@ -904,6 +933,11 @@ export function ResourceGraph({
         data:     nodeData(n) as NodeData,
       });
     }
+    console.log('[ResourceGraph] Nós renderizados:', {
+      totalInput: propNodes.length,
+      addedToRender: newRfNodes.length,
+      skipped: skippedNodes.map(s => ({ id: s.id.substring(0, 8), reason: s.reason }))
+    });
 
     setRfNodes(newRfNodes);
 
@@ -918,6 +952,11 @@ export function ResourceGraph({
       { editMode: editModeRef.current, onDelete: onEdgeDeleteRef.current },
     )));
     // eslint-disable-next-line react-hooks/exhaustive-deps
+    } catch (err) {
+      console.error('ResourceGraph Effect 1 error:', err);
+      setRfNodes([]);
+      setRfEdges([]);
+    }
   }, [propNodes, propEdges, resetLayoutKey, compactMode]);
 
   // ── Effect 2: update colors/states when simulation changes (no relayout) ─
@@ -935,7 +974,7 @@ export function ResourceGraph({
       })),
     );
     const visibleEdges = propEdges.filter((e) =>
-      !(e.relationType === 'hosts' && e.targetType === 'application'),
+      !(e.relationType === 'hosts' && e.targetType === 'application' && hostedAppIdsRef.current.has(e.targetId)),
     );
     setRfEdges(visibleEdges.map((e) => buildEdge(
       { id: e.id, sourceId: e.sourceId, targetId: e.targetId, relationType: e.relationType },
