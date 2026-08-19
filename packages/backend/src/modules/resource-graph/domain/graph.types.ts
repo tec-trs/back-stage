@@ -34,6 +34,8 @@ export interface GraphEdge {
   createdByUserId?: string | null;
   createdByName?: string | null;
   createdAt?: string;
+  sourceLabel?: string;
+  targetLabel?: string;
 }
 
 export interface ImpactNode {

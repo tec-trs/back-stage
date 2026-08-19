@@ -70,20 +70,20 @@ export function RelationshipsPage() {
     id.startsWith('deploy:') || id.startsWith('url-owner:') || id.startsWith('edge-');
 
   const getDisplayName = (
-    type: string,
-    id: string,
+    relLabel?: string,
     fallbackLabel?: string,
+    id?: string,
   ): { name: string; title: string } => {
-    const node = nodeMap.get(`${type}:${id}`);
-    if (node) {
-      return { name: node.label, title: node.label };
+    // Preferência: label da relação → label do nó → UUID
+    if (relLabel) {
+      return { name: relLabel, title: relLabel };
     }
     if (fallbackLabel) {
       return { name: fallbackLabel, title: fallbackLabel };
     }
     // Mostrar apenas os últimos 8 chars do UUID
-    const shortId = id.substring(id.length - 8);
-    return { name: shortId, title: id };
+    const shortId = id ? id.substring(id.length - 8) : 'N/A';
+    return { name: shortId, title: id || 'Unknown' };
   };
 
   if (isError) {
@@ -169,8 +169,8 @@ export function RelationshipsPage() {
               {filtered.map((rel) => {
                 const src = nodeMap.get(`${rel.sourceType}:${rel.sourceId}`);
                 const tgt = nodeMap.get(`${rel.targetType}:${rel.targetId}`);
-                const srcDisplay = getDisplayName(rel.sourceType, rel.sourceId, src?.label);
-                const tgtDisplay = getDisplayName(rel.targetType, rel.targetId, tgt?.label);
+                const srcDisplay = getDisplayName(rel.sourceLabel, src?.label, rel.sourceId);
+                const tgtDisplay = getDisplayName(rel.targetLabel, tgt?.label, rel.targetId);
                 const implicit = isImplicit(rel.id);
                 const relLabel = RELATION_TYPE_LABELS[rel.relationType]?.label ?? rel.relationType;
 
