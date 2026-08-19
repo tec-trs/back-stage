@@ -1,16 +1,21 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
+  BaseEdge,
+  EdgeLabelRenderer,
   Handle,
   MarkerType,
   Position,
   ReactFlow,
   applyEdgeChanges,
   applyNodeChanges,
+  getSmoothStepPath,
   useUpdateNodeInternals,
+  type Connection,
   type Edge as RFEdge,
   type EdgeChange,
+  type EdgeProps,
   type Node as RFNode,
   type NodeChange,
   type NodeProps,
@@ -51,6 +56,29 @@ const EDGE_LABEL: Record<string, string> = {
   consumes:    'consome',
   part_of:     'parte de',
 };
+
+/* ── Position persistence (localStorage) ───────────────────────────────── */
+
+type SavedPositions = Record<string, { x: number; y: number }>;
+
+function loadPositions(key: string): SavedPositions {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as SavedPositions) : {};
+  } catch {
+    return {};
+  }
+}
+
+function savePositions(key: string, nodes: RFNode[]): void {
+  try {
+    const positions: SavedPositions = {};
+    for (const n of nodes) positions[n.id] = n.position;
+    localStorage.setItem(key, JSON.stringify(positions));
+  } catch {
+    // ignore storage quota errors
+  }
+}
 
 /* ── Dagre layout ───────────────────────────────────────────────────────── */
 
@@ -100,7 +128,79 @@ interface NodeData extends Record<string, unknown> {
   simulationActive: boolean;
   /** Only on db-group nodes */
   dbLabels?: string[];
+  editMode: boolean;
 }
+
+/* ── Custom edge (deletable) ────────────────────────────────────────────── */
+
+interface DeletableEdgeData extends Record<string, unknown> {
+  editMode?: boolean;
+  isImplicit?: boolean;
+  edgeLabel?: string;
+  edgeLabelColor?: string;
+  onDelete?: (id: string) => void;
+}
+
+function DeletableEdge({
+  id,
+  sourceX, sourceY, sourcePosition,
+  targetX, targetY, targetPosition,
+  style, markerEnd, animated, data,
+}: EdgeProps) {
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
+    sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition,
+  });
+  const d = (data ?? {}) as DeletableEdgeData;
+  const canDelete = d.editMode && !d.isImplicit;
+
+  return (
+    <>
+      <BaseEdge
+        id={id}
+        path={edgePath}
+        markerEnd={markerEnd as string}
+        style={{ ...style, animation: animated ? undefined : 'none' }}
+        interactionWidth={20}
+      />
+      <EdgeLabelRenderer>
+        <div
+          style={{
+            position: 'absolute',
+            transform: `translate(-50%,-50%) translate(${labelX}px,${labelY}px)`,
+            pointerEvents: 'all',
+          }}
+          className="nodrag nopan"
+        >
+          {d.editMode ? (
+            canDelete ? (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); d.onDelete?.(id); }}
+                className="flex h-5 w-5 items-center justify-center rounded-full border border-red-800 bg-red-950 text-red-400 text-xs leading-none shadow-md hover:bg-red-900 hover:text-red-200"
+                title="Remover relacao"
+              >
+                ×
+              </button>
+            ) : (
+              <span className="rounded border border-slate-800 bg-slate-900/80 px-1 py-0.5 text-[9px] text-slate-600">
+                {d.edgeLabel}
+              </span>
+            )
+          ) : d.edgeLabel ? (
+            <span
+              className="rounded text-[10px]"
+              style={{ background: '#0f172a', opacity: 0.85, padding: '2px 4px', color: d.edgeLabelColor ?? '#94a3b8' }}
+            >
+              {d.edgeLabel}
+            </span>
+          ) : null}
+        </div>
+      </EdgeLabelRenderer>
+    </>
+  );
+}
+
+const EDGE_TYPES = { deletable: DeletableEdge };
 
 /* ── Edge builder ───────────────────────────────────────────────────────── */
 
@@ -111,10 +211,16 @@ interface PropEdge {
   relationType: string;
 }
 
+interface BuildEdgeOpts {
+  editMode?: boolean;
+  onDelete?: (id: string) => void;
+}
+
 function buildEdge(
   e: PropEdge,
   impactedNodeIds: Set<string>,
   simulationSourceId?: string,
+  opts?: BuildEdgeOpts,
 ): RFEdge {
   const touchesSource = e.sourceId === simulationSourceId || e.targetId === simulationSourceId;
   const touchesImpact = impactedNodeIds.has(e.sourceId) || impactedNodeIds.has(e.targetId);
@@ -134,13 +240,13 @@ function buildEdge(
   }
 
   const isDimmed = simulationActive && !touchesSource && !touchesImpact;
+  const isImplicit = e.id.startsWith('deploy:') || e.id.startsWith('url-owner:') || e.id.startsWith('edge-');
 
   return {
     id:     e.id,
     source: e.sourceId,
     target: e.targetId,
-    label:  EDGE_LABEL[e.relationType] ?? e.relationType,
-    type:   'smoothstep',
+    type:   'deletable',
     animated,
     markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 14, height: 14 },
     style: {
@@ -149,10 +255,13 @@ function buildEdge(
       opacity: isDimmed ? 0.08 : 1,
       transition: 'stroke 0.4s, opacity 0.4s',
     },
-    labelStyle:      { fill: isDimmed ? '#334155' : '#94a3b8', fontSize: 10 },
-    labelBgStyle:    { fill: '#0f172a', fillOpacity: isDimmed ? 0.3 : 0.85 },
-    labelBgPadding:  [4, 2] as [number, number],
-    labelBgBorderRadius: 3,
+    data: {
+      editMode:       !!opts?.editMode,
+      isImplicit,
+      edgeLabel:      EDGE_LABEL[e.relationType] ?? e.relationType,
+      edgeLabelColor: isDimmed ? '#334155' : '#94a3b8',
+      onDelete:       opts?.onDelete,
+    } as DeletableEdgeData,
   };
 }
 
@@ -162,7 +271,7 @@ function ResourceNode({ data, selected, id }: NodeProps) {
   const d = data as NodeData;
   const updateNodeInternals = useUpdateNodeInternals();
   // Required in @xyflow/react v12 to populate handleBounds so edges render
-  useEffect(() => { updateNodeInternals(id); }, [id, updateNodeInternals]);
+  useEffect(() => { updateNodeInternals(id); }, [id, updateNodeInternals, d.editMode]);
 
   const isOffline   = d.impactDepth === 0;
   const isDirect    = d.impactDepth === 1;
@@ -184,18 +293,30 @@ function ResourceNode({ data, selected, id }: NodeProps) {
       style={{
         width:        NODE_W,
         background:   palette.bg,
-        borderColor,
-        borderWidth:  hasBoldBorder ? 2 : 1,
+        borderColor:  d.editMode ? '#3b82f6' : borderColor,
+        borderWidth:  hasBoldBorder || d.editMode ? 2 : 1,
         opacity:      isDimmed ? 0.2 : 1,
         filter:       isDimmed ? 'grayscale(0.8)' : 'none',
-        transition:   'opacity 0.4s ease, filter 0.4s ease, border-color 0.4s ease, background 0.4s ease',
+        transition:   'opacity 0.4s ease, filter 0.4s ease, border-color 0.25s ease, background 0.4s ease, box-shadow 0.25s ease',
+        boxShadow:    d.editMode ? '0 0 0 2px rgba(59,130,246,0.15)' : undefined,
+        cursor:       d.editMode ? 'default' : 'pointer',
       }}
-      className="rounded-lg border px-3 py-2 shadow-lg cursor-pointer"
+      className="rounded-lg border px-3 py-2 shadow-lg"
     >
       <Handle
         type="target"
         position={Position.Top}
-        style={{ background: '#64748b', border: 'none', width: 8, height: 8 }}
+        style={{
+          background:  d.editMode ? '#3b82f6' : '#475569',
+          border:      d.editMode ? '3px solid #93c5fd' : '2px solid #64748b',
+          width:       d.editMode ? 20 : 8,
+          height:      d.editMode ? 20 : 8,
+          top:         d.editMode ? -10 : -4,
+          boxShadow:   d.editMode ? '0 0 0 4px rgba(59,130,246,0.25)' : 'none',
+          transition:  'all 0.25s',
+          cursor:      d.editMode ? 'crosshair' : 'default',
+          zIndex:      d.editMode ? 20 : 1,
+        }}
       />
 
       {/* Type badge / offline label */}
@@ -258,7 +379,17 @@ function ResourceNode({ data, selected, id }: NodeProps) {
       <Handle
         type="source"
         position={Position.Bottom}
-        style={{ background: '#64748b', border: 'none', width: 8, height: 8 }}
+        style={{
+          background:  d.editMode ? '#3b82f6' : '#475569',
+          border:      d.editMode ? '3px solid #93c5fd' : '2px solid #64748b',
+          width:       d.editMode ? 20 : 8,
+          height:      d.editMode ? 20 : 8,
+          bottom:      d.editMode ? -10 : -4,
+          boxShadow:   d.editMode ? '0 0 0 4px rgba(59,130,246,0.25)' : 'none',
+          transition:  'all 0.25s',
+          cursor:      d.editMode ? 'crosshair' : 'default',
+          zIndex:      d.editMode ? 20 : 1,
+        }}
       />
     </div>
   );
@@ -267,6 +398,13 @@ function ResourceNode({ data, selected, id }: NodeProps) {
 const NODE_TYPES = { resource: ResourceNode };
 
 /* ── Props ──────────────────────────────────────────────────────────────── */
+
+export interface ConnPayload {
+  sourceId: string;
+  sourceType: string;
+  targetId: string;
+  targetType: string;
+}
 
 interface ResourceGraphProps {
   nodes: Array<{
@@ -295,6 +433,13 @@ interface ResourceGraphProps {
   onNodeSelect?: (nodeId: string, resourceType: string) => void;
   onNodeNavigate?: (nodeId: string, resourceType: string) => void;
   isLoading?: boolean;
+  editMode?: boolean;
+  onConnect?: (payload: ConnPayload) => void;
+  onEdgeDelete?: (edgeId: string) => void;
+  /** localStorage key for persisting node positions. Omit to disable persistence. */
+  storageKey?: string;
+  /** Increment to force a full dagre relayout, discarding saved positions. */
+  resetLayoutKey?: number;
 }
 
 /* ── Main component ─────────────────────────────────────────────────────── */
@@ -308,9 +453,23 @@ export function ResourceGraph({
   onNodeSelect,
   onNodeNavigate,
   isLoading = false,
+  editMode = false,
+  onConnect,
+  onEdgeDelete,
+  storageKey,
+  resetLayoutKey = 0,
 }: ResourceGraphProps) {
   const [rfNodes, setRfNodes] = useState<RFNode<NodeData>[]>([]);
   const [rfEdges, setRfEdges] = useState<RFEdge[]>([]);
+
+  // Stable refs so effects can read latest values without adding them as deps
+  const editModeRef     = useRef(editMode);
+  const onEdgeDeleteRef = useRef(onEdgeDelete);
+  editModeRef.current     = editMode;
+  onEdgeDeleteRef.current = onEdgeDelete;
+
+  // Tracks the last resetLayoutKey we acted on; when it changes we skip saved positions
+  const prevResetKeyRef = useRef(resetLayoutKey);
 
   // Impact key — stable string that changes only when the impacted set changes
   const impactedKey = useMemo(
@@ -318,36 +477,53 @@ export function ResourceGraph({
     [impactedNodeIds],
   );
 
-  // ── Effect 1: recompute layout when graph data changes ──────────────────
+  // ── Effect 1: recompute layout when graph data or resetLayoutKey changes ─
   useEffect(() => {
     if (!propNodes.length) {
       setRfNodes([]);
       setRfEdges([]);
       return;
     }
+
     const posMap = layoutGraph(
       propNodes.map((n) => n.id),
       propEdges.map((e) => ({ source: e.sourceId, target: e.targetId, relationType: e.relationType })),
     );
+
+    // Detect a layout reset request
+    const isReset = resetLayoutKey !== prevResetKeyRef.current;
+    if (isReset) {
+      prevResetKeyRef.current = resetLayoutKey;
+      if (storageKey) {
+        try { localStorage.removeItem(storageKey); } catch { /* ignore */ }
+      }
+    }
+
+    // Restore saved positions for known nodes; use dagre for new ones
+    const saved = (storageKey && !isReset) ? loadPositions(storageKey) : {};
+
     setRfNodes(
       propNodes.map((n) => ({
         id:       n.id,
         type:     'resource',
-        position: posMap.get(n.id) ?? { x: 0, y: 0 },
+        position: saved[n.id] ?? posMap.get(n.id) ?? { x: 0, y: 0 },
         data: {
-          label:           n.label,
-          resourceType:    n.resourceType as RType,
-          status:          n.status,
-          impactDepth:     n.id === simulationSourceId ? 0 : impactedByDepth?.get(n.id),
+          label:            n.label,
+          resourceType:     n.resourceType as RType,
+          status:           n.status,
+          impactDepth:      n.id === simulationSourceId ? 0 : impactedByDepth?.get(n.id),
           simulationActive: !!simulationSourceId,
-          dbLabels:        n.dbLabels,
+          dbLabels:         n.dbLabels,
+          editMode:         editModeRef.current,
         },
       })),
     );
-    setRfEdges(propEdges.map((e) => buildEdge(e, impactedNodeIds, simulationSourceId)));
-    // Layout only re-runs when the graph topology changes
+    setRfEdges(propEdges.map((e) => buildEdge(e, impactedNodeIds, simulationSourceId, {
+      editMode: editModeRef.current,
+      onDelete: onEdgeDeleteRef.current,
+    })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [propNodes, propEdges]);
+  }, [propNodes, propEdges, resetLayoutKey]);
 
   // ── Effect 2: update colors/states when simulation changes (no relayout) ─
   useEffect(() => {
@@ -362,20 +538,75 @@ export function ResourceGraph({
         } as NodeData,
       })),
     );
-    setRfEdges(propEdges.map((e) => buildEdge(e, impactedNodeIds, simulationSourceId)));
+    setRfEdges(propEdges.map((e) => buildEdge(e, impactedNodeIds, simulationSourceId, {
+      editMode: editModeRef.current,
+      onDelete: onEdgeDeleteRef.current,
+    })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [impactedKey, simulationSourceId]);
 
+  // ── Effect 3: propagate editMode / onEdgeDelete to existing nodes and edges ─
+  useEffect(() => {
+    if (!rfNodes.length) return;
+    setRfNodes((prev) =>
+      prev.map((n) => ({ ...n, data: { ...n.data, editMode } as NodeData })),
+    );
+    setRfEdges((prev) =>
+      prev.map((e) => ({
+        ...e,
+        data: { ...e.data, editMode, onDelete: onEdgeDelete } as DeletableEdgeData,
+      })),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editMode, onEdgeDelete]);
+
   // Controlled mode handlers — dragging and pan both enabled
   const onNodesChange = useCallback(
-    (changes: NodeChange<RFNode<NodeData>>[]) =>
-      setRfNodes((prev) => applyNodeChanges(changes, prev)),
-    [],
+    (changes: NodeChange<RFNode<NodeData>>[]) => {
+      setRfNodes((prev) => {
+        const next = applyNodeChanges(changes, prev);
+        // Persist positions when the user finishes dragging a node
+        if (storageKey && changes.some((c) => c.type === 'position' && !(c as { dragging?: boolean }).dragging)) {
+          savePositions(storageKey, next);
+        }
+        return next;
+      });
+    },
+    [storageKey],
   );
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) =>
       setRfEdges((prev) => applyEdgeChanges(changes, prev)),
     [],
+  );
+
+  const handleConnect = useCallback(
+    (connection: Connection) => {
+      if (!onConnect || !connection.source || !connection.target) return;
+      const src = rfNodes.find((n) => n.id === connection.source);
+      const tgt = rfNodes.find((n) => n.id === connection.target);
+      if (!src || !tgt) return;
+      onConnect({
+        sourceId:   connection.source,
+        sourceType: (src.data as NodeData).resourceType,
+        targetId:   connection.target,
+        targetType: (tgt.data as NodeData).resourceType,
+      });
+    },
+    [onConnect, rfNodes],
+  );
+
+  const isValidConnection = useCallback(
+    (connection: Connection | RFEdge) => {
+      if (connection.source === connection.target) return false;
+      const src = rfNodes.find((n) => n.id === connection.source);
+      const tgt = rfNodes.find((n) => n.id === connection.target);
+      if (!src || !tgt) return false;
+      const srcType = (src.data as NodeData).resourceType;
+      const tgtType = (tgt.data as NodeData).resourceType;
+      return srcType !== 'db-group' && tgtType !== 'db-group';
+    },
+    [rfNodes],
   );
 
   const onNodeClick = useCallback(
@@ -411,11 +642,16 @@ export function ResourceGraph({
       onEdgesChange={onEdgesChange}
       onNodeClick={onNodeClick}
       onNodeDoubleClick={onNodeDoubleClick}
+      onConnect={editMode ? handleConnect : undefined}
+      isValidConnection={editMode ? isValidConnection : undefined}
       nodeTypes={NODE_TYPES}
+      edgeTypes={EDGE_TYPES}
       fitView
       fitViewOptions={{ padding: 0.2, maxZoom: 1.2 }}
       minZoom={0.15}
       maxZoom={2.5}
+      deleteKeyCode={null}
+      connectionLineStyle={{ stroke: '#60a5fa', strokeWidth: 2, strokeDasharray: '5 4' }}
       className="bg-slate-950"
       proOptions={{ hideAttribution: true }}
     >

@@ -2,13 +2,19 @@ import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { ImpactAnalysisPanel } from '../features/resource-graph/ImpactAnalysisPanel';
-import { useFullGraph } from '../features/resource-graph/use-resource-graph';
+import {
+  useCreateRelationship,
+  useDeleteRelationship,
+  useFullGraph,
+} from '../features/resource-graph/use-resource-graph';
 import type { GraphNode, ImpactResult } from '../features/resource-graph/use-resource-graph';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
+import { Modal } from '../shared/components/Modal';
 import { PageHeader } from '../shared/components/PageHeader';
 import { ResourceGraph } from '../shared/components/ResourceGraph';
+import type { ConnPayload } from '../shared/components/ResourceGraph';
 import { Spinner } from '../shared/components/Spinner';
 
 type ResourceType = 'server' | 'application' | 'database' | 'url';
@@ -42,12 +48,91 @@ const NODE_LABELS: Record<string, string> = {
   url:         'URL',
 };
 
+interface PendingConn extends ConnPayload {
+  sourceLabel: string;
+  targetLabel: string;
+}
+
+const RELATION_OPTIONS = [
+  { value: 'depends_on',  label: 'Depende de',  hint: 'A origem depende do destino para funcionar' },
+  { value: 'connects_to', label: 'Conecta a',    hint: 'A origem faz chamadas ao destino' },
+  { value: 'hosts',       label: 'Hospeda',       hint: 'A origem hospeda / executa o destino' },
+  { value: 'exposes',     label: 'Expoe',         hint: 'A origem expoe o destino publicamente' },
+] as const;
+
+type RelationValue = (typeof RELATION_OPTIONS)[number]['value'];
+
+function ConnectionModal({
+  pending,
+  isBusy,
+  onConfirm,
+  onCancel,
+}: {
+  pending: PendingConn;
+  isBusy: boolean;
+  onConfirm: (relationType: RelationValue) => void;
+  onCancel: () => void;
+}) {
+  const [relationType, setRelationType] = useState<RelationValue>('depends_on');
+
+  return (
+    <Modal title="Criar relacao" isOpen onClose={onCancel}>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm">
+          <span className="font-medium text-slate-200">{pending.sourceLabel}</span>
+          <span className="text-slate-500">→</span>
+          <span className="font-medium text-slate-200">{pending.targetLabel}</span>
+        </div>
+
+        <fieldset className="flex flex-col gap-1">
+          <legend className="mb-1 text-xs font-medium text-slate-400">Tipo de relacao</legend>
+          {RELATION_OPTIONS.map((opt) => (
+            <label
+              key={opt.value}
+              className="flex cursor-pointer items-start gap-3 rounded-md p-2 hover:bg-slate-800"
+            >
+              <input
+                type="radio"
+                name="relationType"
+                value={opt.value}
+                checked={relationType === opt.value}
+                onChange={() => setRelationType(opt.value)}
+                className="mt-0.5 accent-sky-500"
+              />
+              <div>
+                <p className="text-sm font-medium text-slate-200">{opt.label}</p>
+                <p className="text-xs text-slate-500">{opt.hint}</p>
+              </div>
+            </label>
+          ))}
+        </fieldset>
+
+        <div className="flex justify-end gap-3 border-t border-slate-800 pt-3">
+          <Button variant="secondary" size="sm" onClick={onCancel} disabled={isBusy}>
+            Cancelar
+          </Button>
+          <Button size="sm" onClick={() => onConfirm(relationType)} disabled={isBusy}>
+            {isBusy ? 'Criando...' : 'Criar relacao'}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function EcosystemPage() {
   const { data, isLoading, isError, error } = useFullGraph({ page: 1, pageSize: 500 });
   const navigate = useNavigate();
 
   const [selectedNodeId,   setSelectedNodeId]   = useState<string | null>(null);
   const [selectedNodeType, setSelectedNodeType] = useState<ResourceType | null>(null);
+
+  // Edit-mode (drag-and-drop relationship creation)
+  const [editMode,       setEditMode]       = useState(false);
+  const [pendingConn,    setPendingConn]    = useState<PendingConn | null>(null);
+  const [resetLayoutKey, setResetLayoutKey] = useState(0);
+  const createRel = useCreateRelationship();
+  const deleteRel = useDeleteRelationship();
 
   // Simulation state — kept here so the graph reflects the blast radius
   const [simulationSourceId, setSimulationSourceId] = useState<string | undefined>(undefined);
@@ -163,6 +248,41 @@ export function EcosystemPage() {
     setSimulationSourceId(undefined);
   }, []);
 
+  const handleConnect = useCallback(
+    (payload: ConnPayload) => {
+      const srcNode = graphNodes.find((n) => n.id === payload.sourceId);
+      const tgtNode = graphNodes.find((n) => n.id === payload.targetId);
+      setPendingConn({
+        ...payload,
+        sourceLabel: srcNode?.label ?? payload.sourceId,
+        targetLabel: tgtNode?.label ?? payload.targetId,
+      });
+    },
+    [graphNodes],
+  );
+
+  const handleConfirmConnect = useCallback(
+    async (relationType: string) => {
+      if (!pendingConn) return;
+      await createRel.mutateAsync({
+        sourceType:   pendingConn.sourceType,
+        sourceId:     pendingConn.sourceId,
+        targetType:   pendingConn.targetType,
+        targetId:     pendingConn.targetId,
+        relationType,
+      });
+      setPendingConn(null);
+    },
+    [createRel, pendingConn],
+  );
+
+  const handleEdgeDelete = useCallback(
+    async (edgeId: string) => {
+      await deleteRel.mutateAsync(edgeId);
+    },
+    [deleteRel],
+  );
+
   if (isError)
     return (
       <ErrorMessage message={error instanceof Error ? error.message : 'Erro ao carregar ecossistema'} />
@@ -186,8 +306,36 @@ export function EcosystemPage() {
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-slate-800 bg-slate-900/60 px-4 py-2">
         <div className="shrink-0">
           <h1 className="text-sm font-semibold text-slate-100">Ecossistema</h1>
-          <p className="text-xs text-slate-500">Duplo clique no nó para abrir detalhes</p>
+          <p className="text-xs text-slate-500">
+            {editMode
+              ? 'Arraste da bolinha azul de um nó até outro · clique × na aresta para remover'
+              : 'Duplo clique no nó para abrir detalhes'}
+          </p>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setEditMode((prev) => {
+            if (!prev) setSelectedNodeId(null); // fecha painel ao entrar em edit mode
+            return !prev;
+          })}
+          className={`shrink-0 rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
+            editMode
+              ? 'border-blue-700 bg-blue-900/40 text-blue-300 hover:bg-blue-900/60'
+              : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'
+          }`}
+        >
+          {editMode ? 'Sair da edicao' : 'Editar relacoes'}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setResetLayoutKey((k) => k + 1)}
+          className="shrink-0 rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-700"
+          title="Desfaz posicionamento manual e recalcula o layout automatico"
+        >
+          Resetar layout
+        </button>
 
         <div className="mx-2 hidden h-6 w-px bg-slate-700 lg:block" />
 
@@ -247,9 +395,14 @@ export function EcosystemPage() {
             impactedNodeIds={impactedNodeIds}
             impactedByDepth={impactedByDepth}
             simulationSourceId={simulationSourceId}
-            onNodeSelect={handleNodeSelect}
-            onNodeNavigate={handleNodeNavigate}
+            onNodeSelect={editMode ? undefined : handleNodeSelect}
+            onNodeNavigate={editMode ? undefined : handleNodeNavigate}
             isLoading={isLoading}
+            editMode={editMode}
+            onConnect={handleConnect}
+            onEdgeDelete={handleEdgeDelete}
+            storageKey="ecosystem-graph-positions"
+            resetLayoutKey={resetLayoutKey}
           />
         </div>
 
@@ -322,6 +475,15 @@ export function EcosystemPage() {
           </div>
         )}
       </div>
+
+      {pendingConn && (
+        <ConnectionModal
+          pending={pendingConn}
+          isBusy={createRel.isPending}
+          onConfirm={handleConfirmConnect}
+          onCancel={() => setPendingConn(null)}
+        />
+      )}
     </div>
   );
 }

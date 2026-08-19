@@ -498,9 +498,19 @@ export class ResourceRelationshipRepository {
     relationType: string,
     metadata?: Record<string, unknown>,
   ): Promise<GraphEdge> {
+    const orgId = orgContext.getOrThrow();
+
+    if (relationType === 'hosts' && sourceType === 'server' && targetType === 'application') {
+      return this.createHostsRelationship(orgId, sourceId, targetId);
+    }
+
+    if (relationType === 'exposes' && targetType === 'url') {
+      return this.createExposesRelationship(orgId, sourceType, sourceId, targetId);
+    }
+
     const [row] = (await this.db(TABLE_NAME)
       .insert({
-        organization_id: orgContext.getOrThrow(),
+        organization_id: orgId,
         source_type: sourceType,
         source_id: sourceId,
         target_type: targetType,
@@ -518,6 +528,67 @@ export class ResourceRelationshipRepository {
       targetId,
       relationType: relationType as any,
       metadata,
+    };
+  }
+
+  private async createHostsRelationship(orgId: string, serverId: string, appId: string): Promise<GraphEdge> {
+    const environment = 'production';
+
+    // Remove any stale explicit record that duplicates the canonical table
+    await this.db(TABLE_NAME)
+      .where({ organization_id: orgId, source_type: 'server', source_id: serverId, target_type: 'application', target_id: appId, relation_type: 'hosts' })
+      .delete();
+
+    // Restore soft-deleted record if one exists
+    const restored = await this.db('application_deployments')
+      .where({ organization_id: orgId, server_id: serverId, application_id: appId, environment })
+      .whereNotNull('deleted_at')
+      .update({ deleted_at: null });
+
+    if (!restored) {
+      const existing = await this.db('application_deployments')
+        .where({ organization_id: orgId, server_id: serverId, application_id: appId, environment })
+        .whereNull('deleted_at')
+        .first();
+
+      if (!existing) {
+        await this.db('application_deployments').insert({
+          organization_id: orgId,
+          application_id: appId,
+          server_id: serverId,
+          environment,
+        });
+      }
+    }
+
+    return {
+      id: `deploy:${serverId}:${appId}`,
+      sourceType: 'server',
+      sourceId: serverId,
+      targetType: 'application',
+      targetId: appId,
+      relationType: 'hosts' as any,
+    };
+  }
+
+  private async createExposesRelationship(orgId: string, sourceType: ResourceType, sourceId: string, urlId: string): Promise<GraphEdge> {
+    // Remove any stale explicit record
+    await this.db(TABLE_NAME)
+      .where({ organization_id: orgId, source_id: sourceId, target_type: 'url', target_id: urlId, relation_type: 'exposes' })
+      .delete();
+
+    await this.db('urls')
+      .where({ id: urlId, organization_id: orgId })
+      .whereNull('deleted_at')
+      .update({ owner_resource_type: sourceType, owner_resource_id: sourceId });
+
+    return {
+      id: `url-owner:${sourceId}:${urlId}`,
+      sourceType,
+      sourceId,
+      targetType: 'url',
+      targetId: urlId,
+      relationType: 'exposes' as any,
     };
   }
 

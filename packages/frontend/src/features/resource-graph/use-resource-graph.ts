@@ -153,6 +153,9 @@ export function useCreateRelationship() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['resource-graph'] });
       void queryClient.invalidateQueries({ queryKey: ['resource-graph-subgraph'] });
+      void queryClient.invalidateQueries({ queryKey: ['applications'] });
+      void queryClient.invalidateQueries({ queryKey: ['servers'] });
+      void queryClient.invalidateQueries({ queryKey: ['urls'] });
     },
   });
 }
