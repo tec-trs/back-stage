@@ -810,6 +810,14 @@ export function ResourceGraph({
 
     const posMap = layoutGraph(dagreNodes, dagreEdges, compactMode);
 
+    console.log('[ResourceGraph] Layout calculado:', {
+      dagreNodesCount: dagreNodes.length,
+      dagreEdgesCount: dagreEdges.length,
+      positions: Array.from(posMap.entries())
+        .slice(0, 10)
+        .map(([id, pos]) => ({ id: id.substring(0, 8), pos }))
+    });
+
     // ── 6. Handle reset and load saved positions ──────────────────────────
     const isReset = resetLayoutKey !== prevResetKeyRef.current;
     if (isReset) {
