@@ -80,3 +80,25 @@ export function useApplications(page = 1): UseQueryResult<ListApplicationsRespon
       apiRequest<ListApplicationsResponse>('/api/applications', { query: { page, pageSize: 50 } }),
   });
 }
+
+export function useAllApplications(): UseQueryResult<ApplicationSummary[], Error> {
+  return useQuery({
+    queryKey: ['applications-all'],
+    queryFn: async () => {
+      let allItems: ApplicationSummary[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await apiRequest<ListApplicationsResponse>('/api/applications', {
+          query: { page, pageSize: 100 },
+        });
+        allItems = allItems.concat(response.items);
+        hasMore = response.pagination.page * response.pagination.pageSize < response.pagination.total;
+        page++;
+      }
+
+      return allItems;
+    },
+  });
+}

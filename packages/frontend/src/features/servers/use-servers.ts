@@ -86,3 +86,25 @@ export function useServers(page = 1): UseQueryResult<ListServersResponse, Error>
     queryFn: () => apiRequest<ListServersResponse>('/api/servers', { query: { page, pageSize: 50 } }),
   });
 }
+
+export function useAllServers(): UseQueryResult<ServerSummary[], Error> {
+  return useQuery({
+    queryKey: ['servers-all'],
+    queryFn: async () => {
+      let allItems: ServerSummary[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await apiRequest<ListServersResponse>('/api/servers', {
+          query: { page, pageSize: 100 },
+        });
+        allItems = allItems.concat(response.items);
+        hasMore = response.pagination.page * response.pagination.pageSize < response.pagination.total;
+        page++;
+      }
+
+      return allItems;
+    },
+  });
+}

@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useServers } from '../servers/use-servers';
-import { useApplications } from '../applications/use-applications';
-import { useDatabases } from '../databases/use-databases';
-import { useUrls } from '../urls/use-urls';
+import { useAllServers } from '../servers/use-servers';
+import { useAllApplications } from '../applications/use-applications';
+import { useAllDatabases } from '../databases/use-databases';
+import { useAllUrls } from '../urls/use-urls';
 import type { ResourceType } from './AddRelationshipDialog';
 import { Spinner } from '../../shared/components/Spinner';
 
@@ -45,22 +45,22 @@ export function ResourceSelector({
   const [isOpen, setIsOpen] = useState(false);
 
   // Buscar recursos por tipo
-  const servers = useServers();
-  const applications = useApplications();
-  const databases = useDatabases();
-  const urls = useUrls();
+  const servers = useAllServers();
+  const applications = useAllApplications();
+  const databases = useAllDatabases();
+  const urls = useAllUrls();
 
   // Coletar dados conforme o tipo
   const resources = useMemo(() => {
     switch (resourceType) {
       case 'server':
-        return servers.data?.items ?? [];
+        return servers.data ?? [];
       case 'application':
-        return applications.data?.items ?? [];
+        return applications.data ?? [];
       case 'database':
-        return databases.data?.items ?? [];
+        return databases.data ?? [];
       case 'url':
-        return urls.data?.items ?? [];
+        return urls.data ?? [];
       default:
         return [];
     }

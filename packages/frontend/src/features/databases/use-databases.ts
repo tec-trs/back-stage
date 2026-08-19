@@ -103,3 +103,25 @@ export function useDeleteDatabase() {
     return apiRequest<void>(`/api/databases/${id}`, { method: 'DELETE' });
   };
 }
+
+export function useAllDatabases() {
+  return useQuery({
+    queryKey: ['databases-all'],
+    queryFn: async () => {
+      let allItems: Database[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await apiRequest<DatabasesResponse>('/api/databases', {
+          query: { page, pageSize: 100 },
+        });
+        allItems = allItems.concat(response.items);
+        hasMore = response.pagination.page * response.pagination.pageSize < response.pagination.total;
+        page++;
+      }
+
+      return allItems;
+    },
+  });
+}

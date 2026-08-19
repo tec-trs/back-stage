@@ -86,3 +86,25 @@ export function useDeleteUrl() {
     return apiRequest<void>(`/api/urls/${id}`, { method: 'DELETE' });
   };
 }
+
+export function useAllUrls() {
+  return useQuery({
+    queryKey: ['urls-all'],
+    queryFn: async () => {
+      let allItems: Url[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await apiRequest<UrlsResponse>('/api/urls', {
+          query: { page, pageSize: 100 },
+        });
+        allItems = allItems.concat(response.items);
+        hasMore = response.pagination.page * response.pagination.pageSize < response.pagination.total;
+        page++;
+      }
+
+      return allItems;
+    },
+  });
+}
