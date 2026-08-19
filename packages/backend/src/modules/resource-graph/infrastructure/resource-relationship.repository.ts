@@ -479,58 +479,17 @@ export class ResourceRelationshipRepository {
     targetId?: string;
     relationType?: string;
   }): Promise<GraphEdge[]> {
-    const orgId = orgContext.getOrThrow();
-    const { rows } = await this.db.raw<{ rows: (RelationshipRow & { source_label?: string; target_label?: string })[] }>(`
-      SELECT
-        rr.id,
-        rr.source_type,
-        rr.source_id,
-        rr.target_type,
-        rr.target_id,
-        rr.relation_type,
-        rr.metadata,
-        rr.reason,
-        rr.created_by_user_id,
-        rr.created_at,
-        CASE
-          WHEN rr.source_type = 'server' THEN s_src.hostname
-          WHEN rr.source_type = 'application' THEN a_src.display_name
-          WHEN rr.source_type = 'database' THEN d_src.display_name
-          WHEN rr.source_type = 'url' THEN u_src.label
-          ELSE NULL
-        END as source_label,
-        CASE
-          WHEN rr.target_type = 'server' THEN s_tgt.hostname
-          WHEN rr.target_type = 'application' THEN a_tgt.display_name
-          WHEN rr.target_type = 'database' THEN d_tgt.display_name
-          WHEN rr.target_type = 'url' THEN u_tgt.label
-          ELSE NULL
-        END as target_label
-      FROM resource_relationships rr
-      LEFT JOIN servers s_src ON rr.source_type = 'server' AND rr.source_id = s_src.id
-      LEFT JOIN applications a_src ON rr.source_type = 'application' AND rr.source_id = a_src.id
-      LEFT JOIN databases d_src ON rr.source_type = 'database' AND rr.source_id = d_src.id
-      LEFT JOIN urls u_src ON rr.source_type = 'url' AND rr.source_id = u_src.id
-      LEFT JOIN servers s_tgt ON rr.target_type = 'server' AND rr.target_id = s_tgt.id
-      LEFT JOIN applications a_tgt ON rr.target_type = 'application' AND rr.target_id = a_tgt.id
-      LEFT JOIN databases d_tgt ON rr.target_type = 'database' AND rr.target_id = d_tgt.id
-      LEFT JOIN urls u_tgt ON rr.target_type = 'url' AND rr.target_id = u_tgt.id
-      WHERE rr.organization_id = :orgId
-        AND rr.deleted_at IS NULL
-        ${filters.sourceType ? 'AND rr.source_type = :sourceType' : ''}
-        ${filters.sourceId ? 'AND rr.source_id = :sourceId' : ''}
-        ${filters.targetType ? 'AND rr.target_type = :targetType' : ''}
-        ${filters.targetId ? 'AND rr.target_id = :targetId' : ''}
-        ${filters.relationType ? 'AND rr.relation_type = :relationType' : ''}
-    `, {
-      orgId,
-      ...(filters.sourceType && { sourceType: filters.sourceType }),
-      ...(filters.sourceId && { sourceId: filters.sourceId }),
-      ...(filters.targetType && { targetType: filters.targetType }),
-      ...(filters.targetId && { targetId: filters.targetId }),
-      ...(filters.relationType && { relationType: filters.relationType }),
-    });
+    let query = this.db(TABLE_NAME)
+      .select('*')
+      .where('organization_id', orgContext.getOrThrow())
+      .whereNull('deleted_at');
+    if (filters.sourceType) query = query.where('source_type', filters.sourceType);
+    if (filters.sourceId)   query = query.where('source_id',   filters.sourceId);
+    if (filters.targetType) query = query.where('target_type', filters.targetType);
+    if (filters.targetId)   query = query.where('target_id',   filters.targetId);
+    if (filters.relationType) query = query.where('relation_type', filters.relationType);
 
+    const rows = (await query) as RelationshipRow[];
     return rows.map((r) => ({
       id: r.id,
       sourceType: r.source_type,
@@ -541,11 +500,8 @@ export class ResourceRelationshipRepository {
       metadata: r.metadata,
       reason: r.reason ?? null,
       createdByUserId: r.created_by_user_id ?? null,
-      createdByName: r.source_label ?? null, // Reusando para compatibilidade
+      createdByName: r.created_by_name ?? null,
       createdAt: r.created_at?.toISOString?.() ?? (r.created_at as any),
-      // Adiciona os labels resolvidos
-      ...(r.source_label && { sourceLabel: r.source_label }),
-      ...(r.target_label && { targetLabel: r.target_label }),
     }));
   }
 

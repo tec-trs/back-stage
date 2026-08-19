@@ -169,8 +169,8 @@ export function RelationshipsPage() {
               {filtered.map((rel) => {
                 const src = nodeMap.get(`${rel.sourceType}:${rel.sourceId}`);
                 const tgt = nodeMap.get(`${rel.targetType}:${rel.targetId}`);
-                const srcDisplay = getDisplayName(rel.sourceLabel, src?.label, rel.sourceId);
-                const tgtDisplay = getDisplayName(rel.targetLabel, tgt?.label, rel.targetId);
+                const srcDisplay = getDisplayName(undefined, src?.label, rel.sourceId);
+                const tgtDisplay = getDisplayName(undefined, tgt?.label, rel.targetId);
                 const implicit = isImplicit(rel.id);
                 const relLabel = RELATION_TYPE_LABELS[rel.relationType]?.label ?? rel.relationType;
 
