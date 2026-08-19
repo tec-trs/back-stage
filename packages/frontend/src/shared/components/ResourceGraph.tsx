@@ -165,6 +165,11 @@ function DeletableEdge({
   const d = (data ?? {}) as DeletableEdgeData;
   const canDelete = d.editMode && !d.isImplicit;
 
+  // Debug: log if trying to delete an edge that won't delete
+  if (d.editMode && d.isImplicit && id.includes('pasoe') || id.includes('tomcat')) {
+    console.warn(`⚠️ Aresta não-deletável: ${id}`, { isImplicit: d.isImplicit, edgeLabel: d.edgeLabel });
+  }
+
   return (
     <>
       <BaseEdge
@@ -194,7 +199,10 @@ function DeletableEdge({
                 ×
               </button>
             ) : (
-              <span className="rounded border border-slate-800 bg-slate-900/80 px-1 py-0.5 text-[9px] text-slate-600">
+              <span
+                className="rounded border border-slate-800 bg-slate-900/80 px-1 py-0.5 text-[9px] text-slate-600"
+                title={d.isImplicit ? `Relação implícita (ID: ${id}) — não pode ser deletada. Deletar a origem/destino.` : d.edgeLabel}
+              >
                 {d.edgeLabel}
               </span>
             )
