@@ -4,6 +4,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { OrgPickerDialog } from '../features/auth/OrgPickerDialog';
 import { useAuthStore } from '../features/auth/auth.store';
 import { Button } from '../shared/components/Button';
+import { APP_VERSION } from '../shared/constants/app';
 import { GlobalSearch } from '../shared/components/GlobalSearch';
 import {
   AppWindowIcon,
@@ -202,6 +203,14 @@ export function AppLayout() {
               );
             })}
           </nav>
+
+          {/* Version indicator */}
+          <div className="mt-auto border-t border-slate-800 pt-3">
+            <p className="text-xs text-slate-500">
+              <span className="text-slate-600">Versão:</span>{' '}
+              <span className="font-mono text-slate-400">{APP_VERSION}</span>
+            </p>
+          </div>
         </aside>
       )}
 
