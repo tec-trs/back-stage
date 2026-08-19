@@ -25,8 +25,11 @@ export function useCreateUrl(): UseMutationResult<Url, Error, CreateUrlInput> {
   return useMutation({
     mutationFn: (input: CreateUrlInput) =>
       apiRequest<Url>('/api/urls', { method: 'POST', body: input }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['urls'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return key === 'urls' || key === 'resource-graph' || key === 'resource-graph-subgraph';
+      }});
     },
   });
 }

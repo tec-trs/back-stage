@@ -11,9 +11,11 @@ export function useBulkDeleteDatabases(): UseMutationResult<{ deleted: number },
         method: 'POST',
         body: { ids },
       }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['databases'] });
-      void queryClient.invalidateQueries({ queryKey: ['resource-graph'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return key === 'databases' || key === 'resource-graph' || key === 'resource-graph-subgraph';
+      }});
     },
   });
 }

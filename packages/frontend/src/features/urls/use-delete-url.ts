@@ -7,9 +7,11 @@ export function useDeleteUrl(): UseMutationResult<void, Error, string> {
 
   return useMutation({
     mutationFn: (id: string) => apiRequest<void>(`/api/urls/${id}`, { method: 'DELETE' }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['urls'] });
-      void queryClient.invalidateQueries({ queryKey: ['resource-graph'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return key === 'urls' || key === 'resource-graph' || key === 'resource-graph-subgraph';
+      }});
     },
   });
 }

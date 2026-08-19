@@ -35,8 +35,11 @@ export function useCreateDatabase(): UseMutationResult<Database, Error, CreateDa
   return useMutation({
     mutationFn: (input: CreateDatabaseInput) =>
       apiRequest<Database>('/api/databases', { method: 'POST', body: input }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['databases'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return key === 'databases' || key === 'resource-graph' || key === 'resource-graph-subgraph';
+      }});
     },
   });
 }

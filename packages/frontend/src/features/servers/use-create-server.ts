@@ -56,14 +56,20 @@ export interface CreateServerInput {
   disks?: ServerDiskInput[];
 }
 
-export function useCreateServer(): UseMutationResult<ServerSummary, Error, CreateServerInput> {
+export function useCreateServer(duplicateFromId?: string): UseMutationResult<ServerSummary, Error, CreateServerInput> {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreateServerInput) =>
-      apiRequest<ServerSummary>('/api/servers', { method: 'POST', body: input }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['servers'] });
+    mutationFn: (input: CreateServerInput) => {
+      const endpoint = duplicateFromId ? '/api/servers/duplicate' : '/api/servers';
+      const body = duplicateFromId ? { ...input, duplicateFromId } : input;
+      return apiRequest<ServerSummary>(endpoint, { method: 'POST', body });
+    },
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return key === 'servers' || key === 'resource-graph' || key === 'resource-graph-subgraph';
+      }});
     },
   });
 }

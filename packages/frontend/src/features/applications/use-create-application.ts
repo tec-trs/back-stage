@@ -57,8 +57,11 @@ export function useCreateApplication(): UseMutationResult<
   return useMutation({
     mutationFn: (input: CreateApplicationInput) =>
       apiRequest<ApplicationSummary>('/api/applications', { method: 'POST', body: input }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['applications'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return key === 'applications' || key === 'resource-graph' || key === 'resource-graph-subgraph';
+      }});
     },
   });
 }
