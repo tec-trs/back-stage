@@ -40,6 +40,7 @@ const INNER_PAD       = 12; // padding inside server container
 const SERVER_SPACING  = 16; // gap between server containers within a group
 const GROUP_PAD       = 24; // padding inside group container
 const GROUP_LABEL_H   = 28; // height of the group label area
+const APP_GAP         = 8;  // gap between apps in grid
 
 const TYPE_STYLE = {
   server:         { bg: '#0d1f33', border: '#3b82f6', text: '#93c5fd' },
@@ -682,13 +683,22 @@ export function ResourceGraph({
     }
     const serversInGroups = new Set(serverToGroup.keys());
 
-    // ── 3. Helper: compute server-container size based on app count ───────
+    // ── 3. Helper: compute server-container size and app layout ───────────
+    function getAppLayout(numApps: number) {
+      if (numApps === 0) return { cols: 0, rows: 0, w: NODE_W, h: NODE_H };
+      // Up to 4 apps: 1 column (vertical)
+      // More than 4: 2 columns (grid)
+      const cols = numApps <= 4 ? 1 : 2;
+      const rows = Math.ceil(numApps / cols);
+      const w = cols * NODE_W + (cols + 1) * INNER_PAD;
+      const h = SERVER_HEADER_H + rows * NODE_H + (rows + 1) * APP_GAP + INNER_PAD;
+      return { cols, rows, w, h };
+    }
+
     function containerSize(numApps: number) {
+      const layout = getAppLayout(numApps);
       if (numApps === 0) return { w: NODE_W, h: NODE_H };
-      return {
-        w: Math.max(220, numApps * NODE_W + (numApps + 1) * INNER_PAD),
-        h: SERVER_HEADER_H + NODE_H + INNER_PAD * 2,
-      };
+      return { w: layout.w, h: layout.h };
     }
 
     // ── 4. Compute group bounding sizes (arrange server containers in a row)
@@ -820,12 +830,15 @@ export function ResourceGraph({
           data:     nodeData(n) as NodeData,
         } as RFNode<NodeData>);
 
-        // 7b. App nodes inside this server-container
+        // 7b. App nodes inside this server-container (grid layout: 1 col or 2 cols)
         if (isContainer) {
           const appIds = serverToApps.get(serverId) ?? [];
+          const layout = getAppLayout(appIds.length);
           appIds.forEach((appId, i) => {
             const appNode = nodeMap.get(appId);
             if (!appNode) return;
+            const col = i % layout.cols;
+            const row = Math.floor(i / layout.cols);
             newRfNodes.push({
               id:        appId,
               type:      'resource',
@@ -833,8 +846,8 @@ export function ResourceGraph({
               extent:    'parent',
               draggable: false,
               position:  {
-                x: INNER_PAD + i * (NODE_W + INNER_PAD),
-                y: SERVER_HEADER_H + INNER_PAD,
+                x: INNER_PAD + col * (NODE_W + INNER_PAD),
+                y: SERVER_HEADER_H + INNER_PAD + row * (NODE_H + APP_GAP),
               },
               data: nodeData(appNode) as NodeData,
             } as RFNode<NodeData>);
@@ -862,9 +875,12 @@ export function ResourceGraph({
       } as RFNode<NodeData>);
 
       const appIds = serverToApps.get(n.id) ?? [];
+      const layout = getAppLayout(appIds.length);
       appIds.forEach((appId, i) => {
         const appNode = nodeMap.get(appId);
         if (!appNode) return;
+        const col = i % layout.cols;
+        const row = Math.floor(i / layout.cols);
         newRfNodes.push({
           id:        appId,
           type:      'resource',
@@ -872,8 +888,8 @@ export function ResourceGraph({
           extent:    'parent',
           draggable: false,
           position:  {
-            x: INNER_PAD + i * (NODE_W + INNER_PAD),
-            y: SERVER_HEADER_H + INNER_PAD,
+            x: INNER_PAD + col * (NODE_W + INNER_PAD),
+            y: SERVER_HEADER_H + INNER_PAD + row * (NODE_H + APP_GAP),
           },
           data: nodeData(appNode) as NodeData,
         } as RFNode<NodeData>);
