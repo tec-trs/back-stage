@@ -1112,7 +1112,7 @@ export function ResourceGraph({
       nodeTypes={NODE_TYPES}
       edgeTypes={EDGE_TYPES}
       fitView
-      fitViewOptions={{ padding: 0.2, maxZoom: 1.2 }}
+      fitViewOptions={{ padding: 0.1, maxZoom: 2, minZoom: 0.1 }}
       minZoom={0.15}
       maxZoom={2.5}
       deleteKeyCode={null}
