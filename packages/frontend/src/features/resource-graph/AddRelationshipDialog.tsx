@@ -3,6 +3,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
+import { ResourceSelector } from './ResourceSelector';
 
 import type { CreateRelationshipInput } from './use-resource-graph';
 import { useCreateRelationship } from './use-resource-graph';
@@ -128,14 +129,13 @@ export function AddRelationshipDialog({
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">ID (UUID) *</span>
-              <input
-                required
+              <span className="text-slate-400">Recurso *</span>
+              <ResourceSelector
+                resourceType={form.sourceType}
                 value={form.sourceId}
+                onChange={(id) => setField('sourceId', id)}
+                placeholder="Buscar recurso..."
                 disabled={Boolean(defaultSourceId)}
-                onChange={(e) => setField('sourceId', e.target.value)}
-                placeholder="xxxxxxxx-xxxx-..."
-                className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-60`}
               />
             </label>
           </div>
@@ -197,13 +197,12 @@ export function AddRelationshipDialog({
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">ID (UUID) *</span>
-              <input
-                required
+              <span className="text-slate-400">Recurso *</span>
+              <ResourceSelector
+                resourceType={form.targetType}
                 value={form.targetId}
-                onChange={(e) => setField('targetId', e.target.value)}
-                placeholder="xxxxxxxx-xxxx-..."
-                className={inputClass}
+                onChange={(id) => setField('targetId', id)}
+                placeholder="Buscar recurso..."
               />
             </label>
           </div>
