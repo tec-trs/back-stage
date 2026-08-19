@@ -37,6 +37,7 @@ export const createRelationshipBodySchema = z.object({
   targetId: z.string().uuid(),
   relationType: relationTypeEnum,
   metadata: z.record(z.unknown()).optional(),
+  reason: z.string().max(500).optional(),
 });
 
 export const deleteRelationshipParamsSchema = z.object({

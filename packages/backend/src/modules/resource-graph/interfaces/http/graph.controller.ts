@@ -75,7 +75,11 @@ export class GraphController {
   public simulateImpact = async (request: Request, response: Response): Promise<void> => {
     const body = request.body as SimulateImpactBody;
 
-    const result = await this.graphService.simulateImpact(body.resourceType, body.resourceId);
+    const result = await this.graphService.simulateImpact(
+      body.resourceType,
+      body.resourceId,
+      body.maxDepth,
+    );
 
     response.status(200).json({
       impactedResources: result.impactedResources,
@@ -101,9 +105,15 @@ export class GraphController {
         ipAddress: request.ip,
         userAgent: request.header('user-agent'),
       },
+      body.reason,
     );
 
     response.status(201).json(result);
+  };
+
+  public getCriticalResources = async (_request: Request, response: Response): Promise<void> => {
+    const result = await this.graphService.getCriticalResources();
+    response.status(200).json(result);
   };
 
   public deleteRelationship = async (request: Request, response: Response): Promise<void> => {

@@ -63,6 +63,21 @@ export function createGraphRouter(controller: GraphController): Router {
 
   /**
    * @openapi
+   * /resource-graph/critical-resources:
+   *   get:
+   *     summary: Retorna recursos ranqueados por impacto (o que derruba mais coisa se cair)
+   *     tags: [Resource Graph]
+   *     security: [{ bearerAuth: [] }]
+   *     responses:
+   *       200: { description: Lista de recursos críticos ordenada por impacto total }
+   */
+  router.get(
+    '/critical-resources',
+    asyncHandler(controller.getCriticalResources),
+  );
+
+  /**
+   * @openapi
    * /resource-graph/simulate-impact:
    *   post:
    *     summary: Simula o impacto de desligar um recurso (blast radius)

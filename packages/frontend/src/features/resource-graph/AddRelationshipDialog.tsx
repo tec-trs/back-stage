@@ -34,6 +34,7 @@ interface FormState {
   targetType: ResourceType;
   targetId: string;
   relationType: string;
+  reason: string;
 }
 
 function emptyForm(
@@ -46,6 +47,7 @@ function emptyForm(
     targetType: 'server',
     targetId: '',
     relationType: 'depends_on',
+    reason: '',
   };
 }
 
@@ -86,6 +88,7 @@ export function AddRelationshipDialog({
       targetType: form.targetType,
       targetId: form.targetId.trim(),
       relationType: form.relationType,
+      reason: form.reason.trim() || undefined,
     };
 
     createRelationship.mutate(payload, { onSuccess: onClose });
@@ -157,6 +160,20 @@ export function AddRelationshipDialog({
           {selectedRelation && (
             <p className="text-xs text-slate-500">{selectedRelation.description}</p>
           )}
+        </div>
+
+        {/* Motivo */}
+        <div className="flex flex-col gap-1">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-slate-400">Motivo (opcional)</span>
+            <textarea
+              value={form.reason}
+              onChange={(e) => setField('reason', e.target.value)}
+              placeholder="Ex: X precisa acessar Y para autenticação"
+              className={`${inputClass} resize-none`}
+              rows={2}
+            />
+          </label>
         </div>
 
         {/* Destino */}

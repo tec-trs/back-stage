@@ -166,11 +166,6 @@ function DeletableEdge({
   const d = (data ?? {}) as DeletableEdgeData;
   const canDelete = d.editMode && !d.isImplicit;
 
-  // Debug: log if trying to delete an edge that won't delete
-  if (d.editMode && d.isImplicit && id.includes('pasoe') || id.includes('tomcat')) {
-    console.warn(`⚠️ Aresta não-deletável: ${id}`, { isImplicit: d.isImplicit, edgeLabel: d.edgeLabel });
-  }
-
   return (
     <>
       <BaseEdge
@@ -311,7 +306,7 @@ function ResourceNode({ data, selected, id }: NodeProps) {
   if (isOffline)       palette = IMPACT_STYLE.source;
   else if (isDirect)   palette = IMPACT_STYLE.direct;
   else if (isIndirect) palette = IMPACT_STYLE.indirect;
-  else                 palette = TYPE_STYLE[d.resourceType] ?? TYPE_STYLE.server;
+  else palette = TYPE_STYLE[d.resourceType] ?? TYPE_STYLE.server;
 
   const isHighlighted = d.isHighlighted ?? false;
   const borderColor   = selected ? '#f1f5f9' : (isHighlighted ? '#60a5fa' : palette.border);

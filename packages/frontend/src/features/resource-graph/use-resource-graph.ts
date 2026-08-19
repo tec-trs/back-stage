@@ -21,6 +21,10 @@ export interface GraphEdge {
   targetId: string;
   relationType: string;
   metadata?: Record<string, unknown>;
+  reason?: string | null;
+  createdByUserId?: string | null;
+  createdByName?: string | null;
+  createdAt?: string;
 }
 
 export interface ImpactNode {
@@ -119,6 +123,7 @@ export interface CreateRelationshipInput {
   targetId: string;
   relationType: string;
   metadata?: Record<string, unknown>;
+  reason?: string;
 }
 
 export function useResourceRelationships(
@@ -139,6 +144,31 @@ export function useResourceRelationships(
     },
     enabled: !!sourceType && !!sourceId,
     staleTime: 0,
+  });
+}
+
+export function useAllRelationships(filters?: {
+  relationType?: string;
+  resourceType?: string;
+}) {
+  return useQuery({
+    queryKey: ['resource-graph-all-relationships', filters?.relationType, filters?.resourceType],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters?.relationType) params.append('relationType', filters.relationType);
+      return apiRequest<{ items: GraphEdge[] }>(`/api/resource-graph/relationships?${params}`).then(
+        (r) => r.items,
+      );
+    },
+    staleTime: 60000,
+  });
+}
+
+export function useCriticalResources() {
+  return useQuery({
+    queryKey: ['resource-graph-critical-resources'],
+    queryFn: () => apiRequest<any[]>('/api/resource-graph/critical-resources'),
+    staleTime: 120000,
   });
 }
 

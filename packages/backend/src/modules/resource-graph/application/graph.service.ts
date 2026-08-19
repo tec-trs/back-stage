@@ -2,6 +2,7 @@ import { NotFoundError, ValidationError } from '@back-stage/shared';
 
 import { auditLogger } from '../../../shared/audit/audit-logger.js';
 import type {
+  CriticalResource,
   GraphEdge,
   GraphFilters,
   GraphNode,
@@ -66,8 +67,12 @@ export class GraphService {
     return this.repository.listRelationships(filters);
   }
 
-  public async simulateImpact(resourceType: ResourceType, resourceId: string): Promise<ImpactResult> {
-    return this.repository.getTransitiveImpact(resourceType, resourceId);
+  public async simulateImpact(
+    resourceType: ResourceType,
+    resourceId: string,
+    maxDepth?: number,
+  ): Promise<ImpactResult> {
+    return this.repository.getTransitiveImpact(resourceType, resourceId, maxDepth);
   }
 
   public async createRelationship(
@@ -78,6 +83,7 @@ export class GraphService {
     relationType: RelationType,
     metadata: Record<string, unknown> | undefined,
     audit: AuditContext,
+    reason?: string,
   ): Promise<GraphEdge> {
     if (sourceType === targetType && sourceId === targetId) {
       throw new ValidationError('Um recurso nao pode ter relacao consigo mesmo');
@@ -90,6 +96,8 @@ export class GraphService {
       targetId,
       relationType,
       metadata,
+      reason,
+      audit.actorUserId,
     );
 
     // Implicit edges have non-UUID IDs (e.g. "deploy:...") — store null so the
@@ -128,5 +136,9 @@ export class GraphService {
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
     });
+  }
+
+  public async getCriticalResources(): Promise<CriticalResource[]> {
+    return this.repository.getCriticalResources();
   }
 }

@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 
 import { orgContext } from '../../../shared/context/org-context.js';
 import type {
+  CriticalResource,
   GraphEdge,
   GraphFilters,
   GraphNode,
@@ -35,6 +36,10 @@ interface RelationshipRow {
   target_id: string;
   relation_type: string;
   metadata?: Record<string, unknown>;
+  reason?: string | null;
+  created_by_user_id?: string | null;
+  created_by_name?: string | null;
+  created_at?: string;
 }
 
 interface TraversalRow {
@@ -207,6 +212,10 @@ export class ResourceRelationshipRepository {
       targetId: e.target_id,
       relationType: e.relation_type as any,
       metadata: e.metadata,
+      reason: e.reason ?? null,
+      createdByUserId: e.created_by_user_id ?? null,
+      createdByName: e.created_by_name ?? null,
+      createdAt: e.created_at?.toISOString?.() ?? (e.created_at as any),
     }));
 
     const mappedDeployments: GraphEdge[] = deployments.map((d) => ({
@@ -471,14 +480,27 @@ export class ResourceRelationshipRepository {
     relationType?: string;
   }): Promise<GraphEdge[]> {
     let query = this.db(TABLE_NAME)
-      .select('*')
-      .where('organization_id', orgContext.getOrThrow())
-      .whereNull('deleted_at');
-    if (filters.sourceType) query = query.where('source_type', filters.sourceType);
-    if (filters.sourceId)   query = query.where('source_id',   filters.sourceId);
-    if (filters.targetType) query = query.where('target_type', filters.targetType);
-    if (filters.targetId)   query = query.where('target_id',   filters.targetId);
-    if (filters.relationType) query = query.where('relation_type', filters.relationType);
+      .select(
+        `${TABLE_NAME}.id`,
+        `${TABLE_NAME}.source_type`,
+        `${TABLE_NAME}.source_id`,
+        `${TABLE_NAME}.target_type`,
+        `${TABLE_NAME}.target_id`,
+        `${TABLE_NAME}.relation_type`,
+        `${TABLE_NAME}.metadata`,
+        `${TABLE_NAME}.reason`,
+        `${TABLE_NAME}.created_by_user_id`,
+        `${TABLE_NAME}.created_at`,
+        this.db.raw('users.name as created_by_name'),
+      )
+      .leftJoin('users', 'users.id', `${TABLE_NAME}.created_by_user_id`)
+      .where(`${TABLE_NAME}.organization_id`, orgContext.getOrThrow())
+      .whereNull(`${TABLE_NAME}.deleted_at`);
+    if (filters.sourceType) query = query.where(`${TABLE_NAME}.source_type`, filters.sourceType);
+    if (filters.sourceId)   query = query.where(`${TABLE_NAME}.source_id`,   filters.sourceId);
+    if (filters.targetType) query = query.where(`${TABLE_NAME}.target_type`, filters.targetType);
+    if (filters.targetId)   query = query.where(`${TABLE_NAME}.target_id`,   filters.targetId);
+    if (filters.relationType) query = query.where(`${TABLE_NAME}.relation_type`, filters.relationType);
 
     const rows = (await query) as RelationshipRow[];
     return rows.map((r) => ({
@@ -489,6 +511,10 @@ export class ResourceRelationshipRepository {
       targetId:   r.target_id,
       relationType: r.relation_type as any,
       metadata: r.metadata,
+      reason: r.reason ?? null,
+      createdByUserId: r.created_by_user_id ?? null,
+      createdByName: r.created_by_name ?? null,
+      createdAt: r.created_at?.toISOString?.() ?? (r.created_at as any),
     }));
   }
 
@@ -499,6 +525,8 @@ export class ResourceRelationshipRepository {
     targetId: string,
     relationType: string,
     metadata?: Record<string, unknown>,
+    reason?: string,
+    createdByUserId?: string,
   ): Promise<GraphEdge> {
     const orgId = orgContext.getOrThrow();
 
@@ -519,8 +547,10 @@ export class ResourceRelationshipRepository {
         target_id: targetId,
         relation_type: relationType,
         metadata: metadata ?? {},
+        reason: reason ?? null,
+        created_by_user_id: createdByUserId ?? null,
       })
-      .returning('id')) as { id: string }[];
+      .returning('id', 'created_at')) as { id: string; created_at: string }[];
 
     return {
       id: row.id,
@@ -530,6 +560,9 @@ export class ResourceRelationshipRepository {
       targetId,
       relationType: relationType as any,
       metadata,
+      reason: reason ?? null,
+      createdByUserId: createdByUserId ?? null,
+      createdAt: row.created_at,
     };
   }
 
@@ -619,5 +652,82 @@ export class ResourceRelationshipRepository {
         metadata: {},
       });
     }
+  }
+
+  public async getCriticalResources(): Promise<CriticalResource[]> {
+    const orgId = orgContext.getOrThrow();
+    const { nodes, edges } = await this.getFullGraph({}, { page: 1, pageSize: 500 });
+
+    if (nodes.length === 0) return [];
+
+    // Mapas para rápida lookup de nó por ID
+    const nodeMap = new Map(nodes.map((n) => [`${n.resourceType}:${n.id}`, n]));
+
+    // BFS em memória: para cada nó, calcule impacto total (reutilizando a semântica de direção)
+    const DEPENDENCY_TYPES = new Set(['depends_on', 'connects_to', 'consumes']);
+    const results: CriticalResource[] = [];
+
+    for (const node of nodes) {
+      const impacted = new Set<string>();
+      const directDependents = new Set<string>();
+      const queue: { nodeId: string; depth: number }[] = [`${node.resourceType}:${node.id}`]
+        .map((id) => ({ nodeId: id, depth: 0 }));
+
+      const visited = new Set<string>([`${node.resourceType}:${node.id}`]);
+
+      while (queue.length > 0) {
+        const { nodeId, depth } = queue.shift()!;
+        if (depth > 0) {
+          impacted.add(nodeId);
+          if (depth === 1) directDependents.add(nodeId);
+        }
+
+        // Encontre todas as arestas que começam desta posição (semanticamente falando)
+        for (const edge of edges) {
+          let nextId: string | null = null;
+
+          if (DEPENDENCY_TYPES.has(edge.relationType)) {
+            // depends_on: se este nó é o SOURCE, então o TARGET depende dele
+            if (
+              edge.sourceType === node.resourceType &&
+              edge.sourceId === node.id
+            ) {
+              nextId = `${edge.targetType}:${edge.targetId}`;
+            }
+          } else if (edge.relationType === 'hosts' || edge.relationType === 'exposes') {
+            // hosts/exposes: se este nó é o SOURCE, então o TARGET é afetado
+            if (
+              edge.sourceType === node.resourceType &&
+              edge.sourceId === node.id
+            ) {
+              nextId = `${edge.targetType}:${edge.targetId}`;
+            }
+          }
+
+          if (nextId && !visited.has(nextId) && depth < MAX_DEPTH_DEFAULT) {
+            visited.add(nextId);
+            queue.push({ nodeId: nextId, depth: depth + 1 });
+          }
+        }
+      }
+
+      if (impacted.size > 0) {
+        const n = nodeMap.get(`${node.resourceType}:${node.id}`);
+        if (n) {
+          results.push({
+            resourceType: node.resourceType,
+            resourceId: node.id,
+            label: node.label,
+            environment: node.environment,
+            criticality: node.criticality,
+            directDependents: directDependents.size,
+            totalImpacted: impacted.size,
+          });
+        }
+      }
+    }
+
+    // Ordene por totalImpacted desc
+    return results.sort((a, b) => b.totalImpacted - a.totalImpacted);
   }
 }

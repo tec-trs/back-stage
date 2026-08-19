@@ -30,6 +30,10 @@ export interface GraphEdge {
   targetId: string;
   relationType: RelationType;
   metadata?: Record<string, unknown>;
+  reason?: string | null;
+  createdByUserId?: string | null;
+  createdByName?: string | null;
+  createdAt?: string;
 }
 
 export interface ImpactNode {
@@ -47,6 +51,16 @@ export interface ImpactResult {
   totalImpacted: number;
   byType: Record<ResourceType, number>;
   byDepth: Record<number, ImpactNode[]>;
+}
+
+export interface CriticalResource {
+  resourceType: ResourceType;
+  resourceId: string;
+  label: string;
+  environment?: string;
+  criticality?: string;
+  directDependents: number;
+  totalImpacted: number;
 }
 
 export interface GraphFilters {

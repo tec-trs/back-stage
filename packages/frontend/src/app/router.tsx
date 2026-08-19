@@ -75,6 +75,12 @@ const InventoryPage = lazy(() =>
 const ImpactPage = lazy(() =>
   import('../pages/ImpactPage').then((m) => ({ default: m.ImpactPage })),
 );
+const RelationshipsPage = lazy(() =>
+  import('../pages/RelationshipsPage').then((m) => ({ default: m.RelationshipsPage })),
+);
+const RiskAnalysisPage = lazy(() =>
+  import('../pages/RiskAnalysisPage').then((m) => ({ default: m.RiskAnalysisPage })),
+);
 const OrganizationsPage = lazy(() =>
   import('../pages/OrganizationsPage').then((m) => ({ default: m.OrganizationsPage })),
 );
@@ -117,6 +123,8 @@ export const router = createBrowserRouter([
           { path: '/application-types', element: withSuspense(<ApplicationTypesPage />) },
           { path: '/inventory', element: withSuspense(<InventoryPage />) },
           { path: '/impact/:resourceType/:resourceId', element: withSuspense(<ImpactPage />) },
+          { path: '/relationships', element: withSuspense(<RelationshipsPage />) },
+          { path: '/risk-analysis', element: withSuspense(<RiskAnalysisPage />) },
           { path: '/organizations', element: withSuspense(<OrganizationsPage />) },
           { path: '/settings', element: withSuspense(<SettingsPage />) },
         ],

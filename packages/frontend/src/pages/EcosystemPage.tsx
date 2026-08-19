@@ -70,10 +70,11 @@ function ConnectionModal({
 }: {
   pending: PendingConn;
   isBusy: boolean;
-  onConfirm: (relationType: RelationValue) => void;
+  onConfirm: (relationType: RelationValue, reason?: string) => void;
   onCancel: () => void;
 }) {
   const [relationType, setRelationType] = useState<RelationValue>('depends_on');
+  const [reason, setReason] = useState('');
 
   return (
     <Modal title="Criar relacao" isOpen onClose={onCancel}>
@@ -107,11 +108,22 @@ function ConnectionModal({
           ))}
         </fieldset>
 
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-medium text-slate-400">Motivo (opcional)</label>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Ex: X precisa acessar Y para autenticação"
+            className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:border-slate-500 focus:outline-none resize-none"
+            rows={2}
+          />
+        </div>
+
         <div className="flex justify-end gap-3 border-t border-slate-800 pt-3">
           <Button variant="secondary" size="sm" onClick={onCancel} disabled={isBusy}>
             Cancelar
           </Button>
-          <Button size="sm" onClick={() => onConfirm(relationType)} disabled={isBusy}>
+          <Button size="sm" onClick={() => onConfirm(relationType, reason || undefined)} disabled={isBusy}>
             {isBusy ? 'Criando...' : 'Criar relacao'}
           </Button>
         </div>
@@ -346,7 +358,7 @@ export function EcosystemPage() {
   );
 
   const handleConfirmConnect = useCallback(
-    async (relationType: string) => {
+    async (relationType: string, reason?: string) => {
       if (!pendingConn) return;
       await createRel.mutateAsync({
         sourceType:   pendingConn.sourceType,
@@ -354,6 +366,7 @@ export function EcosystemPage() {
         targetType:   pendingConn.targetType,
         targetId:     pendingConn.targetId,
         relationType,
+        reason,
       });
       setPendingConn(null);
     },
@@ -388,13 +401,27 @@ export function EcosystemPage() {
     <div className="-mx-6 -mt-6 flex flex-col" style={{ height: 'calc(100vh - 61px)' }}>
       {/* ── Cabeçalho compacto com legenda horizontal ──────────────── */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-slate-800 bg-slate-900/60 px-4 py-2">
-        <div className="shrink-0">
+        <div className="shrink-0 flex-1">
           <h1 className="text-sm font-semibold text-slate-100">Ecossistema</h1>
           <p className="text-xs text-slate-500">
             {editMode
               ? 'Arraste da bolinha azul de um nó até outro · clique × na aresta para remover'
               : 'Duplo clique no nó para abrir detalhes'}
           </p>
+        </div>
+        <div className="flex gap-2">
+          <a
+            href="/relationships"
+            className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 hover:bg-slate-700 transition-colors"
+          >
+            📋 Ver todas as relações
+          </a>
+          <a
+            href="/risk-analysis"
+            className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 hover:bg-slate-700 transition-colors"
+          >
+            ⚠️ Análise de Risco
+          </a>
         </div>
 
         {/* Modo compacto */}
