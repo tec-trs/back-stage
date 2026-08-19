@@ -183,8 +183,25 @@ export function EcosystemPage() {
   const [editMode,       setEditMode]       = useState(false);
   const [pendingConn,    setPendingConn]    = useState<PendingConn | null>(null);
   const [resetLayoutKey, setResetLayoutKey] = useState(0);
+  const prevNodeCountRef = useRef<number>(0);
   const createRel = useCreateRelationship();
   const deleteRel = useDeleteRelationship();
+
+  // Auto-reset layout quando número de nós muda significativamente
+  useEffect(() => {
+    if (data && data.nodes.length !== prevNodeCountRef.current) {
+      console.log('[EcosystemPage] Número de nós mudou, resetando layout:', {
+        anterior: prevNodeCountRef.current,
+        novo: data.nodes.length,
+      });
+      // Se a diferença for > 0, significa que um novo nó foi adicionado
+      // Reset o layout para que as posições antigas não influenciem
+      if (data.nodes.length > prevNodeCountRef.current && prevNodeCountRef.current > 0) {
+        setResetLayoutKey(k => k + 1);
+      }
+      prevNodeCountRef.current = data.nodes.length;
+    }
+  }, [data?.nodes.length]);
 
   // Simulation state — kept here so the graph reflects the blast radius
   const [simulationSourceId, setSimulationSourceId] = useState<string | undefined>(undefined);
