@@ -59,6 +59,7 @@ export function DependencyTreePage() {
       // Para URLs e outros nós, mostra quem depende deles (dependentes)
       // Para outros nós, mostra o que eles dependem (dependências)
       const children: TreeNode[] = [];
+      let deps: string[] = [];
 
       if (node.resourceType === 'url') {
         // URLs mostram seus dependentes (quem depends_on, connects_to, consumes desta URL)
@@ -71,10 +72,11 @@ export function DependencyTreePage() {
           .map(depId => buildTree(depId, new Set(visited)))
           .filter((n): n is TreeNode => n !== null);
         children.push(...dependentTrees);
+        deps = dependents;
       } else {
         // Outros nós mostram o que eles dependem
         const outgoing = edgesBySource.get(nodeId) || [];
-        const deps = outgoing
+        deps = outgoing
           .filter(e => !['hosts'].includes(e.type))
           .map(e => e.targetId);
 
