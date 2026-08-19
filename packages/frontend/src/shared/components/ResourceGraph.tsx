@@ -167,7 +167,7 @@ function DeletableEdge({
           style={{
             position: 'absolute',
             transform: `translate(-50%,-50%) translate(${labelX}px,${labelY}px)`,
-            pointerEvents: 'all',
+            pointerEvents: canDelete ? 'all' : 'none',
           }}
           className="nodrag nopan"
         >

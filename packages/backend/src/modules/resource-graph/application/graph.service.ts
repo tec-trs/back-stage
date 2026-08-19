@@ -92,11 +92,14 @@ export class GraphService {
       metadata,
     );
 
+    // Implicit edges have non-UUID IDs (e.g. "deploy:...") — store null so the
+    // uuid column doesn't reject the insert; source/target are in metadata.
+    const UUID_RE = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
     await auditLogger.record({
       actorUserId: audit.actorUserId,
       action: 'relationship.created',
       resourceType: 'relationship',
-      resourceId: edge.id,
+      resourceId: UUID_RE.test(edge.id) ? edge.id : null,
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
       metadata: {
