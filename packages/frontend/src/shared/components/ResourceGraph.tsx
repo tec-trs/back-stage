@@ -954,6 +954,14 @@ export function ResourceGraph({
       skipped: skippedNodes.map(s => ({ id: s.id.substring(0, 8), reason: s.reason }))
     });
 
+    console.log('[ResourceGraph] Setando rfNodes no React Flow:', {
+      count: newRfNodes.length,
+      types: newRfNodes.reduce((acc, n) => {
+        const type = n.data?.resourceType || 'unknown';
+        return { ...acc, [type]: (acc[type as any] ?? 0) + 1 };
+      }, {}),
+      ids: newRfNodes.slice(0, 5).map(n => ({ id: n.id.substring(0, 8), type: n.type }))
+    });
     setRfNodes(newRfNodes);
 
     // ── 8. Build RF edges — filter "hosts" edges replaced by containment ──
