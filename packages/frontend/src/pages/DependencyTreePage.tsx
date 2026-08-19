@@ -67,13 +67,12 @@ export function DependencyTreePage() {
       const apps = hostedApps.get(nodeId) || [];
       for (const appId of apps) {
         const app = nodeMap.get(appId);
-        if (app) {
-          children.push({
-            id: appId,
-            label: app.label,
-            resourceType: app.resourceType,
-            children: [],
-          });
+        if (app && !visited.has(appId)) {
+          // Build tree for hosted app (so it can have its own dependencies)
+          const appTree = buildTree(appId, new Set(visited));
+          if (appTree) {
+            children.push(appTree);
+          }
         }
       }
 
@@ -86,8 +85,11 @@ export function DependencyTreePage() {
       };
     };
 
-    // Build trees from root resources (ones with incoming dependencies)
-    const roots = data.nodes.filter(n => !edgesByTarget.has(n.id));
+    // Build trees from root resources: URLs first (entry points), then orphans
+    const urlRoots = data.nodes.filter(n => n.resourceType === 'url');
+    const orphans = data.nodes.filter(n => n.resourceType !== 'url' && !edgesByTarget.has(n.id));
+    const roots = [...urlRoots, ...orphans];
+
     return roots
       .map(root => buildTree(root.id))
       .filter((n): n is TreeNode => n !== null);
