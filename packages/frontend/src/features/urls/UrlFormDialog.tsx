@@ -10,6 +10,7 @@ import { useUrls } from './use-urls';
 import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
+import { Tabs, type TabItem } from '../../shared/components/Tabs';
 
 import type { CreateUrlInput, UrlHttpMethod } from './use-create-url';
 import { useCreateUrl } from './use-create-url';
@@ -22,10 +23,18 @@ const inputClass =
 const URL_TYPES = ['api', 'frontend', 'monitoring', 'docs', 'webhook', 'cdn', 'download', 'api_external', 'internal'];
 const HTTP_METHODS: UrlHttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
 const URL_STATUSES: Array<{ value: string; label: string }> = [
-  { value: 'active', label: 'Ativo' },
-  { value: 'inactive', label: 'Inativo' },
+  { value: 'active',     label: 'Ativo' },
+  { value: 'inactive',   label: 'Inativo' },
   { value: 'deprecated', label: 'Descontinuado' },
-  { value: 'error', label: 'Erro' },
+  { value: 'error',      label: 'Erro' },
+];
+
+type TabKey = 'identification' | 'http' | 'dependencies';
+
+const TABS: TabItem[] = [
+  { key: 'identification', label: 'Identificacao' },
+  { key: 'http',           label: 'HTTP & Auth' },
+  { key: 'dependencies',  label: 'Dependencias' },
 ];
 
 interface FormState {
@@ -89,22 +98,18 @@ export function UrlFormDialog({
   const { data: applicationsData } = useApplications();
   const { data: urlsData } = useUrls({ pageSize: 200 });
 
-  // Existing depends_on relationships for this URL (edit mode only)
   const { data: existingRelationships } = useResourceRelationships(
     isOpen && url ? 'url' : null,
     url?.id ?? null,
     'depends_on',
   );
 
-  const [form, setForm] = useState<FormState>(emptyForm());
-  const [tags, setTags] = useState<string[]>([]);
-  // IDs of applications this URL depends on
+  const [activeTab, setActiveTab]       = useState<TabKey>('identification');
+  const [form, setForm]                 = useState<FormState>(emptyForm());
+  const [tags, setTags]                 = useState<string[]>([]);
   const [dependsOnAppIds, setDependsOnAppIds] = useState<string[]>([]);
-  // IDs of other URLs this URL depends on
   const [dependsOnUrlIds, setDependsOnUrlIds] = useState<string[]>([]);
-  // Map from appId → relationshipId (to delete when unchecked in edit mode)
-  const existingRelMapRef = useRef<Map<string, string>>(new Map());
-  // Map from urlId → relationshipId for URL→URL dependencies
+  const existingRelMapRef    = useRef<Map<string, string>>(new Map());
   const existingUrlRelMapRef = useRef<Map<string, string>>(new Map());
 
   const allApplications = useMemo(
@@ -119,10 +124,10 @@ export function UrlFormDialog({
     [urlsData, url?.id],
   );
 
-  // Populate form fields when dialog opens
   useEffect(() => {
     if (isOpen) {
       const base = url ? formFromUrl(url) : prefill ? formFromUrl(prefill) : emptyForm();
+      setActiveTab('identification');
       setForm(base);
       setTags(url?.tags ?? prefill?.tags ?? []);
       setDependsOnAppIds([]);
@@ -135,14 +140,13 @@ export function UrlFormDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, url, prefill]);
 
-  // When existing relationships load (edit mode), populate the dependency checkboxes
   useEffect(() => {
     if (isOpen && existingRelationships) {
       const appRels = existingRelationships.filter((r) => r.targetType === 'application');
       const urlRels = existingRelationships.filter((r) => r.targetType === 'url');
       setDependsOnAppIds(appRels.map((r) => r.targetId));
       setDependsOnUrlIds(urlRels.map((r) => r.targetId));
-      existingRelMapRef.current = new Map(appRels.map((r) => [r.targetId, r.id]));
+      existingRelMapRef.current    = new Map(appRels.map((r) => [r.targetId, r.id]));
       existingUrlRelMapRef.current = new Map(urlRels.map((r) => [r.targetId, r.id]));
     }
   }, [isOpen, existingRelationships]);
@@ -164,14 +168,12 @@ export function UrlFormDialog({
   }
 
   async function syncRelationships(urlId: string): Promise<void> {
-    // App dependencies
     const oldAppMap = existingRelMapRef.current;
     const oldAppIds = new Set(oldAppMap.keys());
     const newAppIds = new Set(dependsOnAppIds);
     const appsToDelete = [...oldAppIds].filter((id) => !newAppIds.has(id));
     const appsToCreate = [...newAppIds].filter((id) => !oldAppIds.has(id));
 
-    // URL dependencies
     const oldUrlMap = existingUrlRelMapRef.current;
     const oldUrlIds = new Set(oldUrlMap.keys());
     const newUrlIds = new Set(dependsOnUrlIds);
@@ -182,20 +184,16 @@ export function UrlFormDialog({
       ...appsToDelete.map((appId) => deleteRelationship.mutateAsync(oldAppMap.get(appId)!)),
       ...appsToCreate.map((appId) =>
         createRelationship.mutateAsync({
-          sourceType: 'url',
-          sourceId: urlId,
-          targetType: 'application',
-          targetId: appId,
+          sourceType: 'url', sourceId: urlId,
+          targetType: 'application', targetId: appId,
           relationType: 'depends_on',
         }),
       ),
       ...urlsToDelete.map((targetId) => deleteRelationship.mutateAsync(oldUrlMap.get(targetId)!)),
       ...urlsToCreate.map((targetId) =>
         createRelationship.mutateAsync({
-          sourceType: 'url',
-          sourceId: urlId,
-          targetType: 'url',
-          targetId,
+          sourceType: 'url', sourceId: urlId,
+          targetType: 'url', targetId,
           relationType: 'depends_on',
         }),
       ),
@@ -206,16 +204,16 @@ export function UrlFormDialog({
     event.preventDefault();
 
     const payload: CreateUrlInput = {
-      label: form.label.trim(),
-      url: form.url.trim(),
-      urlType: form.urlType,
-      description: form.description.trim() || null,
-      method: form.method || null,
-      authRequired: form.authRequired,
-      authMethod: form.authMethod.trim() || null,
-      status: form.status,
+      label:              form.label.trim(),
+      url:                form.url.trim(),
+      urlType:            form.urlType,
+      description:        form.description.trim() || null,
+      method:             form.method || null,
+      authRequired:       form.authRequired,
+      authMethod:         form.authMethod.trim() || null,
+      status:             form.status,
       healthcheckEnabled: form.healthcheckEnabled,
-      tags: tags.map((t) => t.trim()).filter(Boolean),
+      tags:               tags.map((t) => t.trim()).filter(Boolean),
     };
 
     try {
@@ -242,13 +240,11 @@ export function UrlFormDialog({
       size="lg"
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto pr-1">
+        <Tabs tabs={TABS} activeTab={activeTab} onChange={(k) => setActiveTab(k as TabKey)} />
 
-          {/* Identificacao */}
-          <fieldset className="flex flex-col gap-3">
-            <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Identificacao
-            </legend>
+        {/* ── Aba: Identificacao ─────────────────────────────────────── */}
+        {activeTab === 'identification' && (
+          <div className="flex flex-col gap-4">
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-slate-400">Label *</span>
               <input
@@ -259,6 +255,7 @@ export function UrlFormDialog({
                 className={inputClass}
               />
             </label>
+
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-slate-400">URL *</span>
               <input
@@ -269,6 +266,7 @@ export function UrlFormDialog({
                 className={inputClass}
               />
             </label>
+
             <div className="grid grid-cols-2 gap-3">
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-slate-400">Tipo *</span>
@@ -295,6 +293,7 @@ export function UrlFormDialog({
                 </select>
               </label>
             </div>
+
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-slate-400">Descricao</span>
               <textarea
@@ -304,80 +303,51 @@ export function UrlFormDialog({
                 className={inputClass}
               />
             </label>
-          </fieldset>
 
-          {/* Depende de (aplicacoes) */}
-          <fieldset className="flex flex-col gap-2">
-            <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Depende de
-            </legend>
-            <p className="text-xs text-slate-500">
-              Selecione as aplicacoes que esta URL precisa para funcionar. Se alguma cair, esta URL sera impactada.
-            </p>
-            {allApplications.length === 0 ? (
-              <p className="text-xs text-slate-600">Nenhuma aplicacao cadastrada.</p>
-            ) : (
-              <div className="flex flex-col gap-1 rounded-md border border-slate-800 p-2">
-                {allApplications.map((app) => {
-                  const checked = dependsOnAppIds.includes(app.id);
-                  return (
-                    <label
-                      key={app.id}
-                      className="flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 hover:bg-slate-900/60"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleDependency(app.id)}
-                        className="h-4 w-4 accent-sky-500"
-                      />
-                      <span className="text-sm text-slate-200">{app.label}</span>
-                    </label>
-                  );
-                })}
+            {/* Tags */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Tags</span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setTags((prev) => [...prev, ''])}
+                >
+                  + Tag
+                </Button>
               </div>
-            )}
-          </fieldset>
-
-          {/* Depende de (outras URLs) */}
-          <fieldset className="flex flex-col gap-2">
-            <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Depende de (URLs)
-            </legend>
-            <p className="text-xs text-slate-500">
-              Selecione as URLs que esta URL precisa para funcionar — ex: um VIP que depende de um servico de licenca.
-            </p>
-            {allUrls.length === 0 ? (
-              <p className="text-xs text-slate-600">Nenhuma outra URL cadastrada.</p>
-            ) : (
-              <div className="flex flex-col gap-1 rounded-md border border-slate-800 p-2">
-                {allUrls.map((u) => {
-                  const checked = dependsOnUrlIds.includes(u.id);
-                  return (
-                    <label
-                      key={u.id}
-                      className="flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 hover:bg-slate-900/60"
+              {tags.length === 0 && (
+                <p className="text-xs text-slate-500">Nenhuma tag adicionada.</p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag, index) => (
+                  <div key={index} className="flex items-center gap-1">
+                    <input
+                      value={tag}
+                      onChange={(e) =>
+                        setTags((prev) => prev.map((t, i) => (i === index ? e.target.value : t)))
+                      }
+                      placeholder="api, producao..."
+                      className={`${inputClass} w-32 py-1.5 text-sm`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setTags((prev) => prev.filter((_, i) => i !== index))}
+                      className="text-slate-500 hover:text-red-400"
                     >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleDependencyUrl(u.id)}
-                        className="h-4 w-4 accent-amber-500"
-                      />
-                      <span className="text-sm text-slate-200">{u.label}</span>
-                      <span className="ml-auto text-xs text-slate-500 truncate max-w-[140px]">{u.urlValue}</span>
-                    </label>
-                  );
-                })}
+                      ×
+                    </button>
+                  </div>
+                ))}
               </div>
-            )}
-          </fieldset>
+            </div>
+          </div>
+        )}
 
-          {/* HTTP & Auth */}
-          <fieldset className="flex flex-col gap-3">
-            <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              HTTP & Autenticacao
-            </legend>
+        {/* ── Aba: HTTP & Auth ───────────────────────────────────────── */}
+        {activeTab === 'http' && (
+          <div className="flex flex-col gap-4">
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-slate-400">Metodo HTTP</span>
               <select
@@ -391,30 +361,34 @@ export function UrlFormDialog({
                 ))}
               </select>
             </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="authRequired"
-                checked={form.authRequired}
-                onChange={(e) => setField('authRequired', e.target.checked)}
-                className="h-4 w-4 accent-sky-500"
-              />
-              <label htmlFor="authRequired" className="cursor-pointer text-sm text-slate-400">
-                Requer autenticacao
-              </label>
-            </div>
-            {form.authRequired && (
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="text-slate-400">Metodo de autenticacao</span>
+
+            <div className="flex flex-col gap-3 rounded-md border border-slate-800 p-3">
+              <div className="flex items-center gap-2">
                 <input
-                  value={form.authMethod}
-                  onChange={(e) => setField('authMethod', e.target.value)}
-                  placeholder="JWT, API Key, Basic Auth..."
-                  className={inputClass}
+                  type="checkbox"
+                  id="authRequired"
+                  checked={form.authRequired}
+                  onChange={(e) => setField('authRequired', e.target.checked)}
+                  className="h-4 w-4 accent-sky-500"
                 />
-              </label>
-            )}
-            <div className="flex items-center gap-2">
+                <label htmlFor="authRequired" className="cursor-pointer text-sm text-slate-300">
+                  Requer autenticacao
+                </label>
+              </div>
+              {form.authRequired && (
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-slate-400">Metodo de autenticacao</span>
+                  <input
+                    value={form.authMethod}
+                    onChange={(e) => setField('authMethod', e.target.value)}
+                    placeholder="JWT, API Key, Basic Auth..."
+                    className={inputClass}
+                  />
+                </label>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 rounded-md border border-slate-800 p-3">
               <input
                 type="checkbox"
                 id="healthcheckEnabled"
@@ -422,52 +396,80 @@ export function UrlFormDialog({
                 onChange={(e) => setField('healthcheckEnabled', e.target.checked)}
                 className="h-4 w-4 accent-sky-500"
               />
-              <label htmlFor="healthcheckEnabled" className="cursor-pointer text-sm text-slate-400">
+              <label htmlFor="healthcheckEnabled" className="cursor-pointer text-sm text-slate-300">
                 Habilitar healthcheck automatico
               </label>
             </div>
-          </fieldset>
+          </div>
+        )}
 
-          {/* Tags */}
-          <fieldset className="flex flex-col gap-2">
-            <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Tags
-            </legend>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-400">Tags</span>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => setTags((prev) => [...prev, ''])}
-              >
-                + Tag
-              </Button>
-            </div>
-            {tags.length === 0 && <p className="text-xs text-slate-500">Nenhuma tag adicionada.</p>}
-            <div className="flex flex-wrap gap-2">
-              {tags.map((tag, index) => (
-                <div key={index} className="flex items-center gap-1">
-                  <input
-                    value={tag}
-                    onChange={(e) =>
-                      setTags((prev) => prev.map((t, i) => (i === index ? e.target.value : t)))
-                    }
-                    placeholder="api, producao..."
-                    className={`${inputClass} w-32 py-1.5 text-sm`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setTags((prev) => prev.filter((_, i) => i !== index))}
-                    className="text-slate-500 hover:text-red-400"
-                  >
-                    ×
-                  </button>
+        {/* ── Aba: Dependencias ──────────────────────────────────────── */}
+        {activeTab === 'dependencies' && (
+          <div className="flex flex-col gap-5">
+            {/* Depende de (aplicacoes) */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Aplicacoes
+              </p>
+              <p className="text-xs text-slate-500">
+                Aplicacoes que esta URL precisa para funcionar. Se alguma cair, esta URL sera impactada.
+              </p>
+              {allApplications.length === 0 ? (
+                <p className="text-xs text-slate-600">Nenhuma aplicacao cadastrada.</p>
+              ) : (
+                <div className="flex max-h-48 flex-col gap-0.5 overflow-y-auto rounded-md border border-slate-800 p-2">
+                  {allApplications.map((app) => (
+                    <label
+                      key={app.id}
+                      className="flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 hover:bg-slate-900/60"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={dependsOnAppIds.includes(app.id)}
+                        onChange={() => toggleDependency(app.id)}
+                        className="h-4 w-4 accent-sky-500"
+                      />
+                      <span className="text-sm text-slate-200">{app.label}</span>
+                    </label>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          </fieldset>
-        </div>
+
+            {/* Depende de (outras URLs) */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                URLs
+              </p>
+              <p className="text-xs text-slate-500">
+                URLs que esta URL precisa para funcionar — ex: um VIP que depende de um servico de licenca.
+              </p>
+              {allUrls.length === 0 ? (
+                <p className="text-xs text-slate-600">Nenhuma outra URL cadastrada.</p>
+              ) : (
+                <div className="flex max-h-48 flex-col gap-0.5 overflow-y-auto rounded-md border border-slate-800 p-2">
+                  {allUrls.map((u) => (
+                    <label
+                      key={u.id}
+                      className="flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 hover:bg-slate-900/60"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={dependsOnUrlIds.includes(u.id)}
+                        onChange={() => toggleDependencyUrl(u.id)}
+                        className="h-4 w-4 accent-amber-500"
+                      />
+                      <span className="text-sm text-slate-200">{u.label}</span>
+                      <span className="ml-auto truncate max-w-[140px] text-xs text-slate-500">
+                        {u.urlValue}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {mutation.isError && (
           <ErrorMessage
