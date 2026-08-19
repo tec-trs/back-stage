@@ -762,6 +762,11 @@ export function ResourceGraph({
     }
 
     // ── 5. Build dagre input ──────────────────────────────────────────────
+    console.log('[ResourceGraph] Grupos encontrados:', {
+      groupToServersSize: groupToServers.size,
+      groups: Array.from(groupToServers.entries()).map(([name, ids]) => ({ name, serverCount: ids.length }))
+    });
+
     const dagreNodes: { id: string; width?: number; height?: number }[] = [];
     for (const [groupName, _servers] of groupToServers) {
       const gs = groupSize.get(groupName)!;
@@ -846,6 +851,8 @@ export function ResourceGraph({
       const groupId  = `server-group:${groupName}`;
       const gs       = groupSize.get(groupName)!;
       const groupPos = saved[groupId] ?? posMap.get(groupId) ?? { x: 0, y: 0 };
+
+      console.log('[ResourceGraph] Adicionando server-group:', { groupId, groupName, serverIds, position: groupPos });
 
       newRfNodes.push({
         id:       groupId,
