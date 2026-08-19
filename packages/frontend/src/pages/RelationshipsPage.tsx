@@ -69,6 +69,23 @@ export function RelationshipsPage() {
   const isImplicit = (id: string): boolean =>
     id.startsWith('deploy:') || id.startsWith('url-owner:') || id.startsWith('edge-');
 
+  const getDisplayName = (
+    type: string,
+    id: string,
+    fallbackLabel?: string,
+  ): { name: string; title: string } => {
+    const node = nodeMap.get(`${type}:${id}`);
+    if (node) {
+      return { name: node.label, title: node.label };
+    }
+    if (fallbackLabel) {
+      return { name: fallbackLabel, title: fallbackLabel };
+    }
+    // Mostrar apenas os últimos 8 chars do UUID
+    const shortId = id.substring(id.length - 8);
+    return { name: shortId, title: id };
+  };
+
   if (isError) {
     return (
       <>
@@ -152,6 +169,8 @@ export function RelationshipsPage() {
               {filtered.map((rel) => {
                 const src = nodeMap.get(`${rel.sourceType}:${rel.sourceId}`);
                 const tgt = nodeMap.get(`${rel.targetType}:${rel.targetId}`);
+                const srcDisplay = getDisplayName(rel.sourceType, rel.sourceId, src?.label);
+                const tgtDisplay = getDisplayName(rel.targetType, rel.targetId, tgt?.label);
                 const implicit = isImplicit(rel.id);
                 const relLabel = RELATION_TYPE_LABELS[rel.relationType]?.label ?? rel.relationType;
 
@@ -162,20 +181,17 @@ export function RelationshipsPage() {
                         <Badge tone="default" className="text-xs capitalize">
                           {rel.sourceType}
                         </Badge>
-                        {src ? (
-                          <button
-                            onClick={() =>
-                              navigate(
-                                `/${rel.sourceType === 'url' ? 'urls' : rel.sourceType + 's'}/${rel.sourceId}`,
-                              )
-                            }
-                            className="text-sky-400 hover:underline truncate"
-                          >
-                            {src.label}
-                          </button>
-                        ) : (
-                          <span className="text-slate-500">{rel.sourceId}</span>
-                        )}
+                        <button
+                          onClick={() =>
+                            navigate(
+                              `/${rel.sourceType === 'url' ? 'urls' : rel.sourceType + 's'}/${rel.sourceId}`,
+                            )
+                          }
+                          className="text-sky-400 hover:underline truncate"
+                          title={srcDisplay.title}
+                        >
+                          {srcDisplay.name}
+                        </button>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center text-slate-500">→</td>
@@ -184,20 +200,17 @@ export function RelationshipsPage() {
                         <Badge tone="default" className="text-xs capitalize">
                           {rel.targetType}
                         </Badge>
-                        {tgt ? (
-                          <button
-                            onClick={() =>
-                              navigate(
-                                `/${rel.targetType === 'url' ? 'urls' : rel.targetType + 's'}/${rel.targetId}`,
-                              )
-                            }
-                            className="text-sky-400 hover:underline truncate"
-                          >
-                            {tgt.label}
-                          </button>
-                        ) : (
-                          <span className="text-slate-500">{rel.targetId}</span>
-                        )}
+                        <button
+                          onClick={() =>
+                            navigate(
+                              `/${rel.targetType === 'url' ? 'urls' : rel.targetType + 's'}/${rel.targetId}`,
+                            )
+                          }
+                          className="text-sky-400 hover:underline truncate"
+                          title={tgtDisplay.title}
+                        >
+                          {tgtDisplay.name}
+                        </button>
                       </div>
                     </td>
                     <td className="px-4 py-3">
