@@ -491,9 +491,12 @@ export class ResourceRelationshipRepository {
         `${TABLE_NAME}.reason`,
         `${TABLE_NAME}.created_by_user_id`,
         `${TABLE_NAME}.created_at`,
-        this.db.raw('users.name as created_by_name'),
+        this.db.raw('COALESCE(users.name, \'Unknown\') as created_by_name'),
       )
-      .leftJoin('users', 'users.id', `${TABLE_NAME}.created_by_user_id`)
+      .leftJoin('users', (join) => {
+        join
+          .on('users.id', '=', `${TABLE_NAME}.created_by_user_id`);
+      })
       .where(`${TABLE_NAME}.organization_id`, orgContext.getOrThrow())
       .whereNull(`${TABLE_NAME}.deleted_at`);
     if (filters.sourceType) query = query.where(`${TABLE_NAME}.source_type`, filters.sourceType);
