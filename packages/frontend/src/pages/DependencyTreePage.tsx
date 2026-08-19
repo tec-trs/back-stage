@@ -33,14 +33,14 @@ export function DependencyTreePage() {
 
     const nodeMap = new Map(data.nodes.map(n => [n.id, n]));
     const edgesBySource = new Map<string, { targetId: string; type: string }[]>();
-    const edgesByTarget = new Map<string, string[]>();
+    const edgesByTarget = new Map<string, { sourceId: string; type: string }[]>();
     const hostedApps = new Map<string, string[]>(); // server -> apps
 
     for (const edge of data.edges) {
       if (!edgesBySource.has(edge.sourceId)) edgesBySource.set(edge.sourceId, []);
       if (!edgesByTarget.has(edge.targetId)) edgesByTarget.set(edge.targetId, []);
       edgesBySource.get(edge.sourceId)!.push({ targetId: edge.targetId, type: edge.relationType });
-      edgesByTarget.get(edge.targetId)!.push(edge.sourceId);
+      edgesByTarget.get(edge.targetId)!.push({ sourceId: edge.sourceId, type: edge.relationType });
 
       // Track hosted applications
       if (edge.relationType === 'hosts') {
@@ -56,12 +56,33 @@ export function DependencyTreePage() {
       const node = nodeMap.get(nodeId);
       if (!node) return null;
 
-      const edges = edgesBySource.get(nodeId) || [];
-      // Only follow non-hosts edges for dependency tree
-      const deps = edges.filter(e => e.type !== 'hosts').map(e => e.targetId);
-      const children = deps
-        .map(depId => buildTree(depId, new Set(visited)))
-        .filter((n): n is TreeNode => n !== null);
+      // Para URLs e outros nós, mostra quem depende deles (dependentes)
+      // Para outros nós, mostra o que eles dependem (dependências)
+      const children: TreeNode[] = [];
+
+      if (node.resourceType === 'url') {
+        // URLs mostram seus dependentes (quem depends_on, connects_to, consumes desta URL)
+        const incoming = edgesByTarget.get(nodeId) || [];
+        const dependents = incoming
+          .filter(e => ['depends_on', 'connects_to', 'consumes'].includes(e.type))
+          .map(e => e.sourceId);
+
+        const dependentTrees = dependents
+          .map(depId => buildTree(depId, new Set(visited)))
+          .filter((n): n is TreeNode => n !== null);
+        children.push(...dependentTrees);
+      } else {
+        // Outros nós mostram o que eles dependem
+        const outgoing = edgesBySource.get(nodeId) || [];
+        const deps = outgoing
+          .filter(e => !['hosts'].includes(e.type))
+          .map(e => e.targetId);
+
+        const depTrees = deps
+          .map(depId => buildTree(depId, new Set(visited)))
+          .filter((n): n is TreeNode => n !== null);
+        children.push(...depTrees);
+      }
 
       // Add hosted apps as children for servers
       const apps = hostedApps.get(nodeId) || [];
