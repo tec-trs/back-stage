@@ -75,9 +75,32 @@ export function DependencyTreePage() {
       if (node.resourceType === 'url') {
         // URLs mostram seus dependentes (quem depends_on, connects_to, consumes desta URL)
         const incoming = edgesByTarget.get(nodeId) || [];
-        const dependents = incoming
+        let dependents = incoming
           .filter(e => ['depends_on', 'connects_to', 'consumes'].includes(e.type))
           .map(e => e.sourceId);
+
+        // Se a URL depende de apps, encontrar os servidores que hospedam essas apps
+        const appDependencies = dependents.filter(id => nodeMap.get(id)?.resourceType === 'application');
+        const serverHostingApps = new Set<string>();
+
+        for (const appId of appDependencies) {
+          // Encontrar todos os servidores que hospedam essa app
+          const hosting = edgesBySource.get(appId) || [];
+          const serversHosting = hosting
+            .filter(e => e.type === 'hosts')
+            .map(e => e.targetId)
+            .filter(id => nodeMap.get(id)?.resourceType === 'server');
+
+          console.log(`🔍 App ${nodeMap.get(appId)?.label} é hospedada por:`, serversHosting.map(id => nodeMap.get(id)?.label));
+
+          serversHosting.forEach(id => serverHostingApps.add(id));
+        }
+
+        // Usar servidores se encontrou, senão usar os dependentes originais
+        if (serverHostingApps.size > 0) {
+          dependents = Array.from(serverHostingApps);
+          console.log(`✅ URL ${node.label} agora depende dos servidores:`, dependents.map(id => nodeMap.get(id)?.label));
+        }
 
         const dependentTrees = dependents
           .map(depId => buildTree(depId, new Set(visited)))
