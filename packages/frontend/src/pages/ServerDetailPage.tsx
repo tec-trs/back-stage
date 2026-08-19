@@ -10,6 +10,7 @@ import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
 import { ResourceGraph } from '../shared/components/ResourceGraph';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
+import { NotFoundError } from '../shared/components/NotFoundError';
 import { Spinner } from '../shared/components/Spinner';
 import {
   translateDiskPurpose,
@@ -46,11 +47,7 @@ export function ServerDetailPage() {
       </Link>
 
       {isLoading && <Spinner />}
-      {isError && (
-        <ErrorMessage
-          message={error instanceof Error ? error.message : 'Erro ao carregar servidor'}
-        />
-      )}
+      {isError && <NotFoundError resourceType="servidor" backLink="/servers" backLabel="Voltar aos servidores" />}
 
       {data && (
         <div className="mt-4 flex flex-col gap-6">

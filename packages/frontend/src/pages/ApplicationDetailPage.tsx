@@ -10,6 +10,7 @@ import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
 import { ResourceGraph } from '../shared/components/ResourceGraph';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
+import { NotFoundError } from '../shared/components/NotFoundError';
 import { Spinner } from '../shared/components/Spinner';
 import {
   translateApplicationStatus,
@@ -48,11 +49,7 @@ export function ApplicationDetailPage() {
       </Link>
 
       {isLoading && <Spinner />}
-      {isError && (
-        <ErrorMessage
-          message={error instanceof Error ? error.message : 'Erro ao carregar aplicacao'}
-        />
-      )}
+      {isError && <NotFoundError resourceType="aplicação" backLink="/applications" backLabel="Voltar às aplicações" />}
 
       {data && (
         <div className="mt-4 flex flex-col gap-6">

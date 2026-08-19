@@ -9,6 +9,7 @@ import { useSubgraph } from '../features/resource-graph/use-resource-graph';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
+import { NotFoundError } from '../shared/components/NotFoundError';
 import { ChevronLeftIcon } from '../shared/components/icons';
 import { ResourceGraph } from '../shared/components/ResourceGraph';
 import { Spinner } from '../shared/components/Spinner';
@@ -46,9 +47,8 @@ export function UrlDetailPage() {
   const impactedNodeIds = useMemo(() => new Set(impactedByDepth.keys()), [impactedByDepth]);
 
   if (isLoading) return <Spinner />;
-  if (isError)
-    return <ErrorMessage message={(error as Error)?.message ?? 'Erro ao carregar URL'} />;
-  if (!url) return <ErrorMessage message="URL nao encontrada" />;
+  if (isError || !url)
+    return <NotFoundError resourceType="URL" backLink="/urls" backLabel="Voltar às URLs" />;
 
   return (
     <div>

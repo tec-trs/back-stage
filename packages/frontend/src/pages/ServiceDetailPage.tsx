@@ -9,6 +9,7 @@ import { useService } from '../features/services/use-service';
 import { Badge } from '../shared/components/Badge';
 import { DependencyGraph } from '../shared/components/DependencyGraph';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
+import { NotFoundError } from '../shared/components/NotFoundError';
 import { Spinner } from '../shared/components/Spinner';
 import { translateLifecycle } from '../shared/constants/labels';
 
@@ -35,11 +36,7 @@ export function ServiceDetailPage() {
       </Link>
 
       {isLoading && <Spinner />}
-      {isError && (
-        <ErrorMessage
-          message={error instanceof Error ? error.message : 'Erro ao carregar service'}
-        />
-      )}
+      {isError && <NotFoundError resourceType="serviço" backLink="/catalog" backLabel="Voltar ao catálogo" />}
 
       {data && (
         <div className="mt-4">

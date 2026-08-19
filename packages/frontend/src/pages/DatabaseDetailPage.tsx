@@ -9,6 +9,7 @@ import { useDatabase } from '../features/databases/use-databases';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
+import { NotFoundError } from '../shared/components/NotFoundError';
 import { ChevronLeftIcon } from '../shared/components/icons';
 import { ResourceGraph } from '../shared/components/ResourceGraph';
 import { Spinner } from '../shared/components/Spinner';
@@ -55,7 +56,7 @@ export function DatabaseDetailPage() {
   }
 
   if (isError) {
-    return <ErrorMessage message={error?.message ?? 'Erro ao carregar banco de dados'} />;
+    return <NotFoundError resourceType="banco de dados" backLink="/databases" backLabel="Voltar aos bancos de dados" />;
   }
 
   if (!database) {
