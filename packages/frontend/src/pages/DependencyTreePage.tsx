@@ -31,6 +31,9 @@ export function DependencyTreePage() {
   const tree = useMemo(() => {
     if (!data) return null;
 
+    console.log('📊 Full graph data:', { nodes: data.nodes.length, edges: data.edges.length });
+    console.log('🔗 Edges:', data.edges.map(e => `${e.sourceId}(${e.sourceType}) --[${e.relationType}]--> ${e.targetId}(${e.targetType})`));
+
     const nodeMap = new Map(data.nodes.map(n => [n.id, n]));
     const edgesBySource = new Map<string, { targetId: string; type: string }[]>();
     const edgesByTarget = new Map<string, { sourceId: string; type: string }[]>();
@@ -48,6 +51,14 @@ export function DependencyTreePage() {
         hostedApps.get(edge.sourceId)!.push(edge.targetId);
       }
     }
+
+    console.log('📍 Hosted apps:', Object.fromEntries(hostedApps));
+    console.log('🎯 Edges by target (who points TO each node):', Object.fromEntries(
+      [...edgesByTarget.entries()].map(([target, edges]) => [
+        `${target} (${nodeMap.get(target)?.label})`,
+        edges.map(e => `${e.sourceId} via ${e.type}`)
+      ])
+    ));
 
     const buildTree = (nodeId: string, visited = new Set<string>()): TreeNode | null => {
       if (visited.has(nodeId)) return null;
@@ -113,9 +124,17 @@ export function DependencyTreePage() {
     const orphans = data.nodes.filter(n => n.resourceType !== 'url' && !edgesByTarget.has(n.id));
     const roots = [...urlRoots, ...orphans];
 
-    return roots
+    console.log('🌳 URL Roots:', urlRoots.map(r => `${r.id} - ${r.label}`));
+    console.log('🌳 Orphan Roots:', orphans.map(r => `${r.id} - ${r.label}`));
+    console.log('🌳 All Roots:', roots.map(r => `${r.id} - ${r.label}`));
+
+    const resultTrees = roots
       .map(root => buildTree(root.id))
       .filter((n): n is TreeNode => n !== null);
+
+    console.log('🎄 Result trees:', resultTrees.map(t => ({ id: t.id, label: t.label, childCount: t.children.length })));
+
+    return resultTrees;
   }, [data]);
 
   const toggleNode = (nodeId: string) => {
