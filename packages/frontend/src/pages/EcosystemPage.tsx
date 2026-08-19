@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { ImpactAnalysisPanel } from '../features/resource-graph/ImpactAnalysisPanel';
@@ -127,11 +127,34 @@ export function EcosystemPage() {
   const [selectedNodeId,   setSelectedNodeId]   = useState<string | null>(null);
   const [selectedNodeType, setSelectedNodeType] = useState<ResourceType | null>(null);
 
-  // Compact mode and filters
-  const [compactMode, setCompactMode] = useState(true);
+  // Compact mode (persisted in localStorage)
+  const [compactMode, setCompactMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ecosystem-compact-mode');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('ecosystem-compact-mode', JSON.stringify(compactMode));
+    } catch {
+      // ignore
+    }
+  }, [compactMode]);
+
   const [visibleTypes, setVisibleTypes] = useState<Set<string>>(
     new Set(['server', 'application', 'database', 'url'])
   );
+
+  // Search/highlight
+  const [searchTerm, setSearchTerm] = useState('');
+  const [highlightedNodeIds, setHighlightedNodeIds] = useState<Set<string>>(new Set());
+
+  // Grouping by environment/tag
+  const [groupBy, setGroupBy] = useState<'none' | 'environment' | 'tag'>('none');
 
   // Edit-mode (drag-and-drop relationship creation)
   const [editMode,       setEditMode]       = useState(false);
@@ -154,6 +177,23 @@ export function EcosystemPage() {
       return next;
     });
   }, []);
+
+  // Search functionality
+  useEffect(() => {
+    if (!searchTerm.trim() || !data) {
+      setHighlightedNodeIds(new Set());
+      return;
+    }
+
+    const term = searchTerm.toLowerCase();
+    const matches = new Set<string>();
+    for (const node of data.nodes) {
+      if (node.label.toLowerCase().includes(term) || node.id.toLowerCase().includes(term)) {
+        matches.add(node.id);
+      }
+    }
+    setHighlightedNodeIds(matches);
+  }, [searchTerm, data]);
 
   // ── Opção A: agrupar bancos quando aplicação tem ≥ 2 ──────────────────────
   const { graphNodes, graphEdges, dbGroups } = useMemo(() => {
@@ -220,12 +260,34 @@ export function EcosystemPage() {
       ...syntheticEdges.filter((e) => filteredNodeIds.has(e.sourceId) && filteredNodeIds.has(e.targetId)),
     ];
 
+    // Apply groupBy: dynamically add displayGroup based on environment/tag
+    let finalNodes = filteredNodes;
+    if (groupBy === 'environment') {
+      finalNodes = filteredNodes.map((n) => {
+        const orig = data.nodes.find((d) => d.id === n.id);
+        if (orig && 'environment' in orig) {
+          return { ...n, displayGroup: (orig as any).environment ?? null };
+        }
+        return n;
+      });
+    } else if (groupBy === 'tag') {
+      // For tag grouping, we'd need to duplicate nodes for each tag - too complex, skip for now
+      // Just add first tag as display group
+      finalNodes = filteredNodes.map((n) => {
+        const orig = data.nodes.find((d) => d.id === n.id);
+        if (orig && 'tags' in orig && Array.isArray((orig as any).tags) && (orig as any).tags.length > 0) {
+          return { ...n, displayGroup: (orig as any).tags[0] ?? null };
+        }
+        return n;
+      });
+    }
+
     return {
-      graphNodes: filteredNodes,
+      graphNodes: finalNodes,
       graphEdges: filteredEdges,
       dbGroups: groups,
     };
-  }, [data, visibleTypes]);
+  }, [data, visibleTypes, groupBy]);
 
   const selectedNode = graphNodes.find((n) => n.id === selectedNodeId);
 
@@ -338,7 +400,7 @@ export function EcosystemPage() {
         {/* Modo compacto */}
         <button
           type="button"
-          onClick={() => setCompactMode((prev) => !prev)}
+          onClick={() => setCompactMode((prev: boolean) => !prev)}
           className={`shrink-0 rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
             compactMode
               ? 'border-purple-700 bg-purple-900/40 text-purple-300 hover:bg-purple-900/60'
@@ -375,6 +437,17 @@ export function EcosystemPage() {
 
         <div className="mx-2 hidden h-6 w-px bg-slate-700 lg:block" />
 
+        {/* Search */}
+        <input
+          type="text"
+          placeholder="🔍 Procurar recurso..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="shrink-0 rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs text-slate-300 placeholder-slate-500 focus:border-slate-600 focus:outline-none"
+        />
+
+        <div className="mx-2 hidden h-6 w-px bg-slate-700 lg:block" />
+
         {/* Filtros por tipo de recurso */}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           {Object.entries(NODE_COLORS)
@@ -396,6 +469,19 @@ export function EcosystemPage() {
               </button>
             ))}
         </div>
+
+        <div className="mx-2 hidden h-6 w-px bg-slate-700 lg:block" />
+
+        {/* Grouping */}
+        <select
+          value={groupBy}
+          onChange={(e) => setGroupBy(e.target.value as 'none' | 'environment' | 'tag')}
+          className="shrink-0 rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-300 focus:border-slate-600 focus:outline-none"
+        >
+          <option value="none">Sem agrupar</option>
+          <option value="environment">Agrupar por ambiente</option>
+          <option value="tag">Agrupar por tag</option>
+        </select>
 
         {/* Legenda impacto — só aparece em modo simulação */}
         {simulationSourceId && (
@@ -443,6 +529,7 @@ export function EcosystemPage() {
             impactedNodeIds={impactedNodeIds}
             impactedByDepth={impactedByDepth}
             simulationSourceId={simulationSourceId}
+            highlightedNodeIds={highlightedNodeIds}
             onNodeSelect={editMode ? undefined : handleNodeSelect}
             onNodeNavigate={editMode ? undefined : handleNodeNavigate}
             isLoading={isLoading}

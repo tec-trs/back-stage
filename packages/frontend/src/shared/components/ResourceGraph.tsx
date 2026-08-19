@@ -140,6 +140,7 @@ interface NodeData extends Record<string, unknown> {
   dbLabels?: string[];
   editMode: boolean;
   compactMode?: boolean;
+  isHighlighted?: boolean;
 }
 
 /* ── Custom edge (deletable) ────────────────────────────────────────────── */
@@ -303,8 +304,9 @@ function ResourceNode({ data, selected, id }: NodeProps) {
   else if (isIndirect) palette = IMPACT_STYLE.indirect;
   else                 palette = TYPE_STYLE[d.resourceType] ?? TYPE_STYLE.server;
 
-  const borderColor   = selected ? '#f1f5f9' : palette.border;
-  const hasBoldBorder = selected || isOffline || isImpacted;
+  const isHighlighted = d.isHighlighted ?? false;
+  const borderColor   = selected ? '#f1f5f9' : (isHighlighted ? '#60a5fa' : palette.border);
+  const hasBoldBorder = selected || isOffline || isImpacted || isHighlighted;
 
   const NODE_W = d.editMode ? NODE_W_EXPANDED : (d.compactMode ? NODE_W_COMPACT : NODE_W_EXPANDED);
 
@@ -314,12 +316,12 @@ function ResourceNode({ data, selected, id }: NodeProps) {
         width:        NODE_W,
         padding:      d.compactMode ? '6px 8px' : '12px',
         background:   palette.bg,
-        borderColor:  d.editMode ? '#3b82f6' : borderColor,
+        borderColor:  d.editMode ? '#3b82f6' : (isHighlighted ? '#60a5fa' : borderColor),
         borderWidth:  hasBoldBorder || d.editMode ? 2 : 1,
         opacity:      isDimmed ? 0.2 : 1,
-        filter:       isDimmed ? 'grayscale(0.8)' : 'none',
+        filter:       isDimmed ? 'grayscale(0.8)' : (isHighlighted ? 'drop-shadow(0 0 4px rgba(96,165,250,0.6))' : 'none'),
         transition:   'opacity 0.4s ease, filter 0.4s ease, border-color 0.25s ease, background 0.4s ease, box-shadow 0.25s ease',
-        boxShadow:    d.editMode ? '0 0 0 2px rgba(59,130,246,0.15)' : undefined,
+        boxShadow:    d.editMode ? '0 0 0 2px rgba(59,130,246,0.15)' : (isHighlighted ? '0 0 0 2px rgba(96,165,250,0.25)' : undefined),
         cursor:       d.editMode ? 'default' : 'pointer',
       }}
       className="rounded-lg border shadow-lg"
@@ -591,6 +593,7 @@ interface ResourceGraphProps {
   impactedNodeIds?: Set<string>;
   impactedByDepth?: Map<string, number>;
   simulationSourceId?: string;
+  highlightedNodeIds?: Set<string>;
   onNodeSelect?: (nodeId: string, resourceType: string) => void;
   onNodeNavigate?: (nodeId: string, resourceType: string) => void;
   isLoading?: boolean;
@@ -610,6 +613,7 @@ export function ResourceGraph({
   impactedNodeIds = new Set(),
   impactedByDepth,
   simulationSourceId,
+  highlightedNodeIds = new Set(),
   onNodeSelect,
   onNodeNavigate,
   isLoading = false,
@@ -757,6 +761,7 @@ export function ResourceGraph({
         dbLabels:         n.dbLabels,
         editMode:         editModeRef.current,
         compactMode,
+        isHighlighted:    highlightedNodeIds.has(n.id),
       };
     }
 
@@ -906,6 +911,7 @@ export function ResourceGraph({
           impactDepth:      n.id === simulationSourceId ? 0 : impactedByDepth?.get(n.id),
           simulationActive: !!simulationSourceId,
           compactMode,
+          isHighlighted:    highlightedNodeIds.has(n.id),
         } as NodeData,
       })),
     );
@@ -919,7 +925,7 @@ export function ResourceGraph({
       { editMode: editModeRef.current, onDelete: onEdgeDeleteRef.current },
     )));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [impactedKey, simulationSourceId, compactMode]);
+  }, [impactedKey, simulationSourceId, compactMode, highlightedNodeIds]);
 
   // ── Effect 3: propagate editMode / onEdgeDelete ───────────────────────
   useEffect(() => {
