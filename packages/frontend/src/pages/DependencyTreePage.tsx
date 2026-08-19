@@ -32,9 +32,6 @@ export function DependencyTreePage() {
   const tree = useMemo(() => {
     if (!data) return null;
 
-    console.log('📊 Full graph data:', { nodes: data.nodes.length, edges: data.edges.length });
-    console.log('🔗 Edges:', data.edges.map(e => `${e.sourceId}(${e.sourceType}) --[${e.relationType}]--> ${e.targetId}(${e.targetType})`));
-
     const nodeMap = new Map(data.nodes.map(n => [n.id, n]));
     const edgesBySource = new Map<string, { targetId: string; type: string }[]>();
     const edgesByTarget = new Map<string, { sourceId: string; type: string }[]>();
@@ -52,14 +49,6 @@ export function DependencyTreePage() {
         hostedApps.get(edge.sourceId)!.push(edge.targetId);
       }
     }
-
-    console.log('📍 Hosted apps:', Object.fromEntries(hostedApps));
-    console.log('🎯 Edges by target (who points TO each node):', Object.fromEntries(
-      [...edgesByTarget.entries()].map(([target, edges]) => [
-        `${target} (${nodeMap.get(target)?.label})`,
-        edges.map(e => `${e.sourceId} via ${e.type}`)
-      ])
-    ));
 
     const buildTree = (nodeId: string, visited = new Set<string>()): TreeNode | null => {
       if (visited.has(nodeId)) return null;
@@ -99,18 +88,13 @@ export function DependencyTreePage() {
         if (serverHostingApps.size > 0) {
           dependents = Array.from(serverHostingApps);
 
-          // Agrupar servidores por display_group
+          // Agrupar servidores por grupo (se vindo de um grupo explícito) ou display_group (fallback)
           const serversByGroup = new Map<string, string[]>();
-          console.log('📋 Servidores dependentes da URL:', dependents.map(id => {
-            const srv = nodeMap.get(id);
-            return { id, label: srv?.label, displayGroup: srv?.displayGroup };
-          }));
 
           for (const serverId of dependents) {
             const server = nodeMap.get(serverId);
             if (server) {
               const group = server.displayGroup || 'Sem grupo';
-              console.log(`🏷️ Servidor ${server.label} pertence ao grupo: ${group}`);
               if (!serversByGroup.has(group)) {
                 serversByGroup.set(group, []);
               }
@@ -118,16 +102,8 @@ export function DependencyTreePage() {
             }
           }
 
-          console.log('👥 Servidores agrupados:', Object.fromEntries(
-            [...serversByGroup.entries()].map(([group, servers]) => [
-              group,
-              servers.map(id => nodeMap.get(id)?.label)
-            ])
-          ));
-
           // Criar nós de grupo virtuais
           for (const [groupName, serverIds] of serversByGroup) {
-            console.log(`✨ Criando nó de grupo: ${groupName} com ${serverIds.length} servidores`);
             const groupNode: TreeNode = {
               id: `group:${groupName}`,
               label: groupName,
@@ -136,7 +112,6 @@ export function DependencyTreePage() {
                 .map(serverId => buildTree(serverId, new Set(visited)))
                 .filter((n): n is TreeNode => n !== null),
             };
-            console.log(`   └─ Grupo tem ${groupNode.children.length} filhos`);
             children.push(groupNode);
           }
         } else {
@@ -182,22 +157,15 @@ export function DependencyTreePage() {
       };
     };
 
-    // Build trees from root resources: URLs first (entry points), then orphans
+    // Build trees from root resources: URLs first (entry points), then groups, then orphans
     const urlRoots = data.nodes.filter(n => n.resourceType === 'url');
-    const orphans = data.nodes.filter(n => n.resourceType !== 'url' && !edgesByTarget.has(n.id));
-    const roots = [...urlRoots, ...orphans];
+    const groupRoots = data.nodes.filter(n => n.resourceType === 'group' && !edgesByTarget.has(n.id));
+    const orphans = data.nodes.filter(n => !['url', 'group'].includes(n.resourceType) && !edgesByTarget.has(n.id));
+    const roots = [...urlRoots, ...groupRoots, ...orphans];
 
-    console.log('🌳 URL Roots:', urlRoots.map(r => `${r.id} - ${r.label}`));
-    console.log('🌳 Orphan Roots:', orphans.map(r => `${r.id} - ${r.label}`));
-    console.log('🌳 All Roots:', roots.map(r => `${r.id} - ${r.label}`));
-
-    const resultTrees = roots
+    return roots
       .map(root => buildTree(root.id))
       .filter((n): n is TreeNode => n !== null);
-
-    console.log('🎄 Result trees:', resultTrees.map(t => ({ id: t.id, label: t.label, childCount: t.children.length })));
-
-    return resultTrees;
   }, [data]);
 
   const toggleNode = (nodeId: string) => {

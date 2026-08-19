@@ -1,4 +1,4 @@
-export type ResourceType = 'server' | 'application' | 'database' | 'url';
+export type ResourceType = 'server' | 'application' | 'database' | 'url' | 'group';
 
 export type RelationType = 'hosts' | 'depends_on' | 'connects_to' | 'exposes' | 'consumes' | 'part_of';
 

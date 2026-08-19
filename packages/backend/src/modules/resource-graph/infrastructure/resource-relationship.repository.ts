@@ -127,6 +127,8 @@ export class ResourceRelationshipRepository {
       SELECT id, 'database' as type, display_name as label, status, criticality, environment, hosted_on_server_id, monitoring_url, null::text as display_group FROM databases WHERE deleted_at IS NULL AND organization_id = '${orgId}'
       UNION ALL
       SELECT id, 'url' as type, label, status, null::text as criticality, null::text as environment, null::uuid as hosted_on_server_id, null::text as monitoring_url, null::text as display_group FROM urls WHERE deleted_at IS NULL AND organization_id = '${orgId}'
+      UNION ALL
+      SELECT id, 'group' as type, name as label, status, criticality, null::text as environment, null::uuid as hosted_on_server_id, null::text as monitoring_url, null::text as display_group FROM server_groups WHERE deleted_at IS NULL AND organization_id = '${orgId}'
     `;
   }
 
@@ -204,6 +206,13 @@ export class ResourceRelationshipRepository {
       .whereNotNull('owner_resource_type')
       .whereNotNull('owner_resource_id') as UrlRow[];
 
+    // Implicit edges from server_group_members (group → hosts → server)
+    interface GroupMemberRow { group_id: string; server_id: string }
+    const groupMembers = await this.db('server_group_members')
+      .select('group_id', 'server_id')
+      .where('organization_id', orgId)
+      .whereNull('deleted_at') as GroupMemberRow[];
+
     const mappedExplicit = explicitEdges.map((e) => ({
       id: e.id,
       sourceType: e.source_type,
@@ -236,10 +245,20 @@ export class ResourceRelationshipRepository {
       relationType: 'exposes' as any,
     }));
 
+    const mappedGroupMembers: GraphEdge[] = groupMembers.map((gm) => ({
+      id: `group-member:${gm.group_id}:${gm.server_id}`,
+      sourceType: 'group' as const,
+      sourceId: gm.group_id,
+      targetType: 'server' as const,
+      targetId: gm.server_id,
+      relationType: 'hosts' as any,
+    }));
+
     // Deduplicate: explicit relationships that duplicate an implicit one take precedence
     const implicitKeys = new Set([
       ...mappedDeployments.map((e) => `${e.sourceId}:${e.targetId}:hosts`),
       ...mappedUrls.map((e) => `${e.sourceId}:${e.targetId}:exposes`),
+      ...mappedGroupMembers.map((e) => `${e.sourceId}:${e.targetId}:hosts`),
     ]);
     const deduped = mappedExplicit.filter(
       (e) => !implicitKeys.has(`${e.sourceId}:${e.targetId}:${e.relationType}`),
@@ -260,7 +279,7 @@ export class ResourceRelationshipRepository {
     // Drop any edge whose source or target no longer exists in the node set
     // (avoids phantom edges from soft-deleted resources lingering in resource_relationships)
     const nodeIdSet = new Set(mappedNodes.map((n) => n.id));
-    const allEdges = [...deduped, ...mappedDeployments, ...mappedUrls].filter(
+    const allEdges = [...deduped, ...mappedDeployments, ...mappedUrls, ...mappedGroupMembers].filter(
       (e) => nodeIdSet.has(e.sourceId) && nodeIdSet.has(e.targetId),
     );
 
