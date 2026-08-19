@@ -65,13 +65,11 @@ export function GroupsPage() {
         description="Gerencie grupos de servidores (VIPs) e suas relações com URLs"
       />
 
-      {showAddDialog && (
-        <AddRelationshipDialog
-          defaultSourceType="url"
-          defaultTargetType="group"
-          onClose={() => setShowAddDialog(false)}
-        />
-      )}
+      <AddRelationshipDialog
+        isOpen={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        defaultSourceType="url"
+      />
 
       <Button
         onClick={() => setShowAddDialog(true)}
