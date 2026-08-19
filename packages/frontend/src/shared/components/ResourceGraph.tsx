@@ -447,8 +447,9 @@ function ResourceNode({ data, selected, id }: NodeProps) {
 
 /* ── Custom node: server-container (server hosting apps) ────────────────── */
 
-function ServerContainerNode({ data }: NodeProps) {
+function ServerContainerNode({ data, id }: NodeProps) {
   const d = data as NodeData;
+  console.log('[ResourceGraph] Renderizando ServerContainerNode:', { id, label: d.label });
   const palette = TYPE_STYLE.server;
   const appPalette = TYPE_STYLE.application;
 
@@ -559,8 +560,9 @@ function ServerContainerNode({ data }: NodeProps) {
 
 /* ── Custom node: server-group (outer displayGroup container) ───────────── */
 
-function ServerGroupNode({ data }: NodeProps) {
+function ServerGroupNode({ data, id }: NodeProps) {
   const d = data as NodeData;
+  console.log('[ResourceGraph] Renderizando ServerGroupNode:', { id, label: d.label });
   return (
     <div
       style={{
