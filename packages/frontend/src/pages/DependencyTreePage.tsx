@@ -19,6 +19,7 @@ const RESOURCE_ICONS: Record<string, string> = {
   application: '📱',
   database: '📊',
   url: '🔗',
+  group: '📦',
 };
 
 export function DependencyTreePage() {
@@ -91,21 +92,45 @@ export function DependencyTreePage() {
             .map(e => e.targetId)
             .filter(id => nodeMap.get(id)?.resourceType === 'server');
 
-          console.log(`🔍 App ${nodeMap.get(appId)?.label} é hospedada por:`, serversHosting.map(id => nodeMap.get(id)?.label));
-
           serversHosting.forEach(id => serverHostingApps.add(id));
         }
 
         // Usar servidores se encontrou, senão usar os dependentes originais
         if (serverHostingApps.size > 0) {
           dependents = Array.from(serverHostingApps);
-          console.log(`✅ URL ${node.label} agora depende dos servidores:`, dependents.map(id => nodeMap.get(id)?.label));
+
+          // Agrupar servidores por display_group
+          const serversByGroup = new Map<string, string[]>();
+          for (const serverId of dependents) {
+            const server = nodeMap.get(serverId);
+            if (server) {
+              const group = server.displayGroup || 'Sem grupo';
+              if (!serversByGroup.has(group)) {
+                serversByGroup.set(group, []);
+              }
+              serversByGroup.get(group)!.push(serverId);
+            }
+          }
+
+          // Criar nós de grupo virtuais
+          for (const [groupName, serverIds] of serversByGroup) {
+            const groupNode: TreeNode = {
+              id: `group:${groupName}`,
+              label: groupName,
+              resourceType: 'group',
+              children: serverIds
+                .map(serverId => buildTree(serverId, new Set(visited)))
+                .filter((n): n is TreeNode => n !== null),
+            };
+            children.push(groupNode);
+          }
+        } else {
+          const dependentTrees = dependents
+            .map(depId => buildTree(depId, new Set(visited)))
+            .filter((n): n is TreeNode => n !== null);
+          children.push(...dependentTrees);
         }
 
-        const dependentTrees = dependents
-          .map(depId => buildTree(depId, new Set(visited)))
-          .filter((n): n is TreeNode => n !== null);
-        children.push(...dependentTrees);
         deps = dependents;
       } else {
         // Outros nós mostram o que eles dependem
