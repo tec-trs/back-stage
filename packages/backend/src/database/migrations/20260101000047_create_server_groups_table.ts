@@ -22,9 +22,6 @@ export async function up(knex: Knex): Promise<void> {
     table.string('status', 20).notNullable().defaultTo('active');
     table.string('criticality', 20).nullable();
 
-    // Soft delete
-    table.timestamp('deleted_at').nullable();
-
     addTimestamps(knex, table);
 
     // Índices
