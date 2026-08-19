@@ -125,7 +125,7 @@ export function ResourceSelector({
                 <Spinner />
               </div>
             ) : filteredOptions.length === 0 ? (
-              <div className="px-3 py-4 text-center text-sm text-slate-500">
+              <div className="px-3 py-4 text-center text-sm text-slate-400">
                 {search ? 'Nenhum resultado encontrado' : 'Nenhum recurso disponível'}
               </div>
             ) : (
@@ -134,12 +134,12 @@ export function ResourceSelector({
                   key={option.id}
                   type="button"
                   onClick={() => handleSelect(option.id)}
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-800 ${
+                  className={`w-full px-3 py-2 text-left text-sm text-slate-100 hover:bg-slate-800 ${
                     value === option.id ? 'bg-slate-800 border-l-2 border-sky-400' : ''
                   }`}
                 >
                   {option.label}
-                  <span className="ml-2 text-xs text-slate-600">{option.id.substring(0, 8)}</span>
+                  <span className="ml-2 text-xs text-slate-500">{option.id.substring(0, 8)}</span>
                 </button>
               ))
             )}
