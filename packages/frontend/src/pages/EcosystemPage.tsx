@@ -136,6 +136,17 @@ export function EcosystemPage() {
   const { data, isLoading, isError, error } = useFullGraph({ page: 1, pageSize: 500 });
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (data) {
+      console.log('[EcosystemPage] Grafo carregado:', {
+        nodes: data.nodes.length,
+        edges: data.edges.length,
+        total: data.pagination.total,
+        nodeTypes: data.nodes.reduce((acc, n) => ({ ...acc, [n.resourceType]: (acc[n.resourceType as any] ?? 0) + 1 }), {})
+      });
+    }
+  }, [data]);
+
   const [selectedNodeId,   setSelectedNodeId]   = useState<string | null>(null);
   const [selectedNodeType, setSelectedNodeType] = useState<ResourceType | null>(null);
 
