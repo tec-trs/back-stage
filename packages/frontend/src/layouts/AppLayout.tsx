@@ -77,7 +77,9 @@ const NAV_ITEMS: NavItem[] = [
   { kind: 'link', to: '/applications', label: 'Aplicacoes', icon: <BoxIcon /> },
   { kind: 'link', to: '/databases', label: 'Bancos de Dados', icon: <BoxIcon /> },
   { kind: 'link', to: '/urls', label: 'URLs', icon: <NetworkIcon /> },
+  { kind: 'link', to: '/groups', label: 'Grupos (VIPs)', icon: <GroupIcon /> },
   { kind: 'link', to: '/ecosystem', label: 'Ecossistema', icon: <NetworkIcon /> },
+  { kind: 'link', to: '/dependency-tree', label: 'Árvore de Deps', icon: <LayersIcon /> },
   { kind: 'link', to: '/settings', label: 'Configuracoes', icon: <SettingsIcon /> },
   { kind: 'link', to: '/organizations', label: 'Organizacoes', icon: <GroupIcon />, adminOnly: true },
 ];
