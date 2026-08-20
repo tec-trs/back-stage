@@ -824,12 +824,15 @@ export function ResourceGraph({
       // Keep all other edges
       return true;
     });
-    setRfEdges(visibleEdges.map((e) => buildEdge(
+    console.log('[ResourceGraph Effect 1] propEdges:', propEdges.length, 'visibleEdges:', visibleEdges.length, 'hostedAppIds:', hostedAppIds.size);
+    const builtEdges = visibleEdges.map((e) => buildEdge(
       { id: e.id, sourceId: e.sourceId, targetId: e.targetId, relationType: e.relationType },
       impactedNodeIds,
       simulationSourceId,
       { editMode: editModeRef.current, onDelete: onEdgeDeleteRef.current },
-    )));
+    ));
+    console.log('[ResourceGraph Effect 1] builtEdges:', builtEdges.length);
+    setRfEdges(builtEdges);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     } catch (err) {
       console.error('ResourceGraph Effect 1 error:', err);
@@ -858,12 +861,14 @@ export function ResourceGraph({
       // Keep all other edges
       return true;
     });
-    setRfEdges(visibleEdges.map((e) => buildEdge(
+    console.log('[ResourceGraph Effect 2] propEdges:', propEdges.length, 'visibleEdges:', visibleEdges.length, 'hostedAppIds:', hostedAppIdsRef.current.size);
+    const builtEdges2 = visibleEdges.map((e) => buildEdge(
       { id: e.id, sourceId: e.sourceId, targetId: e.targetId, relationType: e.relationType },
       impactedNodeIds,
       simulationSourceId,
       { editMode: editModeRef.current, onDelete: onEdgeDeleteRef.current },
-    )));
+    ));
+    setRfEdges(builtEdges2);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [impactedKey, simulationSourceId, compactMode, highlightedNodeIds]);
 
