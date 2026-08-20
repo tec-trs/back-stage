@@ -9,6 +9,7 @@ import {
   useAllRelationships,
 } from '../resource-graph/use-resource-graph';
 import { useUrls } from './use-urls';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
@@ -95,6 +96,7 @@ export function UrlFormDialog({
   const updateUrl = useUpdateUrl();
   const createRelationship = useCreateRelationship();
   const deleteRelationship = useDeleteRelationship();
+  const queryClient = useQueryClient();
   const mutation = isEditMode ? updateUrl : createUrl;
 
   const { data: applicationsData } = useApplications();
@@ -253,6 +255,10 @@ export function UrlFormDialog({
         });
       }),
     ]);
+
+    // Refetch all relationships to ensure they're up to date
+    console.log('[syncRelationships] Refetching all relationships...');
+    await queryClient.refetchQueries({ queryKey: ['resource-graph-all-relationships'] });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
