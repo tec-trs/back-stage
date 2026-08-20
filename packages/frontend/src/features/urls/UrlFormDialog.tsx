@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useApplications } from '../applications/use-applications';
+import { useServers } from '../servers/use-servers';
 import {
   useCreateRelationship,
   useDeleteRelationship,
@@ -96,6 +97,7 @@ export function UrlFormDialog({
   const mutation = isEditMode ? updateUrl : createUrl;
 
   const { data: applicationsData } = useApplications();
+  const { data: serversData } = useServers();
   const { data: urlsData } = useUrls({ pageSize: 100 });
 
   const { data: existingRelationships } = useResourceRelationships(
@@ -104,13 +106,21 @@ export function UrlFormDialog({
     'depends_on',
   );
 
+  const { data: exposesRelationships } = useResourceRelationships(
+    isOpen && url ? 'url' : null,
+    url?.id ?? null,
+    'exposes',
+  );
+
   const [activeTab, setActiveTab]       = useState<TabKey>('identification');
   const [form, setForm]                 = useState<FormState>(emptyForm());
   const [tags, setTags]                 = useState<string[]>([]);
   const [dependsOnAppIds, setDependsOnAppIds] = useState<string[]>([]);
   const [dependsOnUrlIds, setDependsOnUrlIds] = useState<string[]>([]);
+  const [exposedToServerIds, setExposedToServerIds] = useState<string[]>([]);
   const existingRelMapRef    = useRef<Map<string, string>>(new Map());
   const existingUrlRelMapRef = useRef<Map<string, string>>(new Map());
+  const existingServerRelMapRef = useRef<Map<string, string>>(new Map());
 
   const allApplications = useMemo(
     () => (applicationsData?.items ?? []).map((a) => ({ id: a.id, label: a.displayName ?? a.code })),
@@ -132,8 +142,10 @@ export function UrlFormDialog({
       setTags(url?.tags ?? prefill?.tags ?? []);
       setDependsOnAppIds([]);
       setDependsOnUrlIds([]);
+      setExposedToServerIds([]);
       existingRelMapRef.current = new Map();
       existingUrlRelMapRef.current = new Map();
+      existingServerRelMapRef.current = new Map();
       createUrl.reset();
       updateUrl.reset();
     }
@@ -151,6 +163,14 @@ export function UrlFormDialog({
     }
   }, [isOpen, existingRelationships]);
 
+  useEffect(() => {
+    if (isOpen && exposesRelationships) {
+      const serverRels = exposesRelationships.filter((r) => r.sourceType === 'server');
+      setExposedToServerIds(serverRels.map((r) => r.sourceId));
+      existingServerRelMapRef.current = new Map(serverRels.map((r) => [r.sourceId, r.id]));
+    }
+  }, [isOpen, exposesRelationships]);
+
   function setField<K extends keyof FormState>(key: K, value: FormState[K]): void {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -167,6 +187,12 @@ export function UrlFormDialog({
     );
   }
 
+  function toggleExposedToServer(serverId: string): void {
+    setExposedToServerIds((prev) =>
+      prev.includes(serverId) ? prev.filter((id) => id !== serverId) : [...prev, serverId],
+    );
+  }
+
   async function syncRelationships(urlId: string): Promise<void> {
     const oldAppMap = existingRelMapRef.current;
     const oldAppIds = new Set(oldAppMap.keys());
@@ -179,6 +205,12 @@ export function UrlFormDialog({
     const newUrlIds = new Set(dependsOnUrlIds);
     const urlsToDelete = [...oldUrlIds].filter((id) => !newUrlIds.has(id));
     const urlsToCreate = [...newUrlIds].filter((id) => !oldUrlIds.has(id));
+
+    const oldServerMap = existingServerRelMapRef.current;
+    const oldServerIds = new Set(oldServerMap.keys());
+    const newServerIds = new Set(exposedToServerIds);
+    const serversToDelete = [...oldServerIds].filter((id) => !newServerIds.has(id));
+    const serversToCreate = [...newServerIds].filter((id) => !oldServerIds.has(id));
 
     await Promise.all([
       ...appsToDelete.map((appId) => deleteRelationship.mutateAsync(oldAppMap.get(appId)!)),
@@ -195,6 +227,14 @@ export function UrlFormDialog({
           sourceType: 'url', sourceId: urlId,
           targetType: 'url', targetId,
           relationType: 'depends_on',
+        }),
+      ),
+      ...serversToDelete.map((serverId) => deleteRelationship.mutateAsync(oldServerMap.get(serverId)!)),
+      ...serversToCreate.map((serverId) =>
+        createRelationship.mutateAsync({
+          sourceType: 'server', sourceId: serverId,
+          targetType: 'url', targetId: urlId,
+          relationType: 'exposes',
         }),
       ),
     ]);
@@ -406,6 +446,36 @@ export function UrlFormDialog({
         {/* ── Aba: Dependencias ──────────────────────────────────────── */}
         {activeTab === 'dependencies' && (
           <div className="flex flex-col gap-5">
+            {/* Exposta por (servidores) */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Servidores (Load Balance)
+              </p>
+              <p className="text-xs text-slate-500">
+                Servidores que expõem esta URL. Útil para load balances com múltiplos servidores respondendo pela mesma URL.
+              </p>
+              {(serversData?.items ?? []).length === 0 ? (
+                <p className="text-xs text-slate-600">Nenhum servidor cadastrado.</p>
+              ) : (
+                <div className="flex max-h-48 flex-col gap-0.5 overflow-y-auto rounded-md border border-slate-800 p-2">
+                  {(serversData?.items ?? []).map((server) => (
+                    <label
+                      key={server.id}
+                      className="flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 hover:bg-slate-900/60"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={exposedToServerIds.includes(server.id)}
+                        onChange={() => toggleExposedToServer(server.id)}
+                        className="h-4 w-4 accent-cyan-500"
+                      />
+                      <span className="text-sm text-slate-200">{server.displayName ?? server.hostname}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Depende de (aplicacoes) */}
             <div className="flex flex-col gap-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
