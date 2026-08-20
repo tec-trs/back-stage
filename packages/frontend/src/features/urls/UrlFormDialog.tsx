@@ -8,6 +8,7 @@ import {
   useResourceRelationships,
   useAllRelationships,
 } from '../resource-graph/use-resource-graph';
+import { resourceGraphQueryPredicate } from '../../shared/api/query-helpers';
 import { useUrls } from './use-urls';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '../../shared/components/Button';
@@ -261,12 +262,10 @@ export function UrlFormDialog({
     ]);
 
     // Refetch all relationships to ensure they're up to date
-    console.log('[syncRelationships] Refetching all relationships...');
-    const refetchResult = await queryClient.refetchQueries({ queryKey: ['resource-graph-all-relationships'] });
+    console.log('[syncRelationships] Invalidating and refetching resource graph queries...');
+    await queryClient.invalidateQueries({ predicate: resourceGraphQueryPredicate });
+    const refetchResult = await queryClient.refetchQueries({ predicate: resourceGraphQueryPredicate });
     console.log('[syncRelationships] Refetch result:', refetchResult);
-
-    // Also manually invalidate to force refetch
-    queryClient.invalidateQueries({ queryKey: ['resource-graph-all-relationships'] });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
