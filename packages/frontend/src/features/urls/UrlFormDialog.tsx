@@ -249,7 +249,10 @@ export function UrlFormDialog({
       ),
       ...serversToDelete.map((serverId) => {
         console.log('[syncRelationships] Deletando relação servidor:', serverId);
-        return deleteRelationship.mutateAsync(oldServerMap.get(serverId)!);
+        return deleteRelationship.mutateAsync(oldServerMap.get(serverId)!).catch((err) => {
+          console.error('[syncRelationships] Erro ao deletar:', err);
+          throw err;
+        });
       }),
       ...serversToCreate.map((serverId) => {
         console.log('[syncRelationships] Criando relação servidor:', serverId);
@@ -257,6 +260,9 @@ export function UrlFormDialog({
           sourceType: 'server', sourceId: serverId,
           targetType: 'url', targetId: urlId,
           relationType: 'exposes',
+        }).catch((err) => {
+          console.error('[syncRelationships] Erro ao criar:', err);
+          throw err;
         });
       }),
     ]);
@@ -285,17 +291,23 @@ export function UrlFormDialog({
     };
 
     try {
+      console.log('[handleSubmit] Iniciando submit...');
       let urlId: string;
       if (isEditMode && url) {
+        console.log('[handleSubmit] Atualizando URL existente:', url.id);
         await updateUrl.mutateAsync({ id: url.id, ...payload });
         urlId = url.id;
       } else {
+        console.log('[handleSubmit] Criando nova URL');
         const created = await createUrl.mutateAsync(payload);
         urlId = created.id;
       }
+      console.log('[handleSubmit] URL salva, sincronizando relações para:', urlId);
       await syncRelationships(urlId);
+      console.log('[handleSubmit] Relações sincronizadas, fechando modal');
       onClose();
-    } catch {
+    } catch (error) {
+      console.error('[handleSubmit] Erro:', error);
       // errors surfaced via mutation.isError
     }
   }
