@@ -109,9 +109,13 @@ export function UrlFormDialog({
     'depends_on',
   );
 
-  const { data: allRelationships } = useAllRelationships({
+  const { data: allRelationships, isLoading: isLoadingRelationships } = useAllRelationships({
     relationType: 'exposes',
   });
+
+  useEffect(() => {
+    console.log('[allRelationships changed] length:', allRelationships?.length, 'isLoading:', isLoadingRelationships, 'data:', allRelationships);
+  }, [allRelationships, isLoadingRelationships]);
 
   const [activeTab, setActiveTab]       = useState<TabKey>('identification');
   const [form, setForm]                 = useState<FormState>(emptyForm());
@@ -258,7 +262,11 @@ export function UrlFormDialog({
 
     // Refetch all relationships to ensure they're up to date
     console.log('[syncRelationships] Refetching all relationships...');
-    await queryClient.refetchQueries({ queryKey: ['resource-graph-all-relationships'] });
+    const refetchResult = await queryClient.refetchQueries({ queryKey: ['resource-graph-all-relationships'] });
+    console.log('[syncRelationships] Refetch result:', refetchResult);
+
+    // Also manually invalidate to force refetch
+    queryClient.invalidateQueries({ queryKey: ['resource-graph-all-relationships'] });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
