@@ -804,14 +804,37 @@ export function ResourceGraph({
       };
     }
 
-    // Add all nodes as simple resource nodes (skip chip-only apps)
+    // Add all nodes as either resource or server-container (skip chip-only apps)
     for (const n of propNodes) {
       if (hostedAppIds.has(n.id)) continue;
+
+      // Check if this is a server with hosted apps (chips)
+      const isServerWithApps = n.resourceType === 'server' && serverToApps.has(n.id);
+      const hostedAppsList = isServerWithApps
+        ? (serverToApps.get(n.id) ?? [])
+            .filter((id) => chipAppIds.has(id))
+            .map((id) => {
+              const app = propNodes.find((nn) => nn.id === id);
+              return {
+                id,
+                label: app?.label ?? id,
+                status: app?.status,
+              };
+            })
+        : [];
+
+      const nodeType = isServerWithApps && hostedAppsList.length > 0 ? 'server-container' : 'resource';
+      const { w, h } = isServerWithApps && hostedAppsList.length > 0 ? containerSize(n.id) : { w: undefined, h: undefined };
+
       newRfNodes.push({
         id:       n.id,
-        type:     'resource',
+        type:     nodeType,
         position: saved[n.id] ?? posMap.get(n.id) ?? { x: 0, y: 0 },
-        data:     nodeData(n) as NodeData,
+        data:     {
+          ...nodeData(n),
+          hostedApps: hostedAppsList,
+        } as NodeData,
+        ...(w && h ? { style: { width: w, height: h } } : {}),
       });
     }
 
