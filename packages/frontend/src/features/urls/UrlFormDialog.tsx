@@ -115,7 +115,10 @@ export function UrlFormDialog({
   });
 
   useEffect(() => {
-    console.log('[allRelationships changed] length:', allRelationships?.length, 'isLoading:', isLoadingRelationships, 'data:', allRelationships);
+    console.log('[allRelationships changed] length:', allRelationships?.length, 'isLoading:', isLoadingRelationships);
+    if (allRelationships && allRelationships.length > 0) {
+      console.log('[allRelationships changed] Relações retornadas:', allRelationships);
+    }
   }, [allRelationships, isLoadingRelationships]);
 
   const [activeTab, setActiveTab]       = useState<TabKey>('identification');
@@ -272,9 +275,22 @@ export function UrlFormDialog({
 
     // Refetch all relationships to ensure they're up to date
     console.log('[syncRelationships] Invalidating and refetching resource graph queries...');
-    await queryClient.invalidateQueries({ predicate: resourceGraphQueryPredicate });
+    const invalidResult = await queryClient.invalidateQueries({ predicate: resourceGraphQueryPredicate });
+    console.log('[syncRelationships] Invalidate result:', invalidResult);
+
+    // Force immediate refetch
+    const queries = queryClient.getQueryCache().findAll({ predicate: resourceGraphQueryPredicate });
+    console.log('[syncRelationships] Found', queries.length, 'queries to refetch');
+    queries.forEach(q => console.log('[syncRelationships] Query key:', q.queryKey));
+
     const refetchResult = await queryClient.refetchQueries({ predicate: resourceGraphQueryPredicate });
     console.log('[syncRelationships] Refetch result:', refetchResult);
+
+    // Double-check: manually refetch just the allRelationships query
+    const specificResult = await queryClient.refetchQueries({
+      queryKey: ['resource-graph-all-relationships', 'exposes', undefined],
+    });
+    console.log('[syncRelationships] Specific refetch result:', specificResult);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
