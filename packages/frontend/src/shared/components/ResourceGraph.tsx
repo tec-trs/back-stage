@@ -817,10 +817,13 @@ export function ResourceGraph({
 
     setRfNodes(newRfNodes);
 
-    // ── 8. Build RF edges — filter "hosts" edges replaced by containment ──
-    const visibleEdges = propEdges.filter((e) =>
-      !(e.relationType === 'hosts' && e.targetType === 'application' && hostedAppIds.has(e.targetId)),
-    );
+    // ── 8. Build RF edges — filter to match visible nodes ──
+    const visibleEdges = propEdges.filter((e) => {
+      // Remove edges that connect to/from chip-only apps
+      if (hostedAppIds.has(e.sourceId) || hostedAppIds.has(e.targetId)) return false;
+      // Keep all other edges
+      return true;
+    });
     setRfEdges(visibleEdges.map((e) => buildEdge(
       { id: e.id, sourceId: e.sourceId, targetId: e.targetId, relationType: e.relationType },
       impactedNodeIds,
@@ -849,9 +852,12 @@ export function ResourceGraph({
         } as NodeData,
       })),
     );
-    const visibleEdges = propEdges.filter((e) =>
-      !(e.relationType === 'hosts' && e.targetType === 'application' && hostedAppIdsRef.current.has(e.targetId)),
-    );
+    const visibleEdges = propEdges.filter((e) => {
+      // Remove edges that connect to/from chip-only apps
+      if (hostedAppIdsRef.current.has(e.sourceId) || hostedAppIdsRef.current.has(e.targetId)) return false;
+      // Keep all other edges
+      return true;
+    });
     setRfEdges(visibleEdges.map((e) => buildEdge(
       { id: e.id, sourceId: e.sourceId, targetId: e.targetId, relationType: e.relationType },
       impactedNodeIds,
