@@ -214,6 +214,13 @@ export function UrlFormDialog({
     const serversToDelete = [...oldServerIds].filter((id) => !newServerIds.has(id));
     const serversToCreate = [...newServerIds].filter((id) => !oldServerIds.has(id));
 
+    console.log('[syncRelationships] Servidores:', {
+      oldServerIds: [...oldServerIds],
+      newServerIds: [...newServerIds],
+      toDelete: serversToDelete,
+      toCreate: serversToCreate,
+    });
+
     await Promise.all([
       ...appsToDelete.map((appId) => deleteRelationship.mutateAsync(oldAppMap.get(appId)!)),
       ...appsToCreate.map((appId) =>
@@ -231,14 +238,18 @@ export function UrlFormDialog({
           relationType: 'depends_on',
         }),
       ),
-      ...serversToDelete.map((serverId) => deleteRelationship.mutateAsync(oldServerMap.get(serverId)!)),
-      ...serversToCreate.map((serverId) =>
-        createRelationship.mutateAsync({
+      ...serversToDelete.map((serverId) => {
+        console.log('[syncRelationships] Deletando relação servidor:', serverId);
+        return deleteRelationship.mutateAsync(oldServerMap.get(serverId)!);
+      }),
+      ...serversToCreate.map((serverId) => {
+        console.log('[syncRelationships] Criando relação servidor:', serverId);
+        return createRelationship.mutateAsync({
           sourceType: 'server', sourceId: serverId,
           targetType: 'url', targetId: urlId,
           relationType: 'exposes',
-        }),
-      ),
+        });
+      }),
     ]);
   }
 
