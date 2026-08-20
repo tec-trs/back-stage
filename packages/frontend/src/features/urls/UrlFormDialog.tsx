@@ -260,6 +260,9 @@ export function UrlFormDialog({
           sourceType: 'server', sourceId: serverId,
           targetType: 'url', targetId: urlId,
           relationType: 'exposes',
+        }).then((result) => {
+          console.log('[syncRelationships] Relação criada com sucesso:', result);
+          return result;
         }).catch((err) => {
           console.error('[syncRelationships] Erro ao criar:', err);
           throw err;
