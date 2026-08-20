@@ -6,6 +6,7 @@ import {
   useCreateRelationship,
   useDeleteRelationship,
   useResourceRelationships,
+  useAllRelationships,
 } from '../resource-graph/use-resource-graph';
 import { useUrls } from './use-urls';
 import { Button } from '../../shared/components/Button';
@@ -106,11 +107,9 @@ export function UrlFormDialog({
     'depends_on',
   );
 
-  const { data: exposesRelationships } = useResourceRelationships(
-    isOpen && url ? 'url' : null,
-    url?.id ?? null,
-    'exposes',
-  );
+  const { data: allRelationships } = useAllRelationships({
+    relationType: 'exposes',
+  });
 
   const [activeTab, setActiveTab]       = useState<TabKey>('identification');
   const [form, setForm]                 = useState<FormState>(emptyForm());
@@ -164,12 +163,15 @@ export function UrlFormDialog({
   }, [isOpen, existingRelationships]);
 
   useEffect(() => {
-    if (isOpen && exposesRelationships) {
-      const serverRels = exposesRelationships.filter((r) => r.sourceType === 'server');
+    if (isOpen && url && allRelationships) {
+      // Filter for relationships where: server EXPOSES this URL
+      const serverRels = allRelationships.filter(
+        (r) => r.sourceType === 'server' && r.targetType === 'url' && r.targetId === url.id,
+      );
       setExposedToServerIds(serverRels.map((r) => r.sourceId));
       existingServerRelMapRef.current = new Map(serverRels.map((r) => [r.sourceId, r.id]));
     }
-  }, [isOpen, exposesRelationships]);
+  }, [isOpen, url, allRelationships]);
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]): void {
     setForm((prev) => ({ ...prev, [key]: value }));
