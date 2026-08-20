@@ -163,11 +163,13 @@ export function UrlFormDialog({
   }, [isOpen, existingRelationships]);
 
   useEffect(() => {
+    console.log('[useEffect exposes] isOpen:', isOpen, 'url:', url?.id, 'allRelationships length:', allRelationships?.length);
     if (isOpen && url && allRelationships) {
       // Filter for relationships where: server EXPOSES this URL
       const serverRels = allRelationships.filter(
         (r) => r.sourceType === 'server' && r.targetType === 'url' && r.targetId === url.id,
       );
+      console.log('[useEffect exposes] Found server relationships:', serverRels.length, serverRels);
       setExposedToServerIds(serverRels.map((r) => r.sourceId));
       existingServerRelMapRef.current = new Map(serverRels.map((r) => [r.sourceId, r.id]));
     }
