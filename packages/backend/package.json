@@ -1,6 +1,6 @@
 {
   "name": "@back-stage/backend",
-  "version": "0.1.0",
+  "version": "0.7.1",
   "private": true,
   "description": "Backend do Platform Engineering Center (Node + Express + TypeScript)",
   "type": "module",

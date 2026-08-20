@@ -1,6 +1,6 @@
 {
   "name": "@back-stage/frontend",
-  "version": "0.1.0",
+  "version": "0.7.1",
   "private": true,
   "description": "Frontend do Platform Engineering Center (React 19 + Vite + TypeScript)",
   "type": "module",

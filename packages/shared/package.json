@@ -1,6 +1,6 @@
 {
   "name": "@back-stage/shared",
-  "version": "0.1.0",
+  "version": "0.7.1",
   "private": true,
   "description": "Tipos, contratos e utilitarios compartilhados entre os pacotes do back-stage",
   "type": "module",
