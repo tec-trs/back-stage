@@ -37,12 +37,15 @@ export class CatalogEntityRelationRepository implements ICatalogEntityRelationRe
   public constructor(private readonly db: Knex) {}
 
   public async create(dto: CreateRelationDto): Promise<CatalogEntityRelationDto> {
+    const now = new Date();
     const [row] = await this.db(TABLE_NAME)
       .insert({
         source_entity_id: dto.sourceEntityId,
         target_entity_id: dto.targetEntityId,
         relation_type: dto.relationType,
         metadata: dto.metadata || {},
+        created_at: now,
+        updated_at: now,
       })
       .returning('*');
 
