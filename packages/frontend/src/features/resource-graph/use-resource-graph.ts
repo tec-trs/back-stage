@@ -161,7 +161,7 @@ export function useAllRelationships(filters?: {
         (r) => r.items,
       );
     },
-    staleTime: 60000,
+    staleTime: 0, // Always fetch fresh to reflect recent changes
   });
 }
 
