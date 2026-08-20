@@ -96,7 +96,7 @@ export function UrlFormDialog({
   const mutation = isEditMode ? updateUrl : createUrl;
 
   const { data: applicationsData } = useApplications();
-  const { data: urlsData } = useUrls({ pageSize: 200 });
+  const { data: urlsData } = useUrls({ pageSize: 100 });
 
   const { data: existingRelationships } = useResourceRelationships(
     isOpen && url ? 'url' : null,

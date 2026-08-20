@@ -9,6 +9,7 @@ import type {
   ServerFilters,
   UpdateServerInput,
 } from '../infrastructure/server.repository.js';
+import type { ResourceRelationshipRepository } from '../../resource-graph/infrastructure/resource-relationship.repository.js';
 
 export interface ListServersResult {
   items: Server[];
@@ -22,7 +23,10 @@ export interface AuditContext {
 }
 
 export class ServerService {
-  public constructor(private readonly serverRepository: IServerRepository) {}
+  public constructor(
+    private readonly serverRepository: IServerRepository,
+    private readonly resourceRelationshipRepository?: ResourceRelationshipRepository,
+  ) {}
 
   public async list(filters: ServerFilters, pagination: Pagination): Promise<ListServersResult> {
     const { items, total } = await this.serverRepository.findMany(filters, pagination);
@@ -152,5 +156,56 @@ export class ServerService {
     });
 
     return count;
+  }
+
+  public async duplicateWithRelationships(
+    sourceServerId: string,
+    input: CreateServerInput,
+    audit: AuditContext,
+  ): Promise<Server> {
+    // Validate that the source server exists
+    await this.getById(sourceServerId);
+
+    // Create the new server
+    const newServer = await this.create(input, audit);
+
+    // If resource relationship repository is available, copy 'hosts' relationships
+    if (this.resourceRelationshipRepository) {
+      try {
+        const hostRelationships = await this.resourceRelationshipRepository.listRelationships({
+          sourceType: 'server',
+          sourceId: sourceServerId,
+          relationType: 'hosts',
+        });
+
+        // Create new relationships pointing from the new server to the same targets
+        for (const rel of hostRelationships) {
+          await this.resourceRelationshipRepository.createRelationship(
+            'server', // sourceType
+            newServer.id, // sourceId
+            rel.targetType, // targetType
+            rel.targetId, // targetId
+            'hosts',
+            rel.metadata,
+            rel.reason,
+          );
+        }
+
+        await auditLogger.record({
+          actorUserId: audit.actorUserId,
+          action: 'server.duplicated_with_relations',
+          resourceType: 'server',
+          resourceId: newServer.id,
+          ipAddress: audit.ipAddress,
+          userAgent: audit.userAgent,
+          metadata: { sourceServerId, relationshipCount: hostRelationships.length },
+        });
+      } catch (err) {
+        // Log error but don't fail the server creation
+        console.error('Failed to copy relationships when duplicating server:', err);
+      }
+    }
+
+    return newServer;
   }
 }

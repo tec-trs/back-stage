@@ -63,8 +63,8 @@ export function InventoryPage() {
 
   const servers = useServers();
   const applications = useApplications();
-  const databases = useDatabases({ pageSize: 200 });
-  const urls = useUrls({ pageSize: 200 });
+  const databases = useDatabases({ pageSize: 100 });
+  const urls = useUrls({ pageSize: 100 });
 
   const isLoading =
     servers.isLoading || applications.isLoading || databases.isLoading || urls.isLoading;

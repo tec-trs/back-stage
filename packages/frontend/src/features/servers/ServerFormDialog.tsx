@@ -159,7 +159,7 @@ export function ServerFormDialog({
 }) {
   const isEditMode = Boolean(server);
   const isDuplicateMode = Boolean(duplicateFrom);
-  const createServer = useCreateServer();
+  const createServer = useCreateServer(duplicateFrom?.id);
   const updateServer = useUpdateServer();
   const mutation = isEditMode ? updateServer : createServer;
   const { data: environments } = useEnvironments();

@@ -9,6 +9,7 @@ import type { ServerController } from './server.controller.js';
 import {
   bulkDeleteBodySchema,
   createServerBodySchema,
+  duplicateServerBodySchema,
   listServersQuerySchema,
   serverIdParamsSchema,
   setServerStatusBodySchema,
@@ -49,6 +50,34 @@ export function createServerRouter(controller: ServerController): Router {
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ body: createServerBodySchema }),
     asyncHandler(controller.create),
+  );
+
+  /**
+   * @openapi
+   * /servers/duplicate:
+   *   post:
+   *     summary: Duplica um servidor e copia suas relacoes (hosts)
+   *     tags: [Servers]
+   *     security: [{ bearerAuth: [] }]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               duplicateFromId:
+   *                 type: string
+   *                 format: uuid
+   *                 description: ID do servidor a duplicar
+   *     responses:
+   *       201: { description: Servidor duplicado com sucesso }
+   */
+  router.post(
+    '/duplicate',
+    authorizeMiddleware(...WRITE_ROLES),
+    validateMiddleware({ body: duplicateServerBodySchema }),
+    asyncHandler(controller.duplicate),
   );
 
   /**

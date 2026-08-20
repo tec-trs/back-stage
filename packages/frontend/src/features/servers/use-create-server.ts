@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 
 import { apiRequest } from '../../shared/api/http-client';
+import { serverQueryPredicate } from '../../shared/api/query-helpers';
 
 import type {
   DiskPurpose,
@@ -66,10 +67,7 @@ export function useCreateServer(duplicateFromId?: string): UseMutationResult<Ser
       return apiRequest<ServerSummary>(endpoint, { method: 'POST', body });
     },
     onSuccess: async () => {
-      await queryClient.refetchQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return key === 'servers' || key === 'resource-graph' || key === 'resource-graph-subgraph';
-      }});
+      await queryClient.refetchQueries({ predicate: serverQueryPredicate });
     },
   });
 }

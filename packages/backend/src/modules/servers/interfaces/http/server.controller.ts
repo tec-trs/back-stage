@@ -85,4 +85,14 @@ export class ServerController {
     });
     response.status(200).json({ deleted: count });
   };
+
+  public duplicate = async (request: Request, response: Response): Promise<void> => {
+    const { duplicateFromId, ...body } = request.body as CreateServerBody & { duplicateFromId: string };
+    const server = await this.serverService.duplicateWithRelationships(duplicateFromId, body, {
+      actorUserId: request.user?.id,
+      ipAddress: request.ip,
+      userAgent: request.header('user-agent'),
+    });
+    response.status(201).json(server.toJSON());
+  };
 }

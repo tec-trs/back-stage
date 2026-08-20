@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../shared/api/http-client.js';
+import { resourceGraphQueryPredicate } from '../../shared/api/query-helpers.js';
 
 export interface GraphNode {
   id: string;
@@ -182,11 +183,7 @@ export function useCreateRelationship() {
         body: params,
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['resource-graph'] });
-      void queryClient.invalidateQueries({ queryKey: ['resource-graph-subgraph'] });
-      void queryClient.invalidateQueries({ queryKey: ['applications'] });
-      void queryClient.invalidateQueries({ queryKey: ['servers'] });
-      void queryClient.invalidateQueries({ queryKey: ['urls'] });
+      void queryClient.invalidateQueries({ predicate: resourceGraphQueryPredicate });
     },
   });
 }
@@ -200,8 +197,7 @@ export function useDeleteRelationship() {
         method: 'DELETE',
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['resource-graph'] });
-      void queryClient.invalidateQueries({ queryKey: ['resource-graph-subgraph'] });
+      void queryClient.invalidateQueries({ predicate: resourceGraphQueryPredicate });
     },
   });
 }

@@ -92,6 +92,12 @@ export const updateServerBodySchema = z.object({
   environment: environmentEnum.optional(),
 });
 
+export const duplicateServerBodySchema = z.object({
+  hostname: hostnameSchema,
+  duplicateFromId: z.string().uuid(),
+  ...baseFields,
+});
+
 export const setServerStatusBodySchema = z.object({
   status: statusEnum,
 });

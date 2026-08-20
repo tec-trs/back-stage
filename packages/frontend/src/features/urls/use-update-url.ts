@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 
 import { apiRequest } from '../../shared/api/http-client';
+import { urlQueryPredicate } from '../../shared/api/query-helpers';
 
 import type { CreateUrlInput } from './use-create-url';
 import type { Url } from './use-urls';
@@ -16,7 +17,7 @@ export function useUpdateUrl(): UseMutationResult<Url, Error, UpdateUrlInput> {
     mutationFn: ({ id, ...body }: UpdateUrlInput) =>
       apiRequest<Url>(`/api/urls/${id}`, { method: 'PUT', body }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['urls'] });
+      void queryClient.invalidateQueries({ predicate: urlQueryPredicate });
     },
   });
 }
