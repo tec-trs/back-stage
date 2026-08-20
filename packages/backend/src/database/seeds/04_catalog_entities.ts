@@ -1,10 +1,11 @@
 import type { Knex } from 'knex';
 
 export async function seed(knex: Knex): Promise<void> {
+  const org = await knex('organizations').where({ slug: 'default' }).first();
   const team = await knex('teams').where({ slug: 'platform-engineering' }).first();
 
-  if (!team) {
-    throw new Error('Seed de catalog_entities depende do seed de teams');
+  if (!org || !team) {
+    throw new Error('Seed de catalog_entities depende dos seeds de organizations e teams');
   }
 
   await knex('catalog_entities')
@@ -20,6 +21,7 @@ export async function seed(knex: Knex): Promise<void> {
       description: 'Sistema principal da plataforma corporativa',
       lifecycle: 'production',
       owner_team_id: team.id,
+      organization_id: org.id,
     })
     .returning('id');
 
@@ -34,6 +36,7 @@ export async function seed(knex: Knex): Promise<void> {
       owner_team_id: team.id,
       system_id: system.id,
       repository_url: 'https://github.com/back-stage/back-stage',
+      organization_id: org.id,
     })
     .returning('id');
 
@@ -46,5 +49,6 @@ export async function seed(knex: Knex): Promise<void> {
     lifecycle: 'production',
     owner_team_id: team.id,
     system_id: system.id,
+    organization_id: org.id,
   });
 }

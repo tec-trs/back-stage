@@ -1,6 +1,11 @@
 import type { Knex } from 'knex';
 
 export async function seed(knex: Knex): Promise<void> {
+  const org = await knex('organizations').where({ slug: 'default' }).first();
+  if (!org) {
+    throw new Error('Organização padrão não encontrada. Execute as migrations primeiro.');
+  }
+
   await knex('compliance_checks').where({ slug: 'owasp-top10-authentication' }).del();
 
   await knex('compliance_checks').insert({
@@ -9,5 +14,6 @@ export async function seed(knex: Knex): Promise<void> {
     framework: 'OWASP',
     description: 'Verifica se o servico implementa controles de autenticacao do OWASP Top 10',
     severity: 'high',
+    organization_id: org.id,
   });
 }

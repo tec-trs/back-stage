@@ -1,6 +1,6 @@
 {
   "name": "@back-stage/cli",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "private": true,
   "description": "CLI de operacao e scaffolding do Platform Engineering Center",
   "type": "module",
