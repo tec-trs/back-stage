@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { PlusIcon, GripHorizontalIcon } from 'lucide-react';
 
 import { useServerGroups, useDeleteServerGroup } from '../features/server-groups/use-server-groups';
 import { Button } from '../shared/components/Button';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Spinner } from '../shared/components/Spinner';
 import { Badge } from '../shared/components/Badge';
+import { PlusIcon } from '../shared/components/icons';
 
 import { ServerGroupFormDialog } from '../features/server-groups/ServerGroupFormDialog';
 import { ServerGroupDetailPanel } from '../features/server-groups/ServerGroupDetailPanel';
@@ -65,7 +65,7 @@ export function ServerGroupsPage() {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <GripHorizontalIcon size={18} className="text-slate-500" />
+                    <div className="text-slate-500">≡</div>
                     <div>
                       <p className="font-medium text-white">{group.name}</p>
                       {group.vipHostname && (

@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { TrashIcon, PlusIcon } from 'lucide-react';
-import type { Server } from '../servers/use-servers';
+import { TrashIcon, PlusIcon } from '../../shared/components/icons';
 
 import { useGroupMembers, useAddGroupMember, useRemoveGroupMember, type ServerGroup } from './use-server-groups';
 import { useServers } from '../servers/use-servers';
