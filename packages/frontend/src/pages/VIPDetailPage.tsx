@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
-import { useVIP, useVIPServers, useAddVIPServer, useRemoveVIPServer } from '../features/vips/use-vips';
+import { useVIP, useVIPServers, useAddVIPServer, useRemoveVIPServer, useUpdateVIP, type UpdateVIPInput } from '../features/vips/use-vips';
 import { useServers } from '../features/servers/use-servers';
 import { Button } from '../shared/components/Button';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
@@ -18,10 +18,14 @@ export function VIPDetailPage() {
   const { data: allServersResponse } = useServers();
   const addServer = useAddVIPServer(id || '');
   const removeServer = useRemoveVIPServer(id || '');
+  const updateVIP = useUpdateVIP(id || '');
 
   const [showAddServer, setShowAddServer] = useState(false);
   const [selectedServerId, setSelectedServerId] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState<UpdateVIPInput>({});
+  const [editError, setEditError] = useState<string>('');
 
   if (isLoading) return <Spinner />;
   if (error) return <ErrorMessage message={String(error)} />;
@@ -60,6 +64,44 @@ export function VIPDetailPage() {
     }
   };
 
+  const handleEditStart = () => {
+    setEditData({
+      hostname: vip.hostname,
+      displayName: vip.displayName,
+      description: vip.description,
+      vipAddress: vip.vipAddress,
+      loadBalancerType: vip.loadBalancerType,
+      healthCheckInterval: vip.healthCheckInterval,
+      healthCheckPath: vip.healthCheckPath,
+      environment: vip.environment,
+      criticality: vip.criticality,
+      ownerTeam: vip.ownerTeam,
+      costCenter: vip.costCenter,
+      status: vip.status,
+    });
+    setIsEditing(true);
+    setEditError('');
+  };
+
+  const handleEditSave = async () => {
+    if (!editData.hostname?.trim()) {
+      setEditError('Hostname é obrigatório');
+      return;
+    }
+    try {
+      await updateVIP.mutateAsync(editData);
+      setIsEditing(false);
+      setEditError('');
+    } catch (err) {
+      setEditError(String(err));
+    }
+  };
+
+  const handleEditCancel = () => {
+    setIsEditing(false);
+    setEditError('');
+  };
+
   return (
     <div className="space-y-6 p-6">
       <div className="mb-6 flex items-start justify-between">
@@ -87,64 +129,201 @@ export function VIPDetailPage() {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-6">
-            <div className="grid gap-4 sm:grid-cols-2">
-              {vip.vipAddress && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500">Endereço VIP</p>
-                  <p className="mt-1 font-mono text-sm text-blue-300">{vip.vipAddress}</p>
-                </div>
-              )}
-              {vip.loadBalancerType && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500">Tipo de Load Balancer</p>
-                  <p className="mt-1 text-sm text-white">{vip.loadBalancerType}</p>
-                </div>
-              )}
-              {vip.environment && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500">Ambiente</p>
-                  <p className="mt-1 text-sm text-white">{vip.environment}</p>
-                </div>
-              )}
-              {vip.criticality && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500">Criticidade</p>
-                  <p className="mt-1 text-sm text-white">{vip.criticality}</p>
-                </div>
-              )}
-              {vip.healthCheckInterval && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500">Intervalo de Health Check</p>
-                  <p className="mt-1 text-sm text-white">{vip.healthCheckInterval}ms</p>
-                </div>
-              )}
-              {vip.healthCheckPath && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500">Path de Health Check</p>
-                  <p className="mt-1 font-mono text-sm text-slate-300">{vip.healthCheckPath}</p>
-                </div>
-              )}
-              {vip.ownerTeam && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500">Time Responsável</p>
-                  <p className="mt-1 text-sm text-white">{vip.ownerTeam}</p>
-                </div>
-              )}
-              {vip.costCenter && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500">Centro de Custo</p>
-                  <p className="mt-1 text-sm text-white">{vip.costCenter}</p>
-                </div>
-              )}
-            </div>
-            {vip.description && (
-              <div className="mt-4 border-t border-slate-700 pt-4">
-                <p className="text-xs font-semibold text-slate-500">Descrição</p>
-                <p className="mt-2 text-sm text-slate-300">{vip.description}</p>
+          {editError && <ErrorMessage message={editError} />}
+
+          {!isEditing ? (
+            <div className="space-y-4">
+              <div className="flex justify-end">
+                <Button onClick={handleEditStart} variant="secondary">
+                  Editar
+                </Button>
               </div>
-            )}
-          </div>
+              <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-6">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {vip.vipAddress && (
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500">Endereço VIP</p>
+                      <p className="mt-1 font-mono text-sm text-blue-300">{vip.vipAddress}</p>
+                    </div>
+                  )}
+                  {vip.loadBalancerType && (
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500">Tipo de Load Balancer</p>
+                      <p className="mt-1 text-sm text-white">{vip.loadBalancerType}</p>
+                    </div>
+                  )}
+                  {vip.environment && (
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500">Ambiente</p>
+                      <p className="mt-1 text-sm text-white">{vip.environment}</p>
+                    </div>
+                  )}
+                  {vip.criticality && (
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500">Criticidade</p>
+                      <p className="mt-1 text-sm text-white">{vip.criticality}</p>
+                    </div>
+                  )}
+                  {vip.healthCheckInterval && (
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500">Intervalo de Health Check</p>
+                      <p className="mt-1 text-sm text-white">{vip.healthCheckInterval}ms</p>
+                    </div>
+                  )}
+                  {vip.healthCheckPath && (
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500">Path de Health Check</p>
+                      <p className="mt-1 font-mono text-sm text-slate-300">{vip.healthCheckPath}</p>
+                    </div>
+                  )}
+                  {vip.ownerTeam && (
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500">Time Responsável</p>
+                      <p className="mt-1 text-sm text-white">{vip.ownerTeam}</p>
+                    </div>
+                  )}
+                  {vip.costCenter && (
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500">Centro de Custo</p>
+                      <p className="mt-1 text-sm text-white">{vip.costCenter}</p>
+                    </div>
+                  )}
+                </div>
+                {vip.description && (
+                  <div className="mt-4 border-t border-slate-700 pt-4">
+                    <p className="text-xs font-semibold text-slate-500">Descrição</p>
+                    <p className="mt-2 text-sm text-slate-300">{vip.description}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300">Hostname *</label>
+                  <input
+                    type="text"
+                    value={editData.hostname || ''}
+                    onChange={e => setEditData({ ...editData, hostname: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300">Nome Exibição</label>
+                  <input
+                    type="text"
+                    value={editData.displayName || ''}
+                    onChange={e => setEditData({ ...editData, displayName: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300">Descrição</label>
+                  <textarea
+                    value={editData.description || ''}
+                    onChange={e => setEditData({ ...editData, description: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    rows={3}
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300">Endereço VIP</label>
+                    <input
+                      type="text"
+                      value={editData.vipAddress || ''}
+                      onChange={e => setEditData({ ...editData, vipAddress: e.target.value })}
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300">Tipo de Load Balancer</label>
+                    <input
+                      type="text"
+                      value={editData.loadBalancerType || ''}
+                      onChange={e => setEditData({ ...editData, loadBalancerType: e.target.value })}
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300">Ambiente</label>
+                    <input
+                      type="text"
+                      value={editData.environment || ''}
+                      onChange={e => setEditData({ ...editData, environment: e.target.value })}
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300">Criticidade</label>
+                    <input
+                      type="text"
+                      value={editData.criticality || ''}
+                      onChange={e => setEditData({ ...editData, criticality: e.target.value })}
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300">Time Responsável</label>
+                    <input
+                      type="text"
+                      value={editData.ownerTeam || ''}
+                      onChange={e => setEditData({ ...editData, ownerTeam: e.target.value })}
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300">Centro de Custo</label>
+                    <input
+                      type="text"
+                      value={editData.costCenter || ''}
+                      onChange={e => setEditData({ ...editData, costCenter: e.target.value })}
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300">Intervalo de Health Check (ms)</label>
+                    <input
+                      type="number"
+                      value={editData.healthCheckInterval || ''}
+                      onChange={e => setEditData({ ...editData, healthCheckInterval: e.target.value ? parseInt(e.target.value) : undefined })}
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300">Path de Health Check</label>
+                    <input
+                      type="text"
+                      value={editData.healthCheckPath || ''}
+                      onChange={e => setEditData({ ...editData, healthCheckPath: e.target.value })}
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300">Status</label>
+                    <select
+                      value={editData.status || 'active'}
+                      onChange={e => setEditData({ ...editData, status: e.target.value })}
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    >
+                      <option value="active">Ativo</option>
+                      <option value="maintenance">Manutenção</option>
+                      <option value="inactive">Inativo</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button onClick={handleEditCancel} variant="secondary" disabled={updateVIP.isPending}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleEditSave} disabled={updateVIP.isPending}>
+                    {updateVIP.isPending ? 'Salvando...' : 'Salvar'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
