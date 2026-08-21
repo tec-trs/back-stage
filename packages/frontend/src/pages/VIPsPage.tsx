@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { useVIPs, useCreateVIP, useDeleteVIP, useUpdateVIP, type CreateVIPInput, type VIP } from '../features/vips/use-vips';
+import { useVIPs, useCreateVIP, useDeleteVIP, useUpdateVIP, useVIPServers, useAddVIPServer, useRemoveVIPServer, type CreateVIPInput, type VIP } from '../features/vips/use-vips';
+import { useServers } from '../features/servers/use-servers';
 import { useEnvironments } from '../features/environments/use-environments';
 import { useTeams } from '../features/teams/use-teams';
 import { Badge } from '../shared/components/Badge';
@@ -11,13 +12,14 @@ import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Modal } from '../shared/components/Modal';
 import { PageHeader } from '../shared/components/PageHeader';
-import { PlusIcon, TrashIcon, PencilIcon, CopyIcon } from '../shared/components/icons';
+import { PlusIcon, TrashIcon, PencilIcon, CopyIcon, LinkIcon } from '../shared/components/icons';
 import { Spinner } from '../shared/components/Spinner';
 
 export function VIPsPage() {
   const { data: vips = [], isLoading, error } = useVIPs();
   const { data: environmentsResponse } = useEnvironments();
   const { data: teamsResponse } = useTeams();
+  const { data: allServersResponse } = useServers();
   const createVIP = useCreateVIP();
   const deleteVIP = useDeleteVIP();
 
@@ -34,11 +36,23 @@ export function VIPsPage() {
   });
   const [formError, setFormError] = useState('');
 
+  const [showServersModal, setShowServersModal] = useState(false);
+  const [managingServersVIP, setManagingServersVIP] = useState<VIP | null>(null);
+  const { data: servers = [] } = useVIPServers(managingServersVIP?.id || null);
+  const addServer = useAddVIPServer(managingServersVIP?.id || '');
+  const removeServer = useRemoveVIPServer(managingServersVIP?.id || '');
+  const [selectedServerId, setSelectedServerId] = useState<string>('');
+  const [serversError, setServersError] = useState('');
+
   const selectedItems = Array.from(selectedIds).map(id => vips.find(v => v.id === id)).filter(Boolean) as VIP[];
   const singleSelected = selectedItems.length === 1 ? selectedItems[0] : null;
   const allVisible = vips.length > 0 && vips.every(v => selectedIds.has(v.id));
   const environments = Array.isArray(environmentsResponse) ? environmentsResponse : [];
   const teams = Array.isArray(teamsResponse) ? teamsResponse : [];
+
+  const allServers = allServersResponse?.items ?? [];
+  const linkedServerIds = new Set((servers as any[]).map(s => s.id));
+  const availableServers = allServers.filter(s => !linkedServerIds.has(s.id));
 
   function toggleAll(): void {
     if (allVisible) {
@@ -132,6 +146,35 @@ export function VIPsPage() {
       setConfirmDeleteOpen(false);
     } catch (err) {
       setFormError(String(err));
+    }
+  };
+
+  const handleManageServers = () => {
+    if (!singleSelected) return;
+    setManagingServersVIP(singleSelected);
+    setShowServersModal(true);
+    setServersError('');
+    setSelectedServerId('');
+  };
+
+  const handleAddServer = async () => {
+    if (!selectedServerId) return;
+    setServersError('');
+    try {
+      await addServer.mutateAsync(selectedServerId);
+      setSelectedServerId('');
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      setServersError(error);
+    }
+  };
+
+  const handleRemoveServer = async (serverId: string) => {
+    if (!confirm('Remover servidor do VIP?')) return;
+    try {
+      await removeServer.mutateAsync(serverId);
+    } catch (err) {
+      setServersError(String(err));
     }
   };
 
@@ -305,6 +348,16 @@ export function VIPsPage() {
         </Button>
         <Button
           size="sm"
+          variant="secondary"
+          icon={<LinkIcon />}
+          disabled={!singleSelected}
+          onClick={handleManageServers}
+          title={singleSelected ? `Gerenciar servidores de ${singleSelected.hostname}` : 'Selecione um VIP para gerenciar servidores'}
+        >
+          Servidores
+        </Button>
+        <Button
+          size="sm"
           variant="danger"
           icon={<TrashIcon />}
           disabled={selectedItems.length === 0 || deleteVIP.isPending}
@@ -400,6 +453,102 @@ export function VIPsPage() {
           </table>
         </div>
       )}
+
+      <Modal
+        isOpen={showServersModal}
+        onClose={() => {
+          setShowServersModal(false);
+          setManagingServersVIP(null);
+          setSelectedServerId('');
+          setServersError('');
+        }}
+        title={`Gerenciar Servidores - ${managingServersVIP?.hostname}`}
+      >
+        <div className="space-y-4">
+          {serversError && <ErrorMessage message={serversError} />}
+
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-white">Servidores Vinculados</h3>
+            {servers.length === 0 ? (
+              <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 text-center">
+                <p className="text-sm text-slate-400">Nenhum servidor associado a este VIP</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {(servers as any[]).map(server => (
+                  <div
+                    key={server.id}
+                    className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/30 px-3 py-2"
+                  >
+                    <div>
+                      <p className="font-mono text-sm text-white">{server.hostname}</p>
+                      {server.ipAddress && (
+                        <p className="text-xs text-slate-400">{server.ipAddress}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleRemoveServer(server.id)}
+                      className="text-slate-400 hover:text-red-400"
+                      title="Remover servidor"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-slate-700 pt-4">
+            <h3 className="mb-3 text-sm font-semibold text-white">Adicionar Servidor</h3>
+            {availableServers.length === 0 ? (
+              <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 text-center">
+                <p className="text-sm text-slate-400">
+                  Nenhum servidor disponível. Todos já estão vinculados ou não existem servidores criados.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <select
+                  value={selectedServerId}
+                  onChange={e => setSelectedServerId(e.target.value)}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                >
+                  <option value="">Selecionar servidor...</option>
+                  {availableServers.map(server => (
+                    <option key={server.id} value={server.id}>
+                      {server.hostname}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    onClick={handleAddServer}
+                    disabled={!selectedServerId || addServer.isPending}
+                    size="sm"
+                  >
+                    {addServer.isPending ? 'Adicionando...' : 'Adicionar'}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button
+              onClick={() => {
+                setShowServersModal(false);
+                setManagingServersVIP(null);
+                setSelectedServerId('');
+                setServersError('');
+              }}
+              variant="secondary"
+            >
+              Fechar
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
