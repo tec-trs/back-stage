@@ -425,7 +425,7 @@ export class ResourceRelationshipRepository {
     //     source provides to target → if SOURCE goes down, TARGET is affected
     //     → initial seed: WHERE source = root  → collect target
     const orgId = orgContext.getOrThrow();
-    const rootIdText = String(resourceId);
+    const rootIdText = String(rootId);
     const { rows } = await this.db.raw<{ rows: ImpactRow[] }>(`
       WITH RECURSIVE
       all_edges(source_type, source_id, target_type, target_id, relation_type) AS (
