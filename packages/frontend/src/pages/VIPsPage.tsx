@@ -12,7 +12,7 @@ import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Modal } from '../shared/components/Modal';
 import { PageHeader } from '../shared/components/PageHeader';
-import { PlusIcon, TrashIcon, PencilIcon, CopyIcon, LinkIcon } from '../shared/components/icons';
+import { PlusIcon, TrashIcon, PencilIcon, CopyIcon, ServerIcon } from '../shared/components/icons';
 import { Spinner } from '../shared/components/Spinner';
 
 export function VIPsPage() {
@@ -349,7 +349,7 @@ export function VIPsPage() {
         <Button
           size="sm"
           variant="secondary"
-          icon={<LinkIcon />}
+          icon={<ServerIcon />}
           disabled={!singleSelected}
           onClick={handleManageServers}
           title={singleSelected ? `Gerenciar servidores de ${singleSelected.hostname}` : 'Selecione um VIP para gerenciar servidores'}
