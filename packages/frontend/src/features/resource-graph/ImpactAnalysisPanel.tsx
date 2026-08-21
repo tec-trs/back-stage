@@ -9,13 +9,14 @@ import { CRITICALITY_LABELS } from '../../shared/constants/labels';
 import type { ImpactNode, ImpactResult } from './use-resource-graph';
 import { useSimulateImpact } from './use-resource-graph';
 
-type ResourceType = 'server' | 'application' | 'database' | 'url';
+type ResourceType = 'server' | 'application' | 'database' | 'url' | 'vip';
 
 const RESOURCE_TYPE_LABELS: Record<ResourceType, string> = {
   server:      'Servidores',
   application: 'Aplicacoes',
   database:    'Bancos de dados',
   url:         'URLs',
+  vip:         'VIPs',
 };
 
 const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {

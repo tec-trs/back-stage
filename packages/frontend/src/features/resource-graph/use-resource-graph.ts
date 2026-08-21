@@ -4,7 +4,7 @@ import { resourceGraphQueryPredicate } from '../../shared/api/query-helpers.js';
 
 export interface GraphNode {
   id: string;
-  resourceType: 'server' | 'application' | 'database' | 'url';
+  resourceType: 'server' | 'application' | 'database' | 'url' | 'vip';
   label: string;
   status?: string;
   criticality?: string;
@@ -87,7 +87,7 @@ export function useFullGraph(filters: GraphFilters = {}) {
 }
 
 export function useSubgraph(
-  resourceType: 'server' | 'application' | 'database' | 'url' | null,
+  resourceType: 'server' | 'application' | 'database' | 'url' | 'vip' | null,
   resourceId: string | null,
   depth: number = 2,
 ) {
@@ -105,7 +105,7 @@ export function useSubgraph(
 export function useSimulateImpact() {
   return useMutation({
     mutationFn: async (params: {
-      resourceType: 'server' | 'application' | 'database' | 'url';
+      resourceType: 'server' | 'application' | 'database' | 'url' | 'vip';
       resourceId: string;
       maxDepth?: number;
     }) => {

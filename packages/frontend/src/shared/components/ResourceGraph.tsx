@@ -48,6 +48,7 @@ const TYPE_STYLE = {
   application:    { bg: '#160d36', border: '#8b5cf6', text: '#c4b5fd' },
   database:       { bg: '#250820', border: '#ec4899', text: '#f9a8d4' },
   url:            { bg: '#221100', border: '#f59e0b', text: '#fcd34d' },
+  vip:            { bg: '#001f33', border: '#06b6d4', text: '#67e8f9' },
   'db-group':     { bg: '#1a0a1e', border: '#a855f7', text: '#d8b4fe' },
   'server-group': { bg: 'transparent', border: '#3b82f6', text: '#93c5fd' },
 } as const;
@@ -614,7 +615,7 @@ export interface ConnPayload {
 interface ResourceGraphProps {
   nodes: Array<{
     id: string;
-    resourceType: 'server' | 'application' | 'database' | 'url' | 'db-group';
+    resourceType: 'server' | 'application' | 'database' | 'url' | 'vip' | 'db-group';
     label: string;
     status?: string;
     criticality?: string;

@@ -17,9 +17,9 @@ import { ResourceGraph } from '../shared/components/ResourceGraph';
 import type { ConnPayload } from '../shared/components/ResourceGraph';
 import { Spinner } from '../shared/components/Spinner';
 
-type ResourceType = 'server' | 'application' | 'database' | 'url';
+type ResourceType = 'server' | 'application' | 'database' | 'url' | 'vip';
 
-const VALID_RESOURCE_TYPES = new Set<string>(['server', 'application', 'database', 'url']);
+const VALID_RESOURCE_TYPES = new Set<string>(['server', 'application', 'database', 'url', 'vip']);
 
 type EcoNode = Omit<GraphNode, 'resourceType'> & {
   resourceType: ResourceType | 'db-group';
@@ -38,6 +38,7 @@ const NODE_COLORS: Record<string, string> = {
   database:    '#ec4899',
   'db-group':  '#a855f7',
   url:         '#f59e0b',
+  vip:         '#06b6d4',
 };
 
 const NODE_LABELS: Record<string, string> = {
@@ -46,6 +47,7 @@ const NODE_LABELS: Record<string, string> = {
   database:    'Banco de Dados',
   'db-group':  'Bancos (agrupado)',
   url:         'URL',
+  vip:         'VIP',
 };
 
 interface PendingConn extends ConnPayload {
