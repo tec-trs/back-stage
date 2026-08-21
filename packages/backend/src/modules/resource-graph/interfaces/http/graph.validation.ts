@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const resourceTypeEnum = z.enum(['server', 'application', 'database', 'url']);
+const resourceTypeEnum = z.enum(['server', 'application', 'database', 'url', 'vip', 'group']);
 const relationTypeEnum = z.enum(['hosts', 'depends_on', 'connects_to', 'exposes', 'consumes', 'part_of']);
 const criticality = z.enum(['critical', 'high', 'medium', 'low']);
 
