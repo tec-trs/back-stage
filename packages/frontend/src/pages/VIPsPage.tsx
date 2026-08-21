@@ -11,7 +11,7 @@ import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Modal } from '../shared/components/Modal';
 import { PageHeader } from '../shared/components/PageHeader';
-import { PlusIcon, TrashIcon, PencilIcon, CopyIcon, ChevronRightIcon } from '../shared/components/icons';
+import { PlusIcon, TrashIcon, PencilIcon, CopyIcon } from '../shared/components/icons';
 import { Spinner } from '../shared/components/Spinner';
 
 export function VIPsPage() {
@@ -345,10 +345,10 @@ export function VIPsPage() {
                   >
                     <Link
                       to={`/vips/${vip.id}`}
-                      className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300"
+                      className="text-blue-400 hover:text-blue-300"
                       title={`Ver detalhes de ${vip.hostname}`}
                     >
-                      <ChevronRightIcon />
+                      →
                     </Link>
                   </td>
                 </tr>
