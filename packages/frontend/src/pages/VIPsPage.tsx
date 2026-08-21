@@ -1,18 +1,44 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useVIPs } from '../features/vips/use-vips';
+import { useVIPs, useCreateVIP, type CreateVIPInput } from '../features/vips/use-vips';
 import { Button } from '../shared/components/Button';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Spinner } from '../shared/components/Spinner';
 import { Badge } from '../shared/components/Badge';
+import { Modal } from '../shared/components/Modal';
 import { PlusIcon } from '../shared/components/icons';
 
 export function VIPsPage() {
   const { data: vips = [], isLoading, error } = useVIPs();
   const navigate = useNavigate();
+  const createVIP = useCreateVIP();
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState<CreateVIPInput>({
+    hostname: '',
+    displayName: '',
+    vipAddress: '',
+    status: 'active',
+  });
+  const [formError, setFormError] = useState('');
 
   if (isLoading) return <Spinner />;
   if (error) return <ErrorMessage message={String(error)} />;
+
+  const handleSubmit = async () => {
+    if (!formData.hostname.trim()) {
+      setFormError('Hostname é obrigatório');
+      return;
+    }
+    try {
+      await createVIP.mutateAsync(formData);
+      setShowForm(false);
+      setFormData({ hostname: '', displayName: '', vipAddress: '', status: 'active' });
+      setFormError('');
+    } catch (err) {
+      setFormError(String(err));
+    }
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -23,7 +49,7 @@ export function VIPsPage() {
             Gerenciar Virtual IPs e seus servidores associados
           </p>
         </div>
-        <Button className="flex items-center gap-2">
+        <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
           <PlusIcon />
           Novo VIP
         </Button>
@@ -65,6 +91,75 @@ export function VIPsPage() {
           ))}
         </div>
       )}
+
+      <Modal
+        isOpen={showForm}
+        onClose={() => {
+          setShowForm(false);
+          setFormError('');
+        }}
+        title="Criar Novo VIP"
+      >
+        <div className="space-y-4">
+          {formError && <ErrorMessage message={formError} />}
+          <div>
+            <label className="block text-sm font-medium text-slate-300">Hostname *</label>
+            <input
+              type="text"
+              value={formData.hostname}
+              onChange={e => setFormData({ ...formData, hostname: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+              placeholder="ex: vip-app-01"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300">Nome Exibição</label>
+            <input
+              type="text"
+              value={formData.displayName || ''}
+              onChange={e => setFormData({ ...formData, displayName: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+              placeholder="ex: App Balance"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300">Endereço VIP</label>
+            <input
+              type="text"
+              value={formData.vipAddress || ''}
+              onChange={e => setFormData({ ...formData, vipAddress: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+              placeholder="ex: 192.168.1.100"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300">Status</label>
+            <select
+              value={formData.status || 'active'}
+              onChange={e => setFormData({ ...formData, status: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+            >
+              <option value="active">Ativo</option>
+              <option value="maintenance">Manutenção</option>
+              <option value="inactive">Inativo</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              onClick={() => {
+                setShowForm(false);
+                setFormError('');
+              }}
+              variant="secondary"
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleSubmit} disabled={createVIP.isPending}>
+              {createVIP.isPending ? 'Criando...' : 'Criar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
