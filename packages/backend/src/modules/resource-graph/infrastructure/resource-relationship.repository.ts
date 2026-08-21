@@ -426,6 +426,7 @@ export class ResourceRelationshipRepository {
     //     → initial seed: WHERE source = root  → collect target
     const orgId = orgContext.getOrThrow();
     const rootIdText = String(rootId);
+    console.log('[DEBUG] simulateImpact:', { rootType, rootId, rootIdText, orgId });
     const { rows } = await this.db.raw<{ rows: ImpactRow[] }>(`
       WITH RECURSIVE
       all_edges(source_type, source_id, target_type, target_id, relation_type) AS (
@@ -479,6 +480,8 @@ export class ResourceRelationshipRepository {
       FROM impact
       GROUP BY resource_type, resource_id
     `, { rootType, rootIdText, maxDepth: effectiveMaxDepth, orgId });
+
+    console.log('[DEBUG] simulateImpact query result rows:', rows.length, rows);
 
     const impactedResources: ImpactNode[] = [];
     const byType: Record<ResourceType, number> = {
