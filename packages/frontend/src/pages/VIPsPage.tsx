@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { useVIPs, useCreateVIP, useDeleteVIP, type CreateVIPInput, type VIP } from '../features/vips/use-vips';
+import { useVIPs, useCreateVIP, useDeleteVIP, useUpdateVIP, type CreateVIPInput, type VIP } from '../features/vips/use-vips';
 import { useEnvironments } from '../features/environments/use-environments';
 import { useTeams } from '../features/teams/use-teams';
 import { Badge } from '../shared/components/Badge';
@@ -24,7 +24,8 @@ export function VIPsPage() {
   const [showForm, setShowForm] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [duplicatingVIP, setDuplicatingVIP] = useState<VIP | null>(null);
+  const [editingVIP, setEditingVIP] = useState<VIP | null>(null);
+  const updateVIP = useUpdateVIP(editingVIP?.id || '');
   const [formData, setFormData] = useState<CreateVIPInput>({
     hostname: '',
     displayName: '',
@@ -57,7 +58,7 @@ export function VIPsPage() {
   }
 
   const handleCreate = () => {
-    setDuplicatingVIP(null);
+    setEditingVIP(null);
     setFormData({ hostname: '', displayName: '', vipAddress: '', status: 'active' });
     setShowForm(true);
     setFormError('');
@@ -65,11 +66,13 @@ export function VIPsPage() {
 
   const handleEdit = () => {
     if (!singleSelected) return;
-    setDuplicatingVIP(null);
+    setEditingVIP(singleSelected);
     setFormData({
       hostname: singleSelected.hostname,
       displayName: singleSelected.displayName,
+      description: singleSelected.description,
       vipAddress: singleSelected.vipAddress,
+      loadBalancerType: singleSelected.loadBalancerType,
       environment: singleSelected.environment,
       criticality: singleSelected.criticality,
       ownerTeam: singleSelected.ownerTeam,
@@ -81,7 +84,7 @@ export function VIPsPage() {
 
   const handleDuplicate = () => {
     if (!singleSelected) return;
-    setDuplicatingVIP(singleSelected);
+    setEditingVIP(null);
     setFormData({
       hostname: `${singleSelected.hostname}-copy`,
       displayName: singleSelected.displayName,
@@ -105,8 +108,13 @@ export function VIPsPage() {
       const cleanData = Object.fromEntries(
         Object.entries(formData).filter(([_, v]) => v !== null && v !== undefined && v !== '')
       );
-      await createVIP.mutateAsync(cleanData as CreateVIPInput);
+      if (editingVIP) {
+        await updateVIP.mutateAsync(cleanData as CreateVIPInput);
+      } else {
+        await createVIP.mutateAsync(cleanData as CreateVIPInput);
+      }
       setShowForm(false);
+      setEditingVIP(null);
       setFormData({ hostname: '', displayName: '', vipAddress: '', status: 'active' });
       setFormError('');
     } catch (err) {
@@ -147,7 +155,7 @@ export function VIPsPage() {
         isPending={deleteVIP.isPending}
       />
 
-      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Novo VIP">
+      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title={editingVIP ? 'Editar VIP' : 'Novo VIP'}>
         <div className="space-y-4">
           {formError && <ErrorMessage message={formError} />}
           <div>
@@ -171,6 +179,15 @@ export function VIPsPage() {
             />
           </div>
           <div>
+            <label className="block text-sm font-medium text-slate-300">Descrição</label>
+            <textarea
+              value={formData.description || ''}
+              onChange={e => setFormData({ ...formData, description: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+              rows={2}
+            />
+          </div>
+          <div>
             <label className="block text-sm font-medium text-slate-300">Endereço VIP</label>
             <input
               type="text"
@@ -178,6 +195,16 @@ export function VIPsPage() {
               onChange={e => setFormData({ ...formData, vipAddress: e.target.value })}
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
               placeholder="ex: 192.168.1.100"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300">Tipo de Load Balancer</label>
+            <input
+              type="text"
+              value={formData.loadBalancerType || ''}
+              onChange={e => setFormData({ ...formData, loadBalancerType: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+              placeholder="ex: Layer 4, Layer 7"
             />
           </div>
           <div>
@@ -194,6 +221,16 @@ export function VIPsPage() {
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300">Criticidade</label>
+            <input
+              type="text"
+              value={formData.criticality || ''}
+              onChange={e => setFormData({ ...formData, criticality: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+              placeholder="ex: Crítico, Alto, Médio"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-300">Time</label>
@@ -226,14 +263,16 @@ export function VIPsPage() {
             <Button
               onClick={() => {
                 setShowForm(false);
+                setEditingVIP(null);
                 setFormError('');
               }}
               variant="secondary"
+              disabled={createVIP.isPending || updateVIP.isPending}
             >
               Cancelar
             </Button>
-            <Button onClick={handleSubmit} disabled={createVIP.isPending}>
-              {createVIP.isPending ? 'Salvando...' : 'Salvar'}
+            <Button onClick={handleSubmit} disabled={createVIP.isPending || updateVIP.isPending}>
+              {createVIP.isPending || updateVIP.isPending ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
         </div>
