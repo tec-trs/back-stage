@@ -434,10 +434,12 @@ export class ResourceRelationshipRepository {
       .where('organization_id', orgId)
       .whereNull('deleted_at');
     console.log('[DEBUG] Total edges in org:', allEdges.length);
+    console.log('[DEBUG] All edges:', allEdges);
     const relatedEdges = allEdges.filter(e =>
-      (e.target_type === rootType && e.target_id === rootIdText && ['depends_on','connects_to','consumes'].includes(e.relation_type)) ||
-      (e.source_type === rootType && e.source_id === rootIdText && ['hosts','exposes'].includes(e.relation_type))
+      (e.target_type === rootType && String(e.target_id) === rootIdText && ['depends_on','connects_to','consumes'].includes(e.relation_type)) ||
+      (e.source_type === rootType && String(e.source_id) === rootIdText && ['hosts','exposes'].includes(e.relation_type))
     );
+    console.log('[DEBUG] Looking for root:', { rootType, rootIdText });
     console.log('[DEBUG] Edges related to this root:', relatedEdges);
 
     const { rows } = await this.db.raw<{ rows: ImpactRow[] }>(`
