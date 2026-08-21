@@ -101,7 +101,11 @@ export function VIPsPage() {
       return;
     }
     try {
-      await createVIP.mutateAsync(formData);
+      // Filtrar valores null/undefined/vazio para evitar erro de validação
+      const cleanData = Object.fromEntries(
+        Object.entries(formData).filter(([_, v]) => v !== null && v !== undefined && v !== '')
+      );
+      await createVIP.mutateAsync(cleanData as CreateVIPInput);
       setShowForm(false);
       setFormData({ hostname: '', displayName: '', vipAddress: '', status: 'active' });
       setFormError('');

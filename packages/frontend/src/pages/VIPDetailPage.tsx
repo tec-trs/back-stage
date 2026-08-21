@@ -97,7 +97,11 @@ export function VIPDetailPage() {
       return;
     }
     try {
-      await updateVIP.mutateAsync(editData);
+      // Filtrar valores null/undefined para evitar erro de validação
+      const cleanData = Object.fromEntries(
+        Object.entries(editData).filter(([_, v]) => v !== null && v !== undefined && v !== '')
+      );
+      await updateVIP.mutateAsync(cleanData as UpdateVIPInput);
       setIsEditing(false);
       setEditError('');
     } catch (err) {
