@@ -568,33 +568,41 @@ export function EcosystemPage() {
           {editMode ? 'Sair da edicao' : 'Editar relacoes'}
         </button>
 
-        <button
-          type="button"
-          onClick={() => setShowExportMenu(!showExportMenu)}
-          className="shrink-0 rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-700 relative"
-          title="Exportar gráfico como imagem ou PDF"
-        >
-          📥 Exportar
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowExportMenu(!showExportMenu)}
+            className="shrink-0 rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-700"
+            title="Exportar gráfico como imagem ou PDF"
+          >
+            📥 Exportar
+          </button>
 
-        {showExportMenu && (
-          <div className="absolute top-full mt-1 rounded-md border border-slate-700 bg-slate-800 shadow-lg z-20">
-            <button
-              type="button"
-              onClick={() => handleExportPNG()}
-              className="block w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
-            >
-              📷 Exportar como PNG
-            </button>
-            <button
-              type="button"
-              onClick={() => handleExportPDF()}
-              className="block w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors border-t border-slate-700"
-            >
-              📄 Exportar como PDF
-            </button>
-          </div>
-        )}
+          {showExportMenu && (
+            <div className="absolute top-full mt-1 left-0 rounded-md border border-slate-700 bg-slate-800 shadow-lg z-50 min-w-max">
+              <button
+                type="button"
+                onClick={() => {
+                  handleExportPNG();
+                  setShowExportMenu(false);
+                }}
+                className="block w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+              >
+                📷 Exportar como PNG
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleExportPDF();
+                  setShowExportMenu(false);
+                }}
+                className="block w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors border-t border-slate-700"
+              >
+                📄 Exportar como PDF
+              </button>
+            </div>
+          )}
+        </div>
 
         <button
           type="button"
