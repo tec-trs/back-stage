@@ -328,10 +328,10 @@ export class ResourceRelationshipRepository {
     const relationFilter = relationType ? `AND relation_type = :relationType` : '';
 
     const baseWhere = direction === 'downstream'
-      ? `source_type = :rootType AND source_id = :rootId`
+      ? `source_type = :rootType AND source_id = :rootIdText`
       : direction === 'upstream'
-        ? `target_type = :rootType AND target_id = :rootId`
-        : `(source_type = :rootType AND source_id = :rootId) OR (target_type = :rootType AND target_id = :rootId)`;
+        ? `target_type = :rootType AND target_id = :rootIdText`
+        : `(source_type = :rootType AND source_id = :rootIdText) OR (target_type = :rootType AND target_id = :rootIdText)`;
 
     const recursiveJoin = direction === 'downstream'
       ? `rr.source_type = t.target_type AND rr.source_id = t.target_id`
@@ -425,6 +425,7 @@ export class ResourceRelationshipRepository {
     //     source provides to target → if SOURCE goes down, TARGET is affected
     //     → initial seed: WHERE source = root  → collect target
     const orgId = orgContext.getOrThrow();
+    const rootIdText = String(resourceId);
     const { rows } = await this.db.raw<{ rows: ImpactRow[] }>(`
       WITH RECURSIVE
       all_edges(source_type, source_id, target_type, target_id, relation_type) AS (
@@ -449,10 +450,10 @@ export class ResourceRelationshipRepository {
           CASE WHEN relation_type IN ('depends_on','connects_to','consumes')
                THEN source_id ELSE target_id END,
           1,
-          ARRAY[:rootType || ':' || :rootId]
+          ARRAY[:rootType || ':' || :rootIdText]
         FROM all_edges
-        WHERE (target_type = :rootType AND target_id = :rootId AND relation_type IN ('depends_on','connects_to','consumes'))
-           OR (source_type = :rootType AND source_id = :rootId AND relation_type IN ('hosts','exposes'))
+        WHERE (target_type = :rootType AND target_id = :rootIdText AND relation_type IN ('depends_on','connects_to','consumes'))
+           OR (source_type = :rootType AND source_id = :rootIdText AND relation_type IN ('hosts','exposes'))
 
         UNION ALL
 
@@ -477,7 +478,7 @@ export class ResourceRelationshipRepository {
       SELECT resource_type, resource_id, MIN(depth) AS min_depth
       FROM impact
       GROUP BY resource_type, resource_id
-    `, { rootType, rootId, maxDepth: effectiveMaxDepth, orgId });
+    `, { rootType, rootIdText, maxDepth: effectiveMaxDepth, orgId });
 
     const impactedResources: ImpactNode[] = [];
     const byType: Record<ResourceType, number> = {
