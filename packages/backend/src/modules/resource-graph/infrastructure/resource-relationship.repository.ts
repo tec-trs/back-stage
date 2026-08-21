@@ -61,24 +61,14 @@ export class ResourceRelationshipRepository {
   public constructor(private readonly db: Knex) {}
 
   private async getResourceNode(resourceType: ResourceType, resourceId: string): Promise<GraphNode | null> {
-    // VIPs são construídos a partir da string do ID (vip:groupId)
-    if (resourceType === 'vip') {
-      const vipLabel = resourceId.startsWith('vip:')
-        ? resourceId.substring(4)
-        : resourceId;
-
-      return {
-        id: resourceId,
-        resourceType: 'vip',
-        label: `VIP: ${vipLabel}`,
-        status: 'active',
-      };
-    }
-
     let table: string;
     let labelColumn: string;
 
     switch (resourceType) {
+      case 'vip':
+        table = 'vips';
+        labelColumn = 'hostname';
+        break;
       case 'server':
         table = 'servers';
         labelColumn = 'hostname';
@@ -108,10 +98,10 @@ export class ResourceRelationshipRepository {
       'id',
       `${labelColumn} as label`,
       'status',
-      ...(resourceType === 'application' || resourceType === 'database' ? ['criticality'] : []),
+      ...(resourceType === 'application' || resourceType === 'database' || resourceType === 'vip' ? ['criticality'] : []),
       ...(resourceType === 'server' || resourceType === 'database' ? ['environment'] : []),
       ...(resourceType === 'database' ? ['hosted_on_server_id'] : []),
-      ...(resourceType === 'server' || resourceType === 'database' ? ['monitoring_url'] : []),
+      ...(resourceType === 'server' || resourceType === 'database' || resourceType === 'vip' ? ['monitoring_url'] : []),
     ];
 
     const row = await this.db(table)
