@@ -101,7 +101,7 @@ export class ResourceRelationshipRepository {
       ...(resourceType === 'application' || resourceType === 'database' || resourceType === 'vip' ? ['criticality'] : []),
       ...(resourceType === 'server' || resourceType === 'database' ? ['environment'] : []),
       ...(resourceType === 'database' ? ['hosted_on_server_id'] : []),
-      ...(resourceType === 'server' || resourceType === 'database' || resourceType === 'vip' ? ['monitoring_url'] : []),
+      ...(resourceType === 'server' || resourceType === 'database' ? ['monitoring_url'] : []),
     ];
 
     const row = await this.db(table)
