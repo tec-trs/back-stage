@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { TrashIcon, PlusIcon } from 'lucide-react';
 
-import { useGroupMembers, useAddGroupMember, useRemoveGroupMember } from './use-server-groups';
+import { useGroupMembers, useAddGroupMember, useRemoveGroupMember, type ServerGroup } from './use-server-groups';
 import { useServers } from '../servers/use-servers';
-import { ServerGroup } from './use-server-groups';
 import { Button } from '../../shared/components/Button';
 import { Spinner } from '../../shared/components/Spinner';
 import { Badge } from '../../shared/components/Badge';
@@ -16,16 +15,17 @@ interface ServerGroupDetailPanelProps {
 
 export function ServerGroupDetailPanel({ group, onEdit, onDelete }: ServerGroupDetailPanelProps) {
   const { data: members = [], isLoading: isLoadingMembers } = useGroupMembers(group.id);
-  const { data: servers = [] } = useServers();
+  const { data: serversData } = useServers();
+  const servers = serversData?.items ?? [];
   const addMember = useAddGroupMember(group.id);
   const removeMember = useRemoveGroupMember(group.id);
   const [showAddServer, setShowAddServer] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const memberServerIds = new Set(members.map(m => m.serverId));
-  const availableServers = servers.filter(s => !memberServerIds.has(s.id));
+  const memberServerIds = new Set((members as any[]).map((m: any) => m.serverId));
+  const availableServers = servers.filter((s: any) => !memberServerIds.has(s.id));
 
-  const memberServers = servers.filter(s => memberServerIds.has(s.id));
+  const memberServers = servers.filter((s: any) => memberServerIds.has(s.id));
 
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-6">

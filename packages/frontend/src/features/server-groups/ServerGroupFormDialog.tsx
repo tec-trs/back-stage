@@ -5,7 +5,7 @@ import {
   useServerGroup,
   type CreateServerGroupInput,
 } from './use-server-groups';
-import { Dialog } from '../../shared/components/Dialog';
+import { Modal } from '../../shared/components/Modal';
 import { Button } from '../../shared/components/Button';
 import { Spinner } from '../../shared/components/Spinner';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
@@ -61,13 +61,13 @@ export function ServerGroupFormDialog({ groupId, onClose }: ServerGroupFormDialo
   };
 
   return (
-    <Dialog isOpen onClose={onClose} title={groupId ? 'Editar Grupo' : 'Novo Grupo'}>
+    <Modal isOpen onClose={onClose} title={groupId ? 'Editar Grupo' : 'Novo Grupo'}>
       {isLoadingGroup ? (
         <Spinner />
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          {createGroup.error && <ErrorMessage error={createGroup.error} />}
-          {updateGroup.error && <ErrorMessage error={updateGroup.error} />}
+          {createGroup.error && <ErrorMessage message={String(createGroup.error)} />}
+          {updateGroup.error && <ErrorMessage message={String(updateGroup.error)} />}
 
           <div>
             <label className="block text-sm font-medium text-white">
@@ -178,6 +178,6 @@ export function ServerGroupFormDialog({ groupId, onClose }: ServerGroupFormDialo
           </div>
         </form>
       )}
-    </Dialog>
+    </Modal>
   );
 }

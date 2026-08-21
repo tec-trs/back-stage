@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '../../shared/http/api-request';
+import { apiRequest } from '../../shared/api/http-client';
 
 export interface ServerGroup {
   id: string;
