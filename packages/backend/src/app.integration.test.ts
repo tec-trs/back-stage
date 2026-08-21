@@ -1,7 +1,10 @@
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 
 import { createApp } from './app.js';
-import { closeDatabaseConnection } from './database/connection.js';
+import { closeDatabaseConnection, db } from './database/connection.js';
+import { signAccessToken } from './shared/auth/jwt.js';
+import type { AuthenticatedUser } from './shared/auth/auth.types.js';
 
 const app = createApp();
 
@@ -82,5 +85,184 @@ describe('App HTTP layer (integration)', () => {
     const response = await request(app).get('/metrics');
     expect(response.status).toBe(200);
     expect(response.text).toContain('backstage_http_request_duration_seconds');
+  });
+});
+
+describe('Integration: Create VIP and Simulate Impact', () => {
+  let token: string;
+  let organizationId: string;
+  let serverId: string;
+
+  beforeAll(async () => {
+    // Create test organization
+    organizationId = randomUUID();
+    const userId = randomUUID();
+    serverId = randomUUID();
+
+    // Insert test organization
+    await db('organizations').insert({
+      id: organizationId,
+      slug: `test-vip-${randomUUID().slice(0, 8)}`,
+      name: 'Test Organization for VIP',
+      plan: 'enterprise',
+      metadata: {},
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    // Insert test user
+    await db('users').insert({
+      id: userId,
+      email: 'viptest@example.com',
+      code: 'viptest',
+      full_name: 'VIP Test User',
+      is_active: true,
+      metadata: {},
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    // Insert test server
+    await db('servers').insert({
+      id: serverId,
+      hostname: 'test-server-for-vip',
+      organization_id: organizationId,
+      server_type: 'vm',
+      provider: 'on_premise',
+      environment: 'production',
+      status: 'active',
+      metadata: {},
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    // Create a valid JWT token with organization context
+    const user: AuthenticatedUser = {
+      id: userId,
+      code: 'VIPTEST001',
+      email: 'viptest@example.com',
+      fullName: 'VIP Test User',
+      roles: ['admin'],
+      organizationId: organizationId,
+      organizationName: 'Test Organization for VIP',
+    };
+    token = 'Bearer ' + signAccessToken(user);
+  });
+
+  afterAll(async () => {
+    // Clean up test data
+    await db('vip_servers').where({ organization_id: organizationId }).del();
+    await db('vips').where({ organization_id: organizationId }).del();
+    await db('resource_relationships').where({ organization_id: organizationId }).del();
+    await db('servers').where({ organization_id: organizationId }).del();
+    await db('users').where({ email: 'viptest@example.com' }).del();
+    await db('organizations').where({ id: organizationId }).del();
+  });
+
+  it('should create VIP, add servers, and calculate impact', async () => {
+    // Create VIP
+    const createVipResponse = await request(app)
+      .post('/api/vips')
+      .set('Authorization', token)
+      .send({
+        hostname: 'test-vip.example.com',
+        displayName: 'Test VIP',
+        description: 'Test VIP for integration testing',
+        status: 'active',
+        criticality: 'high',
+      });
+
+    expect(createVipResponse.status).toBe(201);
+    const vipId = createVipResponse.body.id;
+    expect(vipId).toBeDefined();
+    expect(createVipResponse.body.hostname).toBe('test-vip.example.com');
+
+    // Add server to VIP
+    const addServerResponse = await request(app)
+      .post(`/api/vips/${vipId}/servers`)
+      .set('Authorization', token)
+      .send({
+        serverId: serverId,
+        order: 0,
+      });
+
+    expect(addServerResponse.status).toBe(201);
+
+    // Get resource graph to verify VIP is there
+    const graphResponse = await request(app)
+      .get('/api/resource-graph')
+      .set('Authorization', token)
+      .query({ pageSize: 100 });
+
+    expect(graphResponse.status).toBe(200);
+    // Check that VIP exists in the graph
+    const vipNode = graphResponse.body.nodes?.find((node: any) => node.id === vipId);
+    expect(vipNode).toBeDefined();
+    expect(vipNode.resourceType).toBe('vip');
+
+    // Simulate impact
+    const impactResponse = await request(app)
+      .post('/api/resource-graph/simulate-impact')
+      .set('Authorization', token)
+      .send({
+        resourceType: 'vip',
+        resourceId: vipId,
+        maxDepth: 10,
+      });
+
+    expect(impactResponse.status).toBe(200);
+    expect(impactResponse.body.impactedResources).toBeDefined();
+    expect(Array.isArray(impactResponse.body.impactedResources)).toBe(true);
+  });
+
+  it('should handle VIP deletion and cascade impact', async () => {
+    // Create VIP
+    const createVipResponse = await request(app)
+      .post('/api/vips')
+      .set('Authorization', token)
+      .send({
+        hostname: 'test-vip-delete.example.com',
+        displayName: 'Test VIP for Deletion',
+        status: 'active',
+      });
+
+    expect(createVipResponse.status).toBe(201);
+    const vipId = createVipResponse.body.id;
+
+    // Add server to VIP
+    const addServerResponse = await request(app)
+      .post(`/api/vips/${vipId}/servers`)
+      .set('Authorization', token)
+      .send({
+        serverId: serverId,
+      });
+
+    expect(addServerResponse.status).toBe(201);
+
+    // Delete VIP
+    const deleteResponse = await request(app)
+      .delete(`/api/vips/${vipId}`)
+      .set('Authorization', token);
+
+    expect(deleteResponse.status).toBe(204);
+
+    // Verify VIP is not accessible (soft-deleted)
+    const getDeletedVipResponse = await request(app)
+      .get(`/api/vips/${vipId}`)
+      .set('Authorization', token);
+
+    expect(getDeletedVipResponse.status).toBe(404);
+
+    // Verify VIP is not in resource graph
+    const graphResponse = await request(app)
+      .get('/api/resource-graph')
+      .set('Authorization', token)
+      .query({ pageSize: 100 });
+
+    expect(graphResponse.status).toBe(200);
+    const deletedVipNode = graphResponse.body.nodes?.find(
+      (node: any) => node.id === vipId
+    );
+    expect(deletedVipNode).toBeUndefined();
   });
 });
