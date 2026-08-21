@@ -73,12 +73,16 @@ function ConnectionModal({
 }: {
   pending: PendingConn;
   isBusy: boolean;
-  onConfirm: (relationType: RelationValue, reason?: string) => void;
+  onConfirm: (relationType: RelationValue, reason?: string, isInverted?: boolean) => void;
   onCancel: () => void;
   error?: string;
 }) {
   const [relationType, setRelationType] = useState<RelationValue>('depends_on');
   const [reason, setReason] = useState('');
+  const [isInverted, setIsInverted] = useState(false);
+
+  const sourceLabel = isInverted ? pending.targetLabel : pending.sourceLabel;
+  const targetLabel = isInverted ? pending.sourceLabel : pending.targetLabel;
 
   return (
     <Modal title="Criar relacao" isOpen onClose={onCancel}>
@@ -86,12 +90,22 @@ function ConnectionModal({
         {error && <ErrorMessage message={error} />}
         <div className="rounded-md border border-slate-700 bg-slate-800/50 p-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Relacionamento</p>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="font-medium text-slate-100">{pending.sourceLabel}</span>
-            <span className="text-slate-500">→</span>
-            <span className="font-medium text-slate-100">{pending.targetLabel}</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-medium text-slate-100">{sourceLabel}</span>
+              <span className="text-slate-500">→</span>
+              <span className="font-medium text-slate-100">{targetLabel}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsInverted(!isInverted)}
+              className="px-2 py-1 text-xs rounded bg-slate-700 hover:bg-slate-600 text-slate-300 transition"
+              title="Inverter direção"
+            >
+              ⇄
+            </button>
           </div>
-          <p className="text-xs text-slate-400 mt-2">Você está arrastando DE '{pending.sourceLabel}' PARA '{pending.targetLabel}'</p>
+          <p className="text-xs text-slate-400 mt-2">Clique ⇄ para inverter a direção se necessário</p>
         </div>
 
         <fieldset className="flex flex-col gap-1">
@@ -132,7 +146,7 @@ function ConnectionModal({
           <Button variant="secondary" size="sm" onClick={onCancel} disabled={isBusy}>
             Cancelar
           </Button>
-          <Button size="sm" onClick={() => onConfirm(relationType, reason || undefined)} disabled={isBusy}>
+          <Button size="sm" onClick={() => onConfirm(relationType, reason || undefined, isInverted)} disabled={isBusy}>
             {isBusy ? 'Criando...' : 'Criar relacao'}
           </Button>
         </div>
@@ -390,14 +404,18 @@ export function EcosystemPage() {
   );
 
   const handleConfirmConnect = useCallback(
-    async (relationType: string, reason?: string) => {
+    async (relationType: string, reason?: string, isInverted?: boolean) => {
       if (!pendingConn) return;
       try {
+        const [sourceType, sourceId, targetType, targetId] = isInverted
+          ? [pendingConn.targetType, pendingConn.targetId, pendingConn.sourceType, pendingConn.sourceId]
+          : [pendingConn.sourceType, pendingConn.sourceId, pendingConn.targetType, pendingConn.targetId];
+
         await createRel.mutateAsync({
-          sourceType:   pendingConn.sourceType,
-          sourceId:     pendingConn.sourceId,
-          targetType:   pendingConn.targetType,
-          targetId:     pendingConn.targetId,
+          sourceType,
+          sourceId,
+          targetType,
+          targetId,
           relationType,
           reason,
         });
