@@ -7,34 +7,37 @@ export async function seed(knex: Knex): Promise<void> {
   }
 
   // Limpar relacionamentos existentes para este seed
-  await knex('resource_relationships').where({ metadata: { seed: 'infrastructure_services' } }).del();
+  await knex('resource_relationships')
+    .whereRaw("metadata->>'seed' = ?", ['infrastructure_services'])
+    .del();
 
   // Buscar ou criar aplicações para os serviços
   const getOrCreateApp = async (
     name: string,
     code: string,
     serverName?: string,
-  ): Promise<{ id: string }> => {
+  ): Promise<string> => {
     let app = await knex('applications').where({ code, organization_id: org.id }).first();
-    if (app) return app;
+    if (app) return app.id;
 
-    const [newApp] = await knex('applications')
+    const result = await knex('applications')
       .insert({
         code,
         display_name: name,
         description: `Aplicação ${name}`,
+        app_type: 'middleware',
         organization_id: org.id,
       })
       .returning('id');
-    return { id: newApp };
+    return result[0].id;
   };
 
   // Buscar ou criar servidor
-  const getOrCreateServer = async (hostname: string): Promise<{ id: string }> => {
+  const getOrCreateServer = async (hostname: string): Promise<string> => {
     let server = await knex('servers').where({ hostname, organization_id: org.id }).first();
-    if (server) return server;
+    if (server) return server.id;
 
-    const [newServer] = await knex('servers')
+    const result = await knex('servers')
       .insert({
         hostname,
         ip_address: '0.0.0.0', // placeholder
@@ -43,7 +46,7 @@ export async function seed(knex: Knex): Promise<void> {
         organization_id: org.id,
       })
       .returning('id');
-    return { id: newServer };
+    return result[0].id;
   };
 
   // Criar aplicações para os serviços
@@ -58,58 +61,58 @@ export async function seed(knex: Knex): Promise<void> {
   const relationships = [
     {
       source_type: 'application',
-      source_id: pasoe01.id,
+      source_id: pasoe01,
       target_type: 'application',
-      target_id: totysRef.id,
+      target_id: totysRef,
       relation_type: 'depends_on',
     },
     {
       source_type: 'application',
-      source_id: pasoe01.id,
+      source_id: pasoe01,
       target_type: 'application',
-      target_id: sholderTotys.id,
+      target_id: sholderTotys,
       relation_type: 'depends_on',
     },
     {
       source_type: 'application',
-      source_id: pasoe02.id,
+      source_id: pasoe02,
       target_type: 'application',
-      target_id: totysRef.id,
+      target_id: totysRef,
       relation_type: 'depends_on',
     },
     {
       source_type: 'application',
-      source_id: pasoe02.id,
+      source_id: pasoe02,
       target_type: 'application',
-      target_id: sholderTotys.id,
+      target_id: sholderTotys,
       relation_type: 'depends_on',
     },
     {
       source_type: 'application',
-      source_id: pasoe03.id,
+      source_id: pasoe03,
       target_type: 'application',
-      target_id: totysRef.id,
+      target_id: totysRef,
       relation_type: 'depends_on',
     },
     {
       source_type: 'application',
-      source_id: pasoe03.id,
+      source_id: pasoe03,
       target_type: 'application',
-      target_id: sholderTotys.id,
+      target_id: sholderTotys,
       relation_type: 'depends_on',
     },
     {
       source_type: 'application',
-      source_id: pasoe04.id,
+      source_id: pasoe04,
       target_type: 'application',
-      target_id: totysRef.id,
+      target_id: totysRef,
       relation_type: 'depends_on',
     },
     {
       source_type: 'application',
-      source_id: pasoe04.id,
+      source_id: pasoe04,
       target_type: 'application',
-      target_id: sholderTotys.id,
+      target_id: sholderTotys,
       relation_type: 'depends_on',
     },
   ];
