@@ -61,6 +61,20 @@ export class ResourceRelationshipRepository {
   public constructor(private readonly db: Knex) {}
 
   private async getResourceNode(resourceType: ResourceType, resourceId: string): Promise<GraphNode | null> {
+    // VIPs são construídos a partir da string do ID (vip:groupId)
+    if (resourceType === 'vip') {
+      const vipLabel = resourceId.startsWith('vip:')
+        ? resourceId.substring(4)
+        : resourceId;
+
+      return {
+        id: resourceId,
+        resourceType: 'vip',
+        label: `VIP: ${vipLabel}`,
+        status: 'active',
+      };
+    }
+
     let table: string;
     let labelColumn: string;
 
@@ -80,6 +94,10 @@ export class ResourceRelationshipRepository {
       case 'url':
         table = 'urls';
         labelColumn = 'label';
+        break;
+      case 'group':
+        table = 'server_groups';
+        labelColumn = 'name';
         break;
       default:
         return null;
