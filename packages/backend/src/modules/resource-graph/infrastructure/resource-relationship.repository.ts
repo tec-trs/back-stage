@@ -146,6 +146,8 @@ export class ResourceRelationshipRepository {
       UNION ALL
       SELECT id, 'url' as type, label, status, null::text as criticality, null::text as environment, null::uuid as hosted_on_server_id, null::text as monitoring_url, null::text as display_group FROM urls WHERE deleted_at IS NULL AND organization_id = '${orgId}'
       UNION ALL
+      SELECT id, 'vip' as type, hostname as label, status, criticality, environment, null::uuid as hosted_on_server_id, null::text as monitoring_url, null::text as display_group FROM vips WHERE deleted_at IS NULL AND organization_id = '${orgId}'
+      UNION ALL
       SELECT id, 'group' as type, name as label, status, criticality, null::text as environment, null::uuid as hosted_on_server_id, null::text as monitoring_url, null::text as display_group FROM server_groups WHERE deleted_at IS NULL AND organization_id = '${orgId}'
     `;
   }
