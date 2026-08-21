@@ -476,6 +476,8 @@ export class ResourceRelationshipRepository {
       application: 0,
       database: 0,
       url: 0,
+      group: 0,
+      vip: 0,
     };
     const byDepth: Record<number, ImpactNode[]> = {};
 
