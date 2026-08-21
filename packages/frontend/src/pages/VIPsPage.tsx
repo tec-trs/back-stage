@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 
 import { useVIPs, useCreateVIP, useDeleteVIP, useUpdateVIP, useVIPServers, useAddVIPServer, useRemoveVIPServer, type CreateVIPInput, type VIP } from '../features/vips/use-vips';
 import { useServers } from '../features/servers/use-servers';
@@ -403,7 +402,6 @@ export function VIPsPage() {
                 <th className="px-4 py-2 font-medium">Ambiente</th>
                 <th className="px-4 py-2 font-medium">Time</th>
                 <th className="px-4 py-2 font-medium">Status</th>
-                <th className="w-10 px-4 py-2"></th>
               </tr>
             </thead>
             <tbody>
@@ -434,18 +432,6 @@ export function VIPsPage() {
                     <Badge tone={vip.status === 'active' ? 'success' : 'warning'}>
                       {vip.status}
                     </Badge>
-                  </td>
-                  <td
-                    className="px-4 py-2 text-right"
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <Link
-                      to={`/vips/${vip.id}`}
-                      className="text-blue-400 hover:text-blue-300"
-                      title={`Ver detalhes de ${vip.hostname}`}
-                    >
-                      →
-                    </Link>
                   </td>
                 </tr>
               ))}
