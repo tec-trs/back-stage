@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { TrashIcon, PlusIcon } from 'lucide-react';
+import type { Server } from '../servers/use-servers';
 
 import { useGroupMembers, useAddGroupMember, useRemoveGroupMember, type ServerGroup } from './use-server-groups';
 import { useServers } from '../servers/use-servers';
@@ -23,9 +24,9 @@ export function ServerGroupDetailPanel({ group, onEdit, onDelete }: ServerGroupD
   const [isDeleting, setIsDeleting] = useState(false);
 
   const memberServerIds = new Set((members as any[]).map((m: any) => m.serverId));
-  const availableServers = servers.filter((s: any) => !memberServerIds.has(s.id));
+  const availableServers = (servers as any[]).filter((s: any) => !memberServerIds.has(s.id));
 
-  const memberServers = servers.filter((s: any) => memberServerIds.has(s.id));
+  const memberServers = (servers as any[]).filter((s: any) => memberServerIds.has(s.id));
 
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-6">

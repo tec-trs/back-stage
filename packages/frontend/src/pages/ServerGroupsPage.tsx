@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PlusIcon, GripVerticalIcon } from 'lucide-react';
+import { PlusIcon, GripHorizontalIcon } from 'lucide-react';
 
 import { useServerGroups, useDeleteServerGroup } from '../features/server-groups/use-server-groups';
 import { Button } from '../shared/components/Button';
@@ -17,7 +17,7 @@ export function ServerGroupsPage() {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
   if (isLoading) return <Spinner />;
-  if (error) return <ErrorMessage error={error} />;
+  if (error) return <ErrorMessage message={String(error)} />;
 
   const selectedGroup = groups.find(g => g.id === selectedGroupId);
 
@@ -65,7 +65,7 @@ export function ServerGroupsPage() {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <GripVerticalIcon size={18} className="text-slate-500" />
+                    <GripHorizontalIcon size={18} className="text-slate-500" />
                     <div>
                       <p className="font-medium text-white">{group.name}</p>
                       {group.vipHostname && (
