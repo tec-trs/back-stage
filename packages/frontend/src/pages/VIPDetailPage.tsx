@@ -40,8 +40,8 @@ export function VIPDetailPage() {
   const linkedServerIds = new Set((servers as any[]).map(s => s.id));
   const availableServers = allServers.filter(s => !linkedServerIds.has(s.id));
 
-  const environments = environmentsResponse?.items ?? [];
-  const teams = teamsResponse?.items ?? [];
+  const environments = Array.isArray(environmentsResponse) ? environmentsResponse : [];
+  const teams = Array.isArray(teamsResponse) ? teamsResponse : [];
 
   const handleAddServer = async () => {
     if (!selectedServerId) return;

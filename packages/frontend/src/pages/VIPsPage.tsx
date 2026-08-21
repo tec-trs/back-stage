@@ -144,7 +144,7 @@ export function VIPsPage() {
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
             >
               <option value="">Selecionar ambiente...</option>
-              {(environmentsResponse?.items ?? []).map(env => (
+              {(Array.isArray(environmentsResponse) ? environmentsResponse : []).map(env => (
                 <option key={env.id} value={env.name}>
                   {env.name}
                 </option>
@@ -159,7 +159,7 @@ export function VIPsPage() {
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
             >
               <option value="">Selecionar time...</option>
-              {(teamsResponse?.items ?? []).map(team => (
+              {(Array.isArray(teamsResponse) ? teamsResponse : []).map(team => (
                 <option key={team.id} value={team.name}>
                   {team.name}
                 </option>
