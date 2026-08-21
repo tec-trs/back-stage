@@ -87,6 +87,9 @@ const DependencyTreePage = lazy(() =>
 const GroupsPage = lazy(() =>
   import('../pages/GroupsPage').then((m) => ({ default: m.GroupsPage })),
 );
+const ServerGroupsPage = lazy(() =>
+  import('../pages/ServerGroupsPage').then((m) => ({ default: m.ServerGroupsPage })),
+);
 const OrganizationsPage = lazy(() =>
   import('../pages/OrganizationsPage').then((m) => ({ default: m.OrganizationsPage })),
 );
@@ -115,6 +118,7 @@ export const router = createBrowserRouter([
           { path: '/users', element: withSuspense(<UsersPage />) },
           { path: '/servers', element: withSuspense(<ServersPage />) },
           { path: '/servers/:id', element: withSuspense(<ServerDetailPage />) },
+          { path: '/server-groups', element: withSuspense(<ServerGroupsPage />) },
           { path: '/applications', element: withSuspense(<ApplicationsPage />) },
           { path: '/applications/:id', element: withSuspense(<ApplicationDetailPage />) },
           { path: '/databases', element: withSuspense(<DatabasesPage />) },
