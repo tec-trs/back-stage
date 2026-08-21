@@ -1,23 +1,28 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
-import { useVIPs, useCreateVIP, type CreateVIPInput } from '../features/vips/use-vips';
+import { useVIPs, useCreateVIP, useDeleteVIP, type CreateVIPInput } from '../features/vips/use-vips';
 import { useEnvironments } from '../features/environments/use-environments';
 import { useTeams } from '../features/teams/use-teams';
-import { Button } from '../shared/components/Button';
-import { ErrorMessage } from '../shared/components/ErrorMessage';
-import { Spinner } from '../shared/components/Spinner';
 import { Badge } from '../shared/components/Badge';
+import { Button } from '../shared/components/Button';
+import { ConfirmDialog } from '../shared/components/ConfirmDialog';
+import { EmptyState } from '../shared/components/EmptyState';
+import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Modal } from '../shared/components/Modal';
-import { PlusIcon } from '../shared/components/icons';
+import { PageHeader } from '../shared/components/PageHeader';
+import { PlusIcon, TrashIcon, PencilIcon } from '../shared/components/icons';
+import { Spinner } from '../shared/components/Spinner';
 
 export function VIPsPage() {
   const { data: vips = [], isLoading, error } = useVIPs();
-  const navigate = useNavigate();
-  const createVIP = useCreateVIP();
   const { data: environmentsResponse } = useEnvironments();
   const { data: teamsResponse } = useTeams();
+  const createVIP = useCreateVIP();
+  const deleteVIP = useDeleteVIP();
+
   const [showForm, setShowForm] = useState(false);
+  const [selectedVIPId, setSelectedVIPId] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [formData, setFormData] = useState<CreateVIPInput>({
     hostname: '',
     displayName: '',
@@ -26,11 +31,34 @@ export function VIPsPage() {
   });
   const [formError, setFormError] = useState('');
 
-  if (isLoading) return <Spinner />;
-  if (error) return <ErrorMessage message={String(error)} />;
+  const selectedVIP = vips.find(v => v.id === selectedVIPId);
+  const environments = Array.isArray(environmentsResponse) ? environmentsResponse : [];
+  const teams = Array.isArray(teamsResponse) ? teamsResponse : [];
+
+  const handleCreate = () => {
+    setSelectedVIPId(null);
+    setFormData({ hostname: '', displayName: '', vipAddress: '', status: 'active' });
+    setShowForm(true);
+    setFormError('');
+  };
+
+  const handleEdit = () => {
+    if (!selectedVIP) return;
+    setFormData({
+      hostname: selectedVIP.hostname,
+      displayName: selectedVIP.displayName,
+      vipAddress: selectedVIP.vipAddress,
+      environment: selectedVIP.environment,
+      criticality: selectedVIP.criticality,
+      ownerTeam: selectedVIP.ownerTeam,
+      status: selectedVIP.status,
+    });
+    setShowForm(true);
+    setFormError('');
+  };
 
   const handleSubmit = async () => {
-    if (!formData.hostname.trim()) {
+    if (!formData.hostname?.trim()) {
       setFormError('Hostname é obrigatório');
       return;
     }
@@ -44,66 +72,32 @@ export function VIPsPage() {
     }
   };
 
+  const handleDeleteConfirm = async () => {
+    if (!selectedVIP) return;
+    try {
+      await deleteVIP.mutateAsync(selectedVIP.id);
+      setSelectedVIPId(null);
+      setConfirmDeleteOpen(false);
+    } catch (err) {
+      setFormError(String(err));
+    }
+  };
+
   return (
-    <div className="space-y-6 p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">VIPs</h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Gerenciar Virtual IPs e seus servidores associados
-          </p>
-        </div>
-        <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
-          <PlusIcon />
-          Novo VIP
-        </Button>
-      </div>
+    <div>
+      <PageHeader title="VIPs" description="Gerenciar Virtual IPs e balanceadores" />
 
-      {vips.length === 0 ? (
-        <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-8 text-center">
-          <p className="text-slate-400">Nenhum VIP criado</p>
-          <p className="mt-2 text-sm text-slate-500">
-            Crie seu primeiro VIP para gerenciar servidores em balanceamento
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {vips.map(vip => (
-            <div
-              key={vip.id}
-              onClick={() => navigate(`/vips/${vip.id}`)}
-              className="flex cursor-pointer items-center justify-between rounded-lg border border-slate-800 bg-slate-900/30 px-4 py-3 transition-all hover:border-slate-700 hover:bg-slate-900/50"
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <p className="font-mono text-sm text-white">{vip.hostname}</p>
-                    {vip.displayName && (
-                      <p className="mt-1 text-xs text-slate-400">{vip.displayName}</p>
-                    )}
-                  </div>
-                  <Badge tone={vip.status === 'active' ? 'success' : 'warning'}>
-                    {vip.status}
-                  </Badge>
-                </div>
-                {vip.vipAddress && (
-                  <p className="mt-2 text-xs text-blue-300">{vip.vipAddress}</p>
-                )}
-              </div>
-              <span className="text-slate-500">→</span>
-            </div>
-          ))}
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={confirmDeleteOpen}
+        title="Deletar VIP"
+        message={`Tem certeza que deseja deletar o VIP "${selectedVIP?.hostname}"? Esta ação não pode ser desfeita.`}
+        confirmLabel="Deletar"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmDeleteOpen(false)}
+        isPending={deleteVIP.isPending}
+      />
 
-      <Modal
-        isOpen={showForm}
-        onClose={() => {
-          setShowForm(false);
-          setFormError('');
-        }}
-        title="Criar Novo VIP"
-      >
+      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Novo VIP">
         <div className="space-y-4">
           {formError && <ErrorMessage message={formError} />}
           <div>
@@ -144,7 +138,7 @@ export function VIPsPage() {
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
             >
               <option value="">Selecionar ambiente...</option>
-              {(Array.isArray(environmentsResponse) ? environmentsResponse : []).map(env => (
+              {environments.map(env => (
                 <option key={env.id} value={env.name}>
                   {env.name}
                 </option>
@@ -159,7 +153,7 @@ export function VIPsPage() {
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
             >
               <option value="">Selecionar time...</option>
-              {(Array.isArray(teamsResponse) ? teamsResponse : []).map(team => (
+              {teams.map(team => (
                 <option key={team.id} value={team.name}>
                   {team.name}
                 </option>
@@ -189,11 +183,90 @@ export function VIPsPage() {
               Cancelar
             </Button>
             <Button onClick={handleSubmit} disabled={createVIP.isPending}>
-              {createVIP.isPending ? 'Criando...' : 'Criar'}
+              {createVIP.isPending ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
         </div>
       </Modal>
+
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
+        <Button size="sm" icon={<PlusIcon />} onClick={handleCreate} title="Incluir um novo VIP">
+          Incluir VIP
+        </Button>
+        <div className="mx-1 h-6 w-px bg-slate-800" />
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<PencilIcon />}
+          disabled={!selectedVIP}
+          onClick={handleEdit}
+          title={selectedVIP ? `Editar ${selectedVIP.hostname}` : 'Selecione um VIP para editar'}
+        >
+          Editar
+        </Button>
+        <Button
+          size="sm"
+          variant="danger"
+          icon={<TrashIcon />}
+          disabled={!selectedVIP || deleteVIP.isPending}
+          onClick={() => setConfirmDeleteOpen(true)}
+          title={selectedVIP ? `Deletar ${selectedVIP.hostname}` : 'Selecione um VIP para deletar'}
+        >
+          Deletar
+        </Button>
+        <span className="ml-auto text-xs text-slate-500">
+          {selectedVIP
+            ? `Selecionado: ${selectedVIP.hostname}`
+            : 'Selecione um VIP na lista para editar ou deletar.'}
+        </span>
+      </div>
+
+      {isLoading && <Spinner />}
+      {error && (
+        <ErrorMessage message={error instanceof Error ? error.message : 'Erro ao carregar VIPs'} />
+      )}
+      {!isLoading && vips.length === 0 && (
+        <EmptyState title="Nenhum VIP encontrado" description="Cadastre o primeiro VIP." />
+      )}
+
+      {!isLoading && vips.length > 0 && (
+        <div className="overflow-hidden rounded-lg border border-slate-800">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-900 text-slate-400">
+              <tr>
+                <th className="px-4 py-2 font-medium">Hostname</th>
+                <th className="px-4 py-2 font-medium">Nome Exibição</th>
+                <th className="px-4 py-2 font-medium">Endereço VIP</th>
+                <th className="px-4 py-2 font-medium">Ambiente</th>
+                <th className="px-4 py-2 font-medium">Time</th>
+                <th className="px-4 py-2 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vips.map(vip => (
+                <tr
+                  key={vip.id}
+                  onClick={() => setSelectedVIPId(vip.id)}
+                  className={`cursor-pointer border-t border-slate-800 ${
+                    selectedVIPId === vip.id ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
+                  }`}
+                >
+                  <td className="px-4 py-2 font-mono text-white">{vip.hostname}</td>
+                  <td className="px-4 py-2 text-slate-400">{vip.displayName || '-'}</td>
+                  <td className="px-4 py-2 font-mono text-blue-300">{vip.vipAddress || '-'}</td>
+                  <td className="px-4 py-2 text-slate-400">{vip.environment || '-'}</td>
+                  <td className="px-4 py-2 text-slate-400">{vip.ownerTeam || '-'}</td>
+                  <td className="px-4 py-2">
+                    <Badge tone={vip.status === 'active' ? 'success' : 'warning'}>
+                      {vip.status}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
