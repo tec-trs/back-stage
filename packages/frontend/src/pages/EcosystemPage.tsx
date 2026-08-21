@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 import { ImpactAnalysisPanel } from '../features/resource-graph/ImpactAnalysisPanel';
 import {
@@ -197,6 +199,7 @@ export function EcosystemPage() {
   const [pendingConn,    setPendingConn]    = useState<PendingConn | null>(null);
   const [connectionError, setConnectionError] = useState<string>('');
   const [resetLayoutKey, setResetLayoutKey] = useState(0);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const prevNodeCountRef = useRef<number>(0);
   const createRel = useCreateRelationship();
   const deleteRel = useDeleteRelationship();
@@ -230,6 +233,48 @@ export function EcosystemPage() {
       else next.add(type);
       return next;
     });
+  }, []);
+
+  const graphContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleExportPNG = useCallback(async () => {
+    if (!graphContainerRef.current) return;
+    try {
+      const canvas = await html2canvas(graphContainerRef.current, {
+        backgroundColor: '#1a1a2e',
+        scale: 2,
+      });
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL();
+      link.download = `ecosistema-${new Date().toISOString().split('T')[0]}.png`;
+      link.click();
+      setShowExportMenu(false);
+    } catch (err) {
+      console.error('Erro ao exportar PNG:', err);
+    }
+  }, []);
+
+  const handleExportPDF = useCallback(async () => {
+    if (!graphContainerRef.current) return;
+    try {
+      const canvas = await html2canvas(graphContainerRef.current, {
+        backgroundColor: '#1a1a2e',
+        scale: 2,
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+      });
+      const imgWidth = 280;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+      pdf.save(`ecosistema-${new Date().toISOString().split('T')[0]}.pdf`);
+      setShowExportMenu(false);
+    } catch (err) {
+      console.error('Erro ao exportar PDF:', err);
+    }
   }, []);
 
   // Search functionality
@@ -525,6 +570,34 @@ export function EcosystemPage() {
 
         <button
           type="button"
+          onClick={() => setShowExportMenu(!showExportMenu)}
+          className="shrink-0 rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-700 relative"
+          title="Exportar gráfico como imagem ou PDF"
+        >
+          📥 Exportar
+        </button>
+
+        {showExportMenu && (
+          <div className="absolute top-full mt-1 rounded-md border border-slate-700 bg-slate-800 shadow-lg z-20">
+            <button
+              type="button"
+              onClick={() => handleExportPNG()}
+              className="block w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+            >
+              📷 Exportar como PNG
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExportPDF()}
+              className="block w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors border-t border-slate-700"
+            >
+              📄 Exportar como PDF
+            </button>
+          </div>
+        )}
+
+        <button
+          type="button"
           onClick={() => setResetLayoutKey((k) => k + 1)}
           className="shrink-0 rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-700"
           title="Desfaz posicionamento manual e recalcula o layout automatico"
@@ -618,7 +691,7 @@ export function EcosystemPage() {
       {/* ── Área principal: grafo + painel inferior ──────────────────── */}
       <div className="relative flex flex-1 overflow-hidden">
         {/* Grafo — largura total */}
-        <div className="flex-1 overflow-hidden bg-slate-950">
+        <div ref={graphContainerRef} className="flex-1 overflow-hidden bg-slate-950">
           <ResourceGraph
             nodes={graphNodes}
             edges={graphEdges}
