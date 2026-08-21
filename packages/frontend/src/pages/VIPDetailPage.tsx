@@ -31,15 +31,23 @@ export function VIPDetailPage() {
   const linkedServerIds = new Set((servers as any[]).map(s => s.id));
   const availableServers = allServers.filter(s => !linkedServerIds.has(s.id));
 
+  console.log('VIP:', id);
+  console.log('Todos os servidores:', allServers.length);
+  console.log('Servidores vinculados:', servers.length);
+  console.log('Servidores disponíveis:', availableServers.length);
+
   const handleAddServer = async () => {
     if (!selectedServerId) return;
     setErrorMsg('');
     try {
+      console.log('Adicionando servidor:', selectedServerId, 'ao VIP:', id);
       await addServer.mutateAsync(selectedServerId);
       setShowAddServer(false);
       setSelectedServerId('');
     } catch (err) {
-      setErrorMsg(String(err));
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error('Erro ao adicionar servidor:', errorMsg);
+      setErrorMsg(errorMsg);
     }
   };
 
@@ -190,36 +198,59 @@ export function VIPDetailPage() {
             title="Adicionar Servidor"
           >
             <div className="space-y-4">
-              <select
-                value={selectedServerId}
-                onChange={e => setSelectedServerId(e.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-              >
-                <option value="">Selecionar servidor...</option>
-                {availableServers.map(server => (
-                  <option key={server.id} value={server.id}>
-                    {server.hostname}
-                  </option>
-                ))}
-              </select>
+              {availableServers.length === 0 ? (
+                <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 text-center">
+                  <p className="text-sm text-slate-400">
+                    Nenhum servidor disponível. Todos já estão vinculados a este VIP ou não existem servidores criados.
+                  </p>
+                </div>
+              ) : (
+                <select
+                  value={selectedServerId}
+                  onChange={e => setSelectedServerId(e.target.value)}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                >
+                  <option value="">Selecionar servidor...</option>
+                  {availableServers.map(server => (
+                    <option key={server.id} value={server.id}>
+                      {server.hostname}
+                    </option>
+                  ))}
+                </select>
+              )}
 
-              <div className="flex justify-end gap-2 pt-2">
-                <Button
-                  onClick={() => {
-                    setShowAddServer(false);
-                    setSelectedServerId('');
-                  }}
-                  variant="secondary"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleAddServer}
-                  disabled={!selectedServerId || addServer.isPending}
-                >
-                  {addServer.isPending ? 'Adicionando...' : 'Adicionar'}
-                </Button>
-              </div>
+              {availableServers.length > 0 && (
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    onClick={() => {
+                      setShowAddServer(false);
+                      setSelectedServerId('');
+                    }}
+                    variant="secondary"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleAddServer}
+                    disabled={!selectedServerId || addServer.isPending}
+                  >
+                    {addServer.isPending ? 'Adicionando...' : 'Adicionar'}
+                  </Button>
+                </div>
+              )}
+              {availableServers.length === 0 && (
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => {
+                      setShowAddServer(false);
+                      setSelectedServerId('');
+                    }}
+                    variant="secondary"
+                  >
+                    Fechar
+                  </Button>
+                </div>
+              )}
             </div>
           </Modal>
         </div>
