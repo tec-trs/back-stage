@@ -60,12 +60,17 @@ export class VIPRepository {
     if (data.ownerUserId !== undefined) updateData.owner_user_id = data.ownerUserId;
     if (data.costCenter !== undefined) updateData.cost_center = data.costCenter;
 
-    const [vip] = await this.db('vips')
+    // Se nenhum campo foi fornecido para atualizar, retorna o VIP existente
+    if (Object.keys(updateData).length === 0) {
+      return this.findById(vipId, organizationId);
+    }
+
+    const vips = await this.db('vips')
       .where({ id: vipId, organization_id: organizationId })
       .update(updateData)
       .returning('*');
 
-    return vip ? this.toDto(vip) : null;
+    return vips && vips.length > 0 ? this.toDto(vips[0]) : null;
   }
 
   async delete(vipId: string, organizationId: string): Promise<boolean> {
