@@ -52,7 +52,7 @@ export class VIPService {
   }
 
   async addServerToVIP(vipId: string, organizationId: string, serverId: string, order?: number): Promise<VIP> {
-    const vip = await this.getVIP(vipId, organizationId);
+    await this.getVIP(vipId, organizationId);
 
     // Validar que servidor existe
     const server = await this.db('servers')
@@ -85,7 +85,7 @@ export class VIPService {
   }
 
   async removeServerFromVIP(vipId: string, organizationId: string, serverId: string): Promise<VIP> {
-    const vip = await this.getVIP(vipId, organizationId);
+    await this.getVIP(vipId, organizationId);
 
     const removed = await this.repository.removeServer(vipId, organizationId, serverId);
     if (!removed) {

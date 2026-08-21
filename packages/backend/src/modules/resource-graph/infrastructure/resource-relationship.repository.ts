@@ -242,7 +242,7 @@ export class ResourceRelationshipRepository {
       reason: e.reason ?? null,
       createdByUserId: e.created_by_user_id ?? null,
       createdByName: e.created_by_name ?? null,
-      createdAt: e.created_at?.toISOString?.() ?? (e.created_at as any),
+      createdAt: (e as any).created_at?.toISOString?.() ?? new Date().toISOString(),
     }));
 
     const mappedDeployments: GraphEdge[] = deployments.map((d) => ({
@@ -540,7 +540,7 @@ export class ResourceRelationshipRepository {
       reason: r.reason ?? null,
       createdByUserId: r.created_by_user_id ?? null,
       createdByName: r.created_by_name ?? null,
-      createdAt: r.created_at?.toISOString?.() ?? (r.created_at as any),
+      createdAt: (r as any).created_at?.toISOString?.() ?? new Date().toISOString(),
     }));
   }
 
@@ -576,7 +576,7 @@ export class ResourceRelationshipRepository {
         reason: reason ?? null,
         created_by_user_id: createdByUserId ?? null,
       })
-      .returning('id', 'created_at')) as { id: string; created_at: string }[];
+      .returning(['id', 'created_at'])) as { id: string; created_at: string }[];
 
     return {
       id: row.id,
@@ -681,7 +681,7 @@ export class ResourceRelationshipRepository {
   }
 
   public async getCriticalResources(): Promise<CriticalResource[]> {
-    const orgId = orgContext.getOrThrow();
+    orgContext.getOrThrow();
     const { nodes, edges } = await this.getFullGraph({}, { page: 1, pageSize: 500 });
 
     if (nodes.length === 0) return [];

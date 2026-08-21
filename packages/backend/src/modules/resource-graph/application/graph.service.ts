@@ -97,7 +97,7 @@ export class GraphService {
       relationType,
       metadata,
       reason,
-      audit.actorUserId,
+      audit.actorUserId ?? undefined,
     );
 
     // Implicit edges have non-UUID IDs (e.g. "deploy:...") — store null so the

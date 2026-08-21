@@ -733,7 +733,6 @@ export function ResourceGraph({
         serverToGroup.set(n.id, `server-group:${n.displayGroup}`);
       }
     }
-    const serversInGroups = new Set(serverToGroup.keys());
 
     // ── 3. Helper: server-container size based on chip count ─────────────
     function containerSize(serverId: string): { w: number; h: number } {
@@ -787,7 +786,6 @@ export function ResourceGraph({
     const saved = (storageKey && !isReset) ? loadPositions(storageKey) : {};
 
     // ── 7. Build RF nodes (SIMPLIFIED: all as resource type) ──────────────
-    const nodeMap = new Map(propNodes.map((n) => [n.id, n]));
     const newRfNodes: RFNode<NodeData>[] = [];
 
     function nodeData(n: { id: string; label: string; resourceType: string; status?: string; dbLabels?: string[] }): NodeData {

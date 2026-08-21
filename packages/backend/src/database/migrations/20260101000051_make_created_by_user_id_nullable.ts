@@ -7,7 +7,7 @@ export async function up(knex: Knex): Promise<void> {
   });
 }
 
-export async function down(knex: Knex): Promise<void> {
+export async function down(): Promise<void> {
   // This would require knowing the original constraint, so we skip it
   // In production, you'd want to be more careful here
 }

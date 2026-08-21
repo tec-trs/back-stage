@@ -15,7 +15,6 @@ export async function seed(knex: Knex): Promise<void> {
   const getOrCreateApp = async (
     name: string,
     code: string,
-    serverName?: string,
   ): Promise<string> => {
     let app = await knex('applications').where({ code, organization_id: org.id }).first();
     if (app) return app.id;
@@ -59,12 +58,12 @@ export async function seed(knex: Knex): Promise<void> {
   const serverSholder = await getOrCreateServer('ocsl-totshe-01p');
 
   // Criar aplicações para os serviços
-  const pasoe01 = await getOrCreateApp('PASOE-TOTYS-01P', 'pasoe-totys-01p', 'ocsl-totgps-01p');
-  const pasoe02 = await getOrCreateApp('PASOE-TOTYS-02P', 'pasoe-totys-02p', 'ocsl-totgps-02p');
-  const pasoe03 = await getOrCreateApp('PASOE-TOTYS-03P', 'pasoe-totys-03p', 'ocsl-totgps-03p');
-  const pasoe04 = await getOrCreateApp('PASOE-TOTYS-04P', 'pasoe-totys-04p', 'ocsl-totgps-04p');
-  const totysRef = await getOrCreateApp('TOTYS-DFS', 'totys-dfs', 'ocsl-totdfs-01p');
-  const sholderTotys = await getOrCreateApp('SHOLDER-TOTYS', 'sholder-totys', 'ocsl-totshe-01p');
+  const pasoe01 = await getOrCreateApp('PASOE-TOTYS-01P', 'pasoe-totys-01p');
+  const pasoe02 = await getOrCreateApp('PASOE-TOTYS-02P', 'pasoe-totys-02p');
+  const pasoe03 = await getOrCreateApp('PASOE-TOTYS-03P', 'pasoe-totys-03p');
+  const pasoe04 = await getOrCreateApp('PASOE-TOTYS-04P', 'pasoe-totys-04p');
+  const totysRef = await getOrCreateApp('TOTYS-DFS', 'totys-dfs');
+  const sholderTotys = await getOrCreateApp('SHOLDER-TOTYS', 'sholder-totys');
 
   // Criar relacionamentos com impactos de cascata
   const relationships = [

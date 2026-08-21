@@ -187,7 +187,7 @@ export class ServerService {
             rel.targetId, // targetId
             'hosts',
             rel.metadata,
-            rel.reason,
+            rel.reason ?? undefined,
           );
         }
 

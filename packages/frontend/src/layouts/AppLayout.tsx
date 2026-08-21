@@ -74,6 +74,7 @@ const NAV_ITEMS: NavItem[] = [
   { kind: 'link', to: '/catalog', label: 'Catalogo', icon: <BookIcon /> },
   { kind: 'link', to: '/infrastructure', label: 'Infraestrutura', icon: <LayersIcon /> },
   { kind: 'link', to: '/servers', label: 'Servidores', icon: <ServerIcon /> },
+  { kind: 'link', to: '/vips', label: 'VIPs', icon: <NetworkIcon /> },
   { kind: 'link', to: '/applications', label: 'Aplicacoes', icon: <BoxIcon /> },
   { kind: 'link', to: '/databases', label: 'Bancos de Dados', icon: <BoxIcon /> },
   { kind: 'link', to: '/urls', label: 'URLs', icon: <NetworkIcon /> },
