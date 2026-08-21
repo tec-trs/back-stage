@@ -69,11 +69,13 @@ function ConnectionModal({
   isBusy,
   onConfirm,
   onCancel,
+  error,
 }: {
   pending: PendingConn;
   isBusy: boolean;
   onConfirm: (relationType: RelationValue, reason?: string) => void;
   onCancel: () => void;
+  error?: string;
 }) {
   const [relationType, setRelationType] = useState<RelationValue>('depends_on');
   const [reason, setReason] = useState('');
@@ -81,6 +83,7 @@ function ConnectionModal({
   return (
     <Modal title="Criar relacao" isOpen onClose={onCancel}>
       <div className="flex flex-col gap-4">
+        {error && <ErrorMessage message={error} />}
         <div className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm">
           <span className="font-medium text-slate-200">{pending.sourceLabel}</span>
           <span className="text-slate-500">→</span>
@@ -161,7 +164,7 @@ export function EcosystemPage() {
   }, [compactMode]);
 
   const [visibleTypes, setVisibleTypes] = useState<Set<string>>(
-    new Set(['server', 'application', 'database', 'url'])
+    new Set(['server', 'application', 'database', 'url', 'vip'])
   );
 
   // Search/highlight
@@ -174,6 +177,7 @@ export function EcosystemPage() {
   // Edit-mode (drag-and-drop relationship creation)
   const [editMode,       setEditMode]       = useState(false);
   const [pendingConn,    setPendingConn]    = useState<PendingConn | null>(null);
+  const [connectionError, setConnectionError] = useState<string>('');
   const [resetLayoutKey, setResetLayoutKey] = useState(0);
   const prevNodeCountRef = useRef<number>(0);
   const createRel = useCreateRelationship();
@@ -376,6 +380,7 @@ export function EcosystemPage() {
         sourceLabel: srcNode?.label ?? payload.sourceId,
         targetLabel: tgtNode?.label ?? payload.targetId,
       });
+      setConnectionError('');
     },
     [graphNodes],
   );
@@ -383,15 +388,20 @@ export function EcosystemPage() {
   const handleConfirmConnect = useCallback(
     async (relationType: string, reason?: string) => {
       if (!pendingConn) return;
-      await createRel.mutateAsync({
-        sourceType:   pendingConn.sourceType,
-        sourceId:     pendingConn.sourceId,
-        targetType:   pendingConn.targetType,
-        targetId:     pendingConn.targetId,
-        relationType,
-        reason,
-      });
-      setPendingConn(null);
+      try {
+        await createRel.mutateAsync({
+          sourceType:   pendingConn.sourceType,
+          sourceId:     pendingConn.sourceId,
+          targetType:   pendingConn.targetType,
+          targetId:     pendingConn.targetId,
+          relationType,
+          reason,
+        });
+        setPendingConn(null);
+        setConnectionError('');
+      } catch (err) {
+        setConnectionError(err instanceof Error ? err.message : 'Erro ao criar relacionamento');
+      }
     },
     [createRel, pendingConn],
   );
@@ -683,6 +693,7 @@ export function EcosystemPage() {
           isBusy={createRel.isPending}
           onConfirm={handleConfirmConnect}
           onCancel={() => setPendingConn(null)}
+          error={connectionError}
         />
       )}
     </div>
