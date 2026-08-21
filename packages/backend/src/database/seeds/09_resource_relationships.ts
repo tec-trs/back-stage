@@ -40,14 +40,23 @@ export async function seed(knex: Knex): Promise<void> {
     const result = await knex('servers')
       .insert({
         hostname,
-        ip_address: '0.0.0.0', // placeholder
-        operating_system: 'Linux',
-        status: 'online',
+        server_type: 'physical',
+        provider: 'on_premise',
+        status: 'active',
+        environment: 'production',
         organization_id: org.id,
       })
       .returning('id');
     return result[0].id;
   };
+
+  // Buscar ou criar servidores
+  const server01 = await getOrCreateServer('ocsl-totgps-01p');
+  const server02 = await getOrCreateServer('ocsl-totgps-02p');
+  const server03 = await getOrCreateServer('ocsl-totgps-03p');
+  const server04 = await getOrCreateServer('ocsl-totgps-04p');
+  const serverTotys = await getOrCreateServer('ocsl-totdfs-01p');
+  const serverSholder = await getOrCreateServer('ocsl-totshe-01p');
 
   // Criar aplicações para os serviços
   const pasoe01 = await getOrCreateApp('PASOE-TOTYS-01P', 'pasoe-totys-01p', 'ocsl-totgps-01p');
@@ -57,64 +66,25 @@ export async function seed(knex: Knex): Promise<void> {
   const totysRef = await getOrCreateApp('TOTYS-DFS', 'totys-dfs', 'ocsl-totdfs-01p');
   const sholderTotys = await getOrCreateApp('SHOLDER-TOTYS', 'sholder-totys', 'ocsl-totshe-01p');
 
-  // Criar relacionamentos: PASOE → TOTYS-DFS e PASOE → SHOLDER-TOTYS
+  // Criar relacionamentos com impactos de cascata
   const relationships = [
-    {
-      source_type: 'application',
-      source_id: pasoe01,
-      target_type: 'application',
-      target_id: totysRef,
-      relation_type: 'depends_on',
-    },
-    {
-      source_type: 'application',
-      source_id: pasoe01,
-      target_type: 'application',
-      target_id: sholderTotys,
-      relation_type: 'depends_on',
-    },
-    {
-      source_type: 'application',
-      source_id: pasoe02,
-      target_type: 'application',
-      target_id: totysRef,
-      relation_type: 'depends_on',
-    },
-    {
-      source_type: 'application',
-      source_id: pasoe02,
-      target_type: 'application',
-      target_id: sholderTotys,
-      relation_type: 'depends_on',
-    },
-    {
-      source_type: 'application',
-      source_id: pasoe03,
-      target_type: 'application',
-      target_id: totysRef,
-      relation_type: 'depends_on',
-    },
-    {
-      source_type: 'application',
-      source_id: pasoe03,
-      target_type: 'application',
-      target_id: sholderTotys,
-      relation_type: 'depends_on',
-    },
-    {
-      source_type: 'application',
-      source_id: pasoe04,
-      target_type: 'application',
-      target_id: totysRef,
-      relation_type: 'depends_on',
-    },
-    {
-      source_type: 'application',
-      source_id: pasoe04,
-      target_type: 'application',
-      target_id: sholderTotys,
-      relation_type: 'depends_on',
-    },
+    // Relacionamentos de hospedagem (server hosts application)
+    { source_type: 'server', source_id: server01, target_type: 'application', target_id: pasoe01, relation_type: 'hosts' },
+    { source_type: 'server', source_id: server02, target_type: 'application', target_id: pasoe02, relation_type: 'hosts' },
+    { source_type: 'server', source_id: server03, target_type: 'application', target_id: pasoe03, relation_type: 'hosts' },
+    { source_type: 'server', source_id: server04, target_type: 'application', target_id: pasoe04, relation_type: 'hosts' },
+    { source_type: 'server', source_id: serverTotys, target_type: 'application', target_id: totysRef, relation_type: 'hosts' },
+    { source_type: 'server', source_id: serverSholder, target_type: 'application', target_id: sholderTotys, relation_type: 'hosts' },
+
+    // Relacionamentos de dependência (app depends on app)
+    { source_type: 'application', source_id: pasoe01, target_type: 'application', target_id: totysRef, relation_type: 'depends_on' },
+    { source_type: 'application', source_id: pasoe01, target_type: 'application', target_id: sholderTotys, relation_type: 'depends_on' },
+    { source_type: 'application', source_id: pasoe02, target_type: 'application', target_id: totysRef, relation_type: 'depends_on' },
+    { source_type: 'application', source_id: pasoe02, target_type: 'application', target_id: sholderTotys, relation_type: 'depends_on' },
+    { source_type: 'application', source_id: pasoe03, target_type: 'application', target_id: totysRef, relation_type: 'depends_on' },
+    { source_type: 'application', source_id: pasoe03, target_type: 'application', target_id: sholderTotys, relation_type: 'depends_on' },
+    { source_type: 'application', source_id: pasoe04, target_type: 'application', target_id: totysRef, relation_type: 'depends_on' },
+    { source_type: 'application', source_id: pasoe04, target_type: 'application', target_id: sholderTotys, relation_type: 'depends_on' },
   ];
 
   // Inserir relacionamentos
@@ -126,5 +96,9 @@ export async function seed(knex: Knex): Promise<void> {
     })),
   );
 
-  console.log(`✓ ${relationships.length} relacionamentos criados no resource-graph`);
+  const hostCount = relationships.filter((r) => r.relation_type === 'hosts').length;
+  const depCount = relationships.filter((r) => r.relation_type === 'depends_on').length;
+  console.log(
+    `✓ ${relationships.length} relacionamentos criados no resource-graph (${hostCount} hosts + ${depCount} dependências)`,
+  );
 }
