@@ -1,2 +1,2 @@
-export const APP_VERSION = '0.13.2';
+export const APP_VERSION = '2.0.0';
 export const APP_NAME = 'Back-Stage';
