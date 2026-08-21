@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import { useVIPs, useCreateVIP, useDeleteVIP, type CreateVIPInput, type VIP } from '../features/vips/use-vips';
 import { useEnvironments } from '../features/environments/use-environments';
@@ -11,11 +11,10 @@ import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Modal } from '../shared/components/Modal';
 import { PageHeader } from '../shared/components/PageHeader';
-import { PlusIcon, TrashIcon, PencilIcon, CopyIcon, ServerIcon } from '../shared/components/icons';
+import { PlusIcon, TrashIcon, PencilIcon, CopyIcon, ChevronRightIcon } from '../shared/components/icons';
 import { Spinner } from '../shared/components/Spinner';
 
 export function VIPsPage() {
-  const navigate = useNavigate();
   const { data: vips = [], isLoading, error } = useVIPs();
   const { data: environmentsResponse } = useEnvironments();
   const { data: teamsResponse } = useTeams();
@@ -263,16 +262,6 @@ export function VIPsPage() {
         </Button>
         <Button
           size="sm"
-          variant="secondary"
-          icon={<ServerIcon />}
-          disabled={!singleSelected}
-          onClick={() => singleSelected && navigate(`/vips/${singleSelected.id}?tab=servers`)}
-          title={singleSelected ? `Gerenciar servidores de ${singleSelected.hostname}` : 'Selecione um VIP para gerenciar servidores'}
-        >
-          Servidores
-        </Button>
-        <Button
-          size="sm"
           variant="danger"
           icon={<TrashIcon />}
           disabled={selectedItems.length === 0 || deleteVIP.isPending}
@@ -318,6 +307,7 @@ export function VIPsPage() {
                 <th className="px-4 py-2 font-medium">Ambiente</th>
                 <th className="px-4 py-2 font-medium">Time</th>
                 <th className="px-4 py-2 font-medium">Status</th>
+                <th className="w-10 px-4 py-2"></th>
               </tr>
             </thead>
             <tbody>
@@ -325,11 +315,11 @@ export function VIPsPage() {
                 <tr
                   key={vip.id}
                   onClick={() => toggleOne(vip.id)}
-                  className={`cursor-pointer border-t border-slate-800 ${
+                  className={`border-t border-slate-800 ${
                     selectedIds.has(vip.id) ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
                   }`}
                 >
-                  <td className="px-4 py-2">
+                  <td className="cursor-pointer px-4 py-2">
                     <input
                       type="checkbox"
                       checked={selectedIds.has(vip.id)}
@@ -339,15 +329,27 @@ export function VIPsPage() {
                       className="h-4 w-4 accent-sky-500"
                     />
                   </td>
-                  <td className="px-4 py-2 font-mono text-white">{vip.hostname}</td>
-                  <td className="px-4 py-2 text-slate-400">{vip.displayName || '-'}</td>
-                  <td className="px-4 py-2 font-mono text-blue-300">{vip.vipAddress || '-'}</td>
-                  <td className="px-4 py-2 text-slate-400">{vip.environment || '-'}</td>
-                  <td className="px-4 py-2 text-slate-400">{vip.ownerTeam || '-'}</td>
-                  <td className="px-4 py-2">
+                  <td className="cursor-pointer px-4 py-2 font-mono text-white">{vip.hostname}</td>
+                  <td className="cursor-pointer px-4 py-2 text-slate-400">{vip.displayName || '-'}</td>
+                  <td className="cursor-pointer px-4 py-2 font-mono text-blue-300">{vip.vipAddress || '-'}</td>
+                  <td className="cursor-pointer px-4 py-2 text-slate-400">{vip.environment || '-'}</td>
+                  <td className="cursor-pointer px-4 py-2 text-slate-400">{vip.ownerTeam || '-'}</td>
+                  <td className="cursor-pointer px-4 py-2">
                     <Badge tone={vip.status === 'active' ? 'success' : 'warning'}>
                       {vip.status}
                     </Badge>
+                  </td>
+                  <td
+                    className="px-4 py-2 text-right"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <Link
+                      to={`/vips/${vip.id}`}
+                      className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300"
+                      title={`Ver detalhes de ${vip.hostname}`}
+                    >
+                      <ChevronRightIcon />
+                    </Link>
                   </td>
                 </tr>
               ))}
