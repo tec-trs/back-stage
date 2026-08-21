@@ -15,7 +15,7 @@ export function VIPDetailPage() {
   const navigate = useNavigate();
   const { data: vip, isLoading, error } = useVIP(id || null);
   const { data: servers = [] } = useVIPServers(id || null);
-  const { data: allServersData } = useServers();
+  const { data: allServersResponse } = useServers();
   const addServer = useAddVIPServer(id || '');
   const removeServer = useRemoveVIPServer(id || '');
 
@@ -27,7 +27,7 @@ export function VIPDetailPage() {
   if (error) return <ErrorMessage message={String(error)} />;
   if (!vip) return <ErrorMessage message="VIP não encontrado" />;
 
-  const allServers = Array.isArray(allServersData) ? allServersData : [];
+  const allServers = allServersResponse?.items ?? [];
   const linkedServerIds = new Set((servers as any[]).map(s => s.id));
   const availableServers = allServers.filter(s => !linkedServerIds.has(s.id));
 
