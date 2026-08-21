@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { useVIPs, useCreateVIP, useDeleteVIP, type CreateVIPInput } from '../features/vips/use-vips';
+import { useVIPs, useCreateVIP, useDeleteVIP, type CreateVIPInput, type VIP } from '../features/vips/use-vips';
 import { useEnvironments } from '../features/environments/use-environments';
 import { useTeams } from '../features/teams/use-teams';
 import { Badge } from '../shared/components/Badge';
@@ -10,7 +10,7 @@ import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Modal } from '../shared/components/Modal';
 import { PageHeader } from '../shared/components/PageHeader';
-import { PlusIcon, TrashIcon, PencilIcon } from '../shared/components/icons';
+import { PlusIcon, TrashIcon, PencilIcon, CopyIcon } from '../shared/components/icons';
 import { Spinner } from '../shared/components/Spinner';
 
 export function VIPsPage() {
@@ -21,8 +21,9 @@ export function VIPsPage() {
   const deleteVIP = useDeleteVIP();
 
   const [showForm, setShowForm] = useState(false);
-  const [selectedVIPId, setSelectedVIPId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [duplicatingVIP, setDuplicatingVIP] = useState<VIP | null>(null);
   const [formData, setFormData] = useState<CreateVIPInput>({
     hostname: '',
     displayName: '',
@@ -31,27 +32,63 @@ export function VIPsPage() {
   });
   const [formError, setFormError] = useState('');
 
-  const selectedVIP = vips.find(v => v.id === selectedVIPId);
+  const selectedItems = Array.from(selectedIds).map(id => vips.find(v => v.id === id)).filter(Boolean) as VIP[];
+  const singleSelected = selectedItems.length === 1 ? selectedItems[0] : null;
+  const allVisible = vips.length > 0 && vips.every(v => selectedIds.has(v.id));
   const environments = Array.isArray(environmentsResponse) ? environmentsResponse : [];
   const teams = Array.isArray(teamsResponse) ? teamsResponse : [];
 
+  function toggleAll(): void {
+    if (allVisible) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(vips.map(v => v.id)));
+    }
+  }
+
+  function toggleOne(id: string): void {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   const handleCreate = () => {
-    setSelectedVIPId(null);
+    setDuplicatingVIP(null);
     setFormData({ hostname: '', displayName: '', vipAddress: '', status: 'active' });
     setShowForm(true);
     setFormError('');
   };
 
   const handleEdit = () => {
-    if (!selectedVIP) return;
+    if (!singleSelected) return;
+    setDuplicatingVIP(null);
     setFormData({
-      hostname: selectedVIP.hostname,
-      displayName: selectedVIP.displayName,
-      vipAddress: selectedVIP.vipAddress,
-      environment: selectedVIP.environment,
-      criticality: selectedVIP.criticality,
-      ownerTeam: selectedVIP.ownerTeam,
-      status: selectedVIP.status,
+      hostname: singleSelected.hostname,
+      displayName: singleSelected.displayName,
+      vipAddress: singleSelected.vipAddress,
+      environment: singleSelected.environment,
+      criticality: singleSelected.criticality,
+      ownerTeam: singleSelected.ownerTeam,
+      status: singleSelected.status,
+    });
+    setShowForm(true);
+    setFormError('');
+  };
+
+  const handleDuplicate = () => {
+    if (!singleSelected) return;
+    setDuplicatingVIP(singleSelected);
+    setFormData({
+      hostname: `${singleSelected.hostname}-copy`,
+      displayName: singleSelected.displayName,
+      vipAddress: '',
+      environment: singleSelected.environment,
+      criticality: singleSelected.criticality,
+      ownerTeam: singleSelected.ownerTeam,
+      status: 'inactive',
     });
     setShowForm(true);
     setFormError('');
@@ -73,15 +110,23 @@ export function VIPsPage() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedVIP) return;
+    if (selectedItems.length === 0) return;
     try {
-      await deleteVIP.mutateAsync(selectedVIP.id);
-      setSelectedVIPId(null);
+      for (const vip of selectedItems) {
+        await deleteVIP.mutateAsync(vip.id);
+      }
+      setSelectedIds(new Set());
       setConfirmDeleteOpen(false);
     } catch (err) {
       setFormError(String(err));
     }
   };
+
+  const deleteLabel = selectedItems.length > 1 ? `Deletar (${selectedItems.length})` : 'Deletar';
+  const deleteMessage =
+    selectedItems.length === 1
+      ? `Tem certeza que deseja deletar o VIP "${singleSelected?.hostname}"? Esta ação não pode ser desfeita.`
+      : `Tem certeza que deseja deletar ${selectedItems.length} VIPs? Esta ação não pode ser desfeita.`;
 
   return (
     <div>
@@ -90,8 +135,8 @@ export function VIPsPage() {
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
         title="Deletar VIP"
-        message={`Tem certeza que deseja deletar o VIP "${selectedVIP?.hostname}"? Esta ação não pode ser desfeita.`}
-        confirmLabel="Deletar"
+        message={deleteMessage}
+        confirmLabel={deleteLabel}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setConfirmDeleteOpen(false)}
         isPending={deleteVIP.isPending}
@@ -198,26 +243,38 @@ export function VIPsPage() {
           size="sm"
           variant="secondary"
           icon={<PencilIcon />}
-          disabled={!selectedVIP}
+          disabled={!singleSelected}
           onClick={handleEdit}
-          title={selectedVIP ? `Editar ${selectedVIP.hostname}` : 'Selecione um VIP para editar'}
+          title={singleSelected ? `Editar ${singleSelected.hostname}` : 'Selecione um VIP para editar'}
         >
           Editar
         </Button>
         <Button
           size="sm"
+          variant="secondary"
+          icon={<CopyIcon />}
+          disabled={!singleSelected}
+          onClick={handleDuplicate}
+          title={singleSelected ? `Duplicar ${singleSelected.hostname}` : 'Selecione um VIP para duplicar'}
+        >
+          Duplicar
+        </Button>
+        <Button
+          size="sm"
           variant="danger"
           icon={<TrashIcon />}
-          disabled={!selectedVIP || deleteVIP.isPending}
+          disabled={selectedItems.length === 0 || deleteVIP.isPending}
           onClick={() => setConfirmDeleteOpen(true)}
-          title={selectedVIP ? `Deletar ${selectedVIP.hostname}` : 'Selecione um VIP para deletar'}
+          title={selectedItems.length > 0 ? `Deletar ${selectedItems.length} VIP(s)` : 'Selecione VIPs para deletar'}
         >
-          Deletar
+          {deleteLabel}
         </Button>
         <span className="ml-auto text-xs text-slate-500">
-          {selectedVIP
-            ? `Selecionado: ${selectedVIP.hostname}`
-            : 'Selecione um VIP na lista para editar ou deletar.'}
+          {selectedItems.length > 0
+            ? selectedItems.length === 1
+              ? `Selecionado: ${singleSelected?.hostname}`
+              : `${selectedItems.length} VIPs selecionados`
+            : 'Selecione VIPs na lista para editar, duplicar ou deletar.'}
         </span>
       </div>
 
@@ -234,6 +291,15 @@ export function VIPsPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-900 text-slate-400">
               <tr>
+                <th className="w-10 px-4 py-2">
+                  <input
+                    type="checkbox"
+                    checked={allVisible}
+                    onChange={toggleAll}
+                    className="h-4 w-4 accent-sky-500"
+                    aria-label="Selecionar todos"
+                  />
+                </th>
                 <th className="px-4 py-2 font-medium">Hostname</th>
                 <th className="px-4 py-2 font-medium">Nome Exibição</th>
                 <th className="px-4 py-2 font-medium">Endereço VIP</th>
@@ -246,11 +312,21 @@ export function VIPsPage() {
               {vips.map(vip => (
                 <tr
                   key={vip.id}
-                  onClick={() => setSelectedVIPId(vip.id)}
+                  onClick={() => toggleOne(vip.id)}
                   className={`cursor-pointer border-t border-slate-800 ${
-                    selectedVIPId === vip.id ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
+                    selectedIds.has(vip.id) ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
                   }`}
                 >
+                  <td className="px-4 py-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(vip.id)}
+                      onChange={() => toggleOne(vip.id)}
+                      onClick={e => e.stopPropagation()}
+                      aria-label={`Selecionar ${vip.hostname}`}
+                      className="h-4 w-4 accent-sky-500"
+                    />
+                  </td>
                   <td className="px-4 py-2 font-mono text-white">{vip.hostname}</td>
                   <td className="px-4 py-2 text-slate-400">{vip.displayName || '-'}</td>
                   <td className="px-4 py-2 font-mono text-blue-300">{vip.vipAddress || '-'}</td>
