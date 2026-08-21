@@ -241,7 +241,7 @@ export function EcosystemPage() {
     if (!graphContainerRef.current) return;
     try {
       const canvas = await html2canvas(graphContainerRef.current, {
-        backgroundColor: '#1a1a2e',
+        backgroundColor: '#ffffff',
         scale: 2,
       });
       const link = document.createElement('a');
@@ -258,7 +258,7 @@ export function EcosystemPage() {
     if (!graphContainerRef.current) return;
     try {
       const canvas = await html2canvas(graphContainerRef.current, {
-        backgroundColor: '#1a1a2e',
+        backgroundColor: '#ffffff',
         scale: 2,
       });
       const imgData = canvas.toDataURL('image/png');
