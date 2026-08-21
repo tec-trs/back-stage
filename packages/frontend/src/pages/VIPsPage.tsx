@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useVIPs, useCreateVIP, type CreateVIPInput } from '../features/vips/use-vips';
+import { useEnvironments } from '../features/environments/use-environments';
+import { useTeams } from '../features/teams/use-teams';
 import { Button } from '../shared/components/Button';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Spinner } from '../shared/components/Spinner';
@@ -13,6 +15,8 @@ export function VIPsPage() {
   const { data: vips = [], isLoading, error } = useVIPs();
   const navigate = useNavigate();
   const createVIP = useCreateVIP();
+  const { data: environmentsResponse } = useEnvironments();
+  const { data: teamsResponse } = useTeams();
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<CreateVIPInput>({
     hostname: '',
@@ -131,6 +135,36 @@ export function VIPsPage() {
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
               placeholder="ex: 192.168.1.100"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300">Ambiente</label>
+            <select
+              value={formData.environment || ''}
+              onChange={e => setFormData({ ...formData, environment: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+            >
+              <option value="">Selecionar ambiente...</option>
+              {(environmentsResponse?.items ?? []).map(env => (
+                <option key={env.id} value={env.name}>
+                  {env.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300">Time</label>
+            <select
+              value={formData.ownerTeam || ''}
+              onChange={e => setFormData({ ...formData, ownerTeam: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+            >
+              <option value="">Selecionar time...</option>
+              {(teamsResponse?.items ?? []).map(team => (
+                <option key={team.id} value={team.name}>
+                  {team.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-300">Status</label>
