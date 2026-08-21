@@ -25,6 +25,7 @@ import { registerGovernanceModule } from './modules/governance/governance.module
 import { registerHealthModule } from './modules/health/health.module.js';
 import { registerSearchModule } from './modules/search/search.module.js';
 import { registerServersModule } from './modules/servers/servers.module.js';
+import { registerServerGroupsModule } from './modules/server-groups/server-groups.module.js';
 import { registerServiceCatalogModule } from './modules/service-catalog/service-catalog.module.js';
 import { registerUsersModule } from './modules/users/users.module.js';
 import { metricsRegistry } from './observability/metrics.js';
@@ -100,6 +101,7 @@ export function createApp(): Express {
   app.use('/api/server-types', registerServerTypesModule());
   app.use('/api/application-types', registerApplicationTypesModule());
   app.use('/api/servers', ...withOrg, registerServersModule());
+  app.use('/api/server-groups', ...withOrg, registerServerGroupsModule());
   app.use('/api/applications', ...withOrg, registerApplicationsModule());
   app.use('/api/databases', ...withOrg, registerDatabasesModule());
   app.use('/api/urls', ...withOrg, registerUrlsModule());
