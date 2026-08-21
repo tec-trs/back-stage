@@ -84,10 +84,14 @@ function ConnectionModal({
     <Modal title="Criar relacao" isOpen onClose={onCancel}>
       <div className="flex flex-col gap-4">
         {error && <ErrorMessage message={error} />}
-        <div className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm">
-          <span className="font-medium text-slate-200">{pending.sourceLabel}</span>
-          <span className="text-slate-500">→</span>
-          <span className="font-medium text-slate-200">{pending.targetLabel}</span>
+        <div className="rounded-md border border-slate-700 bg-slate-800/50 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Relacionamento</p>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="font-medium text-slate-100">{pending.sourceLabel}</span>
+            <span className="text-slate-500">→</span>
+            <span className="font-medium text-slate-100">{pending.targetLabel}</span>
+          </div>
+          <p className="text-xs text-slate-400 mt-2">Você está arrastando DE '{pending.sourceLabel}' PARA '{pending.targetLabel}'</p>
         </div>
 
         <fieldset className="flex flex-col gap-1">

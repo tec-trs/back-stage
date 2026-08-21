@@ -426,22 +426,6 @@ export class ResourceRelationshipRepository {
     //     → initial seed: WHERE source = root  → collect target
     const orgId = orgContext.getOrThrow();
     const rootIdText = String(rootId);
-    console.log('[DEBUG] simulateImpact:', { rootType, rootId, rootIdText, orgId });
-
-    // Debug: verificar relações no banco
-    const allEdges = await this.db(TABLE_NAME)
-      .select(['source_type', 'source_id', 'target_type', 'target_id', 'relation_type'])
-      .where('organization_id', orgId)
-      .whereNull('deleted_at');
-    console.log('[DEBUG] Total edges in org:', allEdges.length);
-    console.log('[DEBUG] All edges:', allEdges);
-    const relatedEdges = allEdges.filter(e =>
-      (e.target_type === rootType && String(e.target_id) === rootIdText && ['depends_on','connects_to','consumes'].includes(e.relation_type)) ||
-      (e.source_type === rootType && String(e.source_id) === rootIdText && ['hosts','exposes'].includes(e.relation_type))
-    );
-    console.log('[DEBUG] Looking for root:', { rootType, rootIdText });
-    console.log('[DEBUG] Edges related to this root:', relatedEdges);
-
     const { rows } = await this.db.raw<{ rows: ImpactRow[] }>(`
       WITH RECURSIVE
       all_edges(source_type, source_id, target_type, target_id, relation_type) AS (
@@ -495,8 +479,6 @@ export class ResourceRelationshipRepository {
       FROM impact
       GROUP BY resource_type, resource_id
     `, { rootType, rootIdText, maxDepth: effectiveMaxDepth, orgId });
-
-    console.log('[DEBUG] simulateImpact query result rows:', rows.length, rows);
 
     const impactedResources: ImpactNode[] = [];
     const byType: Record<ResourceType, number> = {
