@@ -345,10 +345,4 @@ export async function seed(knex: Knex): Promise<void> {
     { organization_id: orgId, source_type: 'server', source_id: zeca.id, target_type: 'database', target_id: banco2.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'pasoe→banco2' }) },
     { organization_id: orgId, source_type: 'server', source_id: zeca.id, target_type: 'database', target_id: banco3.id, relation_type: 'depends_on', metadata: JSON.stringify({ service: 'pasoe→banco3' }) },
   ]);
-
-  console.log('✓ Demo data inserted successfully');
-  console.log(`  Org: ${orgId}`);
-  console.log(`  Servers: juca (${juca.id}), zeca (${zeca.id}), xurumela (${xurumela.id})`);
-  console.log(`  Databases: banco1 (${banco1.id}), banco2 (${banco2.id}), banco3 (${banco3.id})`);
-  console.log(`  Application: TOTVS (${totvsApp.id})`);
 }

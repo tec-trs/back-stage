@@ -126,9 +126,8 @@ export class ServerGroupService {
         organization_id: organizationId,
         metadata: { type: 'vip_group', groupId },
       });
-    } catch (error) {
-      // Pode falhar se já existe - ignorar
-      console.log('Relacionamento VIP já existe ou não pode ser criado');
+    } catch {
+      // Relacionamento já existe ou falha por constraint - ignorar silenciosamente
     }
   }
 

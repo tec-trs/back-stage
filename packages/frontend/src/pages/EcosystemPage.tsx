@@ -207,10 +207,6 @@ export function EcosystemPage() {
   // Auto-reset layout quando número de nós muda significativamente
   useEffect(() => {
     if (data && data.nodes.length !== prevNodeCountRef.current) {
-      console.log('[EcosystemPage] Número de nós mudou, resetando layout:', {
-        anterior: prevNodeCountRef.current,
-        novo: data.nodes.length,
-      });
       // Se a diferença for > 0, significa que um novo nó foi adicionado
       // Reset o layout para que as posições antigas não influenciem
       if (data.nodes.length > prevNodeCountRef.current && prevNodeCountRef.current > 0) {

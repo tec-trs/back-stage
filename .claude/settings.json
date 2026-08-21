@@ -12,5 +12,8 @@
       "WebSearch(*)"
     ],
     "deny": []
+  },
+  "enabledPlugins": {
+    "pr-review-toolkit@claude-plugins-official": true
   }
 }

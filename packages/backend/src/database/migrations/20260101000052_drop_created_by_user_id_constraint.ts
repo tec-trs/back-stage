@@ -4,8 +4,8 @@ export async function up(knex: Knex): Promise<void> {
   // Drop the foreign key constraint on created_by_user_id
   try {
     await knex.raw('ALTER TABLE resource_relationships DROP CONSTRAINT resource_relationships_created_by_user_id_foreign');
-  } catch (error) {
-    console.log('Constraint already removed or does not exist');
+  } catch {
+    // Constraint already removed or does not exist - ignore
   }
 
   // Make sure the column is nullable

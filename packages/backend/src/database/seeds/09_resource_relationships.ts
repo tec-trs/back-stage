@@ -95,9 +95,4 @@ export async function seed(knex: Knex): Promise<void> {
     })),
   );
 
-  const hostCount = relationships.filter((r) => r.relation_type === 'hosts').length;
-  const depCount = relationships.filter((r) => r.relation_type === 'depends_on').length;
-  console.log(
-    `✓ ${relationships.length} relacionamentos criados no resource-graph (${hostCount} hosts + ${depCount} dependências)`,
-  );
 }

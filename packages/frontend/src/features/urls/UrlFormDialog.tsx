@@ -114,12 +114,6 @@ export function UrlFormDialog({
     relationType: 'exposes',
   });
 
-  useEffect(() => {
-    console.log('[allRelationships changed] length:', allRelationships?.length, 'isLoading:', isLoadingRelationships);
-    if (allRelationships && allRelationships.length > 0) {
-      console.log('[allRelationships changed] Relações retornadas:', allRelationships);
-    }
-  }, [allRelationships, isLoadingRelationships]);
 
   const [activeTab, setActiveTab]       = useState<TabKey>('identification');
   const [form, setForm]                 = useState<FormState>(emptyForm());
@@ -173,13 +167,11 @@ export function UrlFormDialog({
   }, [isOpen, existingRelationships]);
 
   useEffect(() => {
-    console.log('[useEffect exposes] isOpen:', isOpen, 'url:', url?.id, 'allRelationships length:', allRelationships?.length);
     if (isOpen && url && allRelationships) {
       // Filter for relationships where: server EXPOSES this URL
       const serverRels = allRelationships.filter(
         (r) => r.sourceType === 'server' && r.targetType === 'url' && r.targetId === url.id,
       );
-      console.log('[useEffect exposes] Found server relationships:', serverRels.length, serverRels);
       setExposedToServerIds(serverRels.map((r) => r.sourceId));
       existingServerRelMapRef.current = new Map(serverRels.map((r) => [r.sourceId, r.id]));
     }
@@ -226,13 +218,6 @@ export function UrlFormDialog({
     const serversToDelete = [...oldServerIds].filter((id) => !newServerIds.has(id));
     const serversToCreate = [...newServerIds].filter((id) => !oldServerIds.has(id));
 
-    console.log('[syncRelationships] Servidores:', {
-      oldServerIds: [...oldServerIds],
-      newServerIds: [...newServerIds],
-      toDelete: serversToDelete,
-      toCreate: serversToCreate,
-    });
-
     await Promise.all([
       ...appsToDelete.map((appId) => deleteRelationship.mutateAsync(oldAppMap.get(appId)!)),
       ...appsToCreate.map((appId) =>
@@ -251,46 +236,24 @@ export function UrlFormDialog({
         }),
       ),
       ...serversToDelete.map((serverId) => {
-        console.log('[syncRelationships] Deletando relação servidor:', serverId);
         return deleteRelationship.mutateAsync(oldServerMap.get(serverId)!).catch((err) => {
-          console.error('[syncRelationships] Erro ao deletar:', err);
           throw err;
         });
       }),
       ...serversToCreate.map((serverId) => {
-        console.log('[syncRelationships] Criando relação servidor:', serverId);
         return createRelationship.mutateAsync({
           sourceType: 'server', sourceId: serverId,
           targetType: 'url', targetId: urlId,
           relationType: 'exposes',
-        }).then((result) => {
-          console.log('[syncRelationships] Relação criada com sucesso:', result);
-          return result;
         }).catch((err) => {
-          console.error('[syncRelationships] Erro ao criar:', err);
           throw err;
         });
       }),
     ]);
 
     // Refetch all relationships to ensure they're up to date
-    console.log('[syncRelationships] Invalidating and refetching resource graph queries...');
-    const invalidResult = await queryClient.invalidateQueries({ predicate: resourceGraphQueryPredicate });
-    console.log('[syncRelationships] Invalidate result:', invalidResult);
-
-    // Force immediate refetch
-    const queries = queryClient.getQueryCache().findAll({ predicate: resourceGraphQueryPredicate });
-    console.log('[syncRelationships] Found', queries.length, 'queries to refetch');
-    queries.forEach(q => console.log('[syncRelationships] Query key:', q.queryKey));
-
-    const refetchResult = await queryClient.refetchQueries({ predicate: resourceGraphQueryPredicate });
-    console.log('[syncRelationships] Refetch result:', refetchResult);
-
-    // Double-check: manually refetch just the allRelationships query
-    const specificResult = await queryClient.refetchQueries({
-      queryKey: ['resource-graph-all-relationships', 'exposes', undefined],
-    });
-    console.log('[syncRelationships] Specific refetch result:', specificResult);
+    await queryClient.invalidateQueries({ predicate: resourceGraphQueryPredicate });
+    await queryClient.refetchQueries({ predicate: resourceGraphQueryPredicate });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -310,23 +273,17 @@ export function UrlFormDialog({
     };
 
     try {
-      console.log('[handleSubmit] Iniciando submit...');
       let urlId: string;
       if (isEditMode && url) {
-        console.log('[handleSubmit] Atualizando URL existente:', url.id);
         await updateUrl.mutateAsync({ id: url.id, ...payload });
         urlId = url.id;
       } else {
-        console.log('[handleSubmit] Criando nova URL');
         const created = await createUrl.mutateAsync(payload);
         urlId = created.id;
       }
-      console.log('[handleSubmit] URL salva, sincronizando relações para:', urlId);
       await syncRelationships(urlId);
-      console.log('[handleSubmit] Relações sincronizadas, fechando modal');
       onClose();
-    } catch (error) {
-      console.error('[handleSubmit] Erro:', error);
+    } catch {
       // errors surfaced via mutation.isError
     }
   }

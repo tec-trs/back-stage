@@ -114,8 +114,8 @@ export class VIPService {
         organization_id: organizationId,
         metadata: { type: 'vip_server_dependency' },
       });
-    } catch (error) {
-      console.log('Relacionamento VIP já existe ou não pode ser criado');
+    } catch {
+      // Relacionamento já existe ou falha por constraint - ignorar silenciosamente
     }
   }
 

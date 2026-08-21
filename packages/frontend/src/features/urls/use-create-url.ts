@@ -26,12 +26,10 @@ export function useCreateUrl(): UseMutationResult<Url, Error, CreateUrlInput> {
     mutationFn: (input: CreateUrlInput) =>
       apiRequest<Url>('/api/urls', { method: 'POST', body: input }),
     onSuccess: async () => {
-      console.log('[useCreateUrl] Iniciando refetch do grafo...');
       await queryClient.refetchQueries({ predicate: (query) => {
         const key = query.queryKey[0];
         return key === 'urls' || key === 'resource-graph' || key === 'resource-graph-subgraph';
       }});
-      console.log('[useCreateUrl] Refetch completo');
     },
   });
 }
