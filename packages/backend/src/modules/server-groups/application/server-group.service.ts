@@ -69,6 +69,15 @@ export class ServerGroupService {
       throw new NotFoundError('Servidor', serverId);
     }
 
+    // Validar que servidor não já está no grupo
+    const existingMember = await this.db('server_group_members')
+      .where({ group_id: groupId, server_id: serverId, deleted_at: null })
+      .first();
+
+    if (existingMember) {
+      throw new ValidationError('Este servidor já está vinculado ao grupo');
+    }
+
     // Adicionar servidor ao grupo
     const members = await this.repository.getMembers(groupId, organizationId);
     const nextOrder = order ?? (members.length > 0 ? Math.max(...members.map((m: { order: number }) => m.order)) + 1 : 0);

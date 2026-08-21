@@ -21,6 +21,7 @@ export function ServerGroupDetailPanel({ group, onEdit, onDelete }: ServerGroupD
   const removeMember = useRemoveGroupMember(group.id);
   const [showAddServer, setShowAddServer] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
   const memberServerIds = new Set((members as any[]).map((m: any) => m.serverId));
   const availableServers = (servers as any[]).filter((s: any) => !memberServerIds.has(s.id));
@@ -110,10 +111,22 @@ export function ServerGroupDetailPanel({ group, onEdit, onDelete }: ServerGroupD
 
         {showAddServer && availableServers.length > 0 && (
           <div className="rounded border border-slate-800 bg-slate-900/20 p-3">
+            {addError && (
+              <div className="mb-2 rounded bg-red-500/10 p-2 text-sm text-red-400">
+                {addError}
+              </div>
+            )}
             <select
-              onChange={e => {
+              onChange={async e => {
                 if (e.target.value) {
-                  addMember.mutate(e.target.value);
+                  setAddError(null);
+                  try {
+                    await addMember.mutateAsync(e.target.value);
+                  } catch (error: any) {
+                    setAddError(
+                      error?.message || 'Erro ao adicionar servidor ao grupo'
+                    );
+                  }
                   e.target.value = '';
                 }
               }}
