@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { useVIPs, useCreateVIP, useDeleteVIP, type CreateVIPInput, type VIP } from '../features/vips/use-vips';
 import { useEnvironments } from '../features/environments/use-environments';
@@ -10,10 +11,11 @@ import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Modal } from '../shared/components/Modal';
 import { PageHeader } from '../shared/components/PageHeader';
-import { PlusIcon, TrashIcon, PencilIcon, CopyIcon } from '../shared/components/icons';
+import { PlusIcon, TrashIcon, PencilIcon, CopyIcon, ServerIcon } from '../shared/components/icons';
 import { Spinner } from '../shared/components/Spinner';
 
 export function VIPsPage() {
+  const navigate = useNavigate();
   const { data: vips = [], isLoading, error } = useVIPs();
   const { data: environmentsResponse } = useEnvironments();
   const { data: teamsResponse } = useTeams();
@@ -258,6 +260,16 @@ export function VIPsPage() {
           title={singleSelected ? `Duplicar ${singleSelected.hostname}` : 'Selecione um VIP para duplicar'}
         >
           Duplicar
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<ServerIcon />}
+          disabled={!singleSelected}
+          onClick={() => singleSelected && navigate(`/vips/${singleSelected.id}?tab=servers`)}
+          title={singleSelected ? `Gerenciar servidores de ${singleSelected.hostname}` : 'Selecione um VIP para gerenciar servidores'}
+        >
+          Servidores
         </Button>
         <Button
           size="sm"

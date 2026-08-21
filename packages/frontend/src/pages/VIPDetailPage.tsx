@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useVIP, useVIPServers, useAddVIPServer, useRemoveVIPServer, useUpdateVIP, type UpdateVIPInput } from '../features/vips/use-vips';
 import { useServers } from '../features/servers/use-servers';
@@ -15,6 +15,7 @@ import { TrashIcon } from '../shared/components/icons';
 export function VIPDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { data: vip, isLoading, error } = useVIP(id || null);
   const { data: servers = [] } = useVIPServers(id || null);
   const { data: allServersResponse } = useServers();
@@ -31,6 +32,13 @@ export function VIPDetailPage() {
   const [editData, setEditData] = useState<UpdateVIPInput>({});
   const [editError, setEditError] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'info' | 'servers'>('info');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'servers') {
+      setActiveTab('servers');
+    }
+  }, [searchParams]);
 
   if (isLoading) return <Spinner />;
   if (error) return <ErrorMessage message={String(error)} />;
