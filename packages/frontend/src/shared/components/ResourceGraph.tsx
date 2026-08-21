@@ -106,7 +106,7 @@ function layoutGraph(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g = new (dagre as any).graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: 'TB', nodesep: 30, ranksep: 60 });
+  g.setGraph({ rankdir: 'TB', nodesep: 20, ranksep: 40 });
 
   nodes.forEach(({ id, width = NODE_W, height = NODE_H }) =>
     g.setNode(id, { width, height }),

@@ -233,6 +233,13 @@ export class ResourceRelationshipRepository {
       .where('organization_id', orgId)
       .whereNull('deleted_at') as GroupMemberRow[];
 
+    // Implicit edges from vip_servers (vip → hosts → server)
+    interface VipServerRow { vip_id: string; server_id: string }
+    const vipServers = await this.db('vip_servers')
+      .select('vip_id', 'server_id')
+      .where('organization_id', orgId)
+      .whereNull('deleted_at') as VipServerRow[];
+
     const mappedExplicit = explicitEdges.map((e) => ({
       id: e.id,
       sourceType: e.source_type,
@@ -274,11 +281,21 @@ export class ResourceRelationshipRepository {
       relationType: 'hosts' as any,
     }));
 
+    const mappedVipServers: GraphEdge[] = vipServers.map((vs) => ({
+      id: `vip-server:${vs.vip_id}:${vs.server_id}`,
+      sourceType: 'vip' as const,
+      sourceId: vs.vip_id,
+      targetType: 'server' as const,
+      targetId: vs.server_id,
+      relationType: 'hosts' as any,
+    }));
+
     // Deduplicate: explicit relationships that duplicate an implicit one take precedence
     const implicitKeys = new Set([
       ...mappedDeployments.map((e) => `${e.sourceId}:${e.targetId}:hosts`),
       ...mappedUrls.map((e) => `${e.sourceId}:${e.targetId}:exposes`),
       ...mappedGroupMembers.map((e) => `${e.sourceId}:${e.targetId}:hosts`),
+      ...mappedVipServers.map((e) => `${e.sourceId}:${e.targetId}:hosts`),
     ]);
     const deduped = mappedExplicit.filter(
       (e) => !implicitKeys.has(`${e.sourceId}:${e.targetId}:${e.relationType}`),
@@ -299,7 +316,7 @@ export class ResourceRelationshipRepository {
     // Drop any edge whose source or target no longer exists in the node set
     // (avoids phantom edges from soft-deleted resources lingering in resource_relationships)
     const nodeIdSet = new Set(mappedNodes.map((n) => n.id));
-    const allEdges = [...deduped, ...mappedDeployments, ...mappedUrls, ...mappedGroupMembers].filter(
+    const allEdges = [...deduped, ...mappedDeployments, ...mappedUrls, ...mappedGroupMembers, ...mappedVipServers].filter(
       (e) => nodeIdSet.has(e.sourceId) && nodeIdSet.has(e.targetId),
     );
 
