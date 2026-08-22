@@ -22,27 +22,30 @@
 
 ## Task Tracking
 
-- [ ] Task 1: Dispatch Investigation Subagent (async, expected completion ~Sept 18)
+- [x] Task 1: Dispatch Investigation Subagent ✅ COMPLETE
 - [x] Task 2: Search Integration Tests — Part 1
 - [x] Task 3: Search Integration Tests — Verification
 - [x] Task 4: URLs Integration Tests — Part 1
 - [x] Task 5: URLs Integration Tests — Verification
 - [x] Task 6: Search E2E Tests
 - [x] Task 7: URLs E2E Tests
-- [ ] Task 8: Wait for Investigation Findings (blocked on Task 1)
-- [ ] Task 9: EcosystemPage Remediation (blocked on Task 8)
+- [ ] Task 8: Wait for Investigation Findings (READY - findings available)
+- [ ] Task 9: EcosystemPage Remediation (Option A: Lazy-load ResourceGraph)
 - [x] Task 10: Documentation & Coverage Validation
 
 ---
 
 ## Execution Log
 
-**Task 1: DISPATCHED (async investigation)**
+**Task 1: COMPLETE**
 - Investigation brief: `.superpowers/sdd/testing-phase-4/task-1-brief.md`
-- Status: Running async (1-2 weeks) in parallel with Tasks 2-10
-- Expected completion: Week 2 (around 2026-09-04+14 days)
-- Awaiting: `.superpowers/phase-4/investigation-report.md` commit from investigation subagent
-- Note: Main track (Tasks 2-10) proceeds independently
+- Report: `.superpowers/phase-4/investigation-report.md`
+- Commit: 76c4356 (spike: investigate EcosystemPage unit test blocker)
+- Status: ✅ Complete
+- Root cause: Component complexity + @xyflow/react integration in JSDOM environment
+- Recommended solution: Option A (Lazy-load ResourceGraph with Suspense)
+- Implementation cost: 3-4 hours
+- Next gate: Task 8 (collect findings) → Task 9 (implement solution)
 
 ---
 
@@ -71,9 +74,11 @@
 - Fixes Applied: Added checkHealth() method, URL format validation
 - Note: DONE_WITH_CONCERNS (PostgreSQL required for execution in CI/CD)
 
-**Task 5: READY (review gate for Task 4)**
+**Task 5: COMPLETE**
 - Brief: `.superpowers/sdd/testing-phase-4/task-5-brief.md`
-- Status: Next task — URLs integration tests verification review
+- Status: ✅ URLs integration tests verification complete
+- Tests verified: 3/3 structurally correct, TypeScript clean, ESLint clean
+- Execution pending PostgreSQL availability in CI/CD
 
 **Task 6: COMPLETE**
 - Implementer Agent: a2816e9395e026919
@@ -95,15 +100,21 @@
 - TypeScript: ✅ PASS
 - Note: DONE (clean, no concerns)
 
-**Task 8: PENDING (blocked on Task 1)**
+**Task 8: READY (investigation findings available)**
 - Brief: `.superpowers/sdd/testing-phase-4/task-8-brief.md`
-- Status: Gate/checkpoint — waits for investigation report (Task 1)
-- Expected: ~Week 2
+- Investigation report: `.superpowers/phase-4/investigation-report.md`
+- Status: ✅ Investigation complete; findings available
+- Root cause: Component complexity + @xyflow/react integration
+- Recommended solution: Option A (Lazy-load ResourceGraph with Suspense)
+- Decision: Accept Option A recommendation
 
-**Task 9: PENDING (blocked on Task 8)**
+**Task 9: READY FOR IMPLEMENTATION**
 - Brief: `.superpowers/sdd/testing-phase-4/task-9-brief.md`
-- Status: EcosystemPage remediation — depends on investigation outcome
-- Expected: ~Week 3-4
+- Status: Pending implementation
+- Solution: Lazy-load ResourceGraph in EcosystemPage
+- Implementation: Wrap in React.lazy() + Suspense boundary
+- Estimated effort: 3-4 hours
+- Next: Execute refactor and tests update
 
 **Task 10: COMPLETE**
 - Brief: `.superpowers/sdd/testing-phase-4/task-10-brief.md`
@@ -145,17 +156,17 @@
 - 23be985: docs: update Task 7 verification status
 - c375890: docs: phase 4 testing complete - 50%+ coverage achieved
 
-### Investigation Track: ⏳ IN PROGRESS (Task 1)
+### Investigation Track: ✅ COMPLETE (Task 1) + READY (Tasks 8-9)
 
-**Status:**
-- Investigation dispatched (should be running async)
-- Expected completion: ~Week 2 (2026-09-04+14 days ≈ Sept 18)
-- Blocker: EcosystemPage unit test worker crash
+**Task 1 Status:**
+- ✅ Investigation complete (2026-08-22)
+- Root cause diagnosed: Component complexity + @xyflow/react integration in JSDOM
+- Solution options: 3 proposals with trade-offs evaluated
+- Recommendation: Option A (Lazy-load ResourceGraph with Suspense)
 
-**Pending Tasks:**
-- Task 1: Root cause diagnosis + 3 solution proposals (async spike)
-- Task 8: Checkpoint/gate (collect investigation findings)
-- Task 9: Remediation (implement chosen solution)
+**Next Steps (Tasks 8-9):**
+- Task 8: Accept/reject investigation recommendation
+- Task 9: Implement chosen solution (estimated 3-4 hours)
 
 ### Metrics
 
@@ -170,10 +181,16 @@
 | **Commits** | 9 |
 | **Commits in Main Track** | 9 |
 
-### Ready for Phase 5
+### Phase 4 Completion Status
 
-✅ Main track complete and documented  
-⏳ Investigation ongoing (async)  
-📊 Coverage target achieved (50%+)  
-✅ CI/CD pipeline green for completed tasks  
+✅ **Main Track:** Complete (Tasks 2-7, 10)  
+✅ **Investigation Track:** Complete (Task 1)  
+✅ **Ready for Remediation:** Tasks 8-9 (implement Option A solution)  
+📊 **Coverage:** 50%+ achieved globally  
+✅ **CI/CD:** Green for completed tasks  
+
+**Total Commits in Phase 4:** 11
+- Main track: 9 commits
+- Investigation: 1 commit  
+- Progress updates: 1 commit  
 
