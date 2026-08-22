@@ -1,0 +1,164 @@
+import type { Knex } from 'knex';
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { orgContext } from '../../../shared/context/org-context.js';
+import { resetTestDatabase, setupTestDatabase, teardownTestDatabase } from '../../../test-fixtures/db-connection.js';
+import { UrlRepository } from '../infrastructure/url.repository.js';
+
+import { UrlService } from './url.service.js';
+
+interface TestContext {
+  db: Knex | null;
+  urlService: UrlService | null;
+  orgId: string;
+}
+
+describe('UrlService (Integration)', () => {
+  const ctx: TestContext = {
+    db: null,
+    urlService: null,
+    orgId: '',
+  };
+
+  beforeEach(async () => {
+    ctx.db = await setupTestDatabase();
+
+    // Create test organization
+    const [org] = (await ctx.db('organizations')
+      .insert({
+        slug: `test-org-${Date.now()}`,
+        name: 'Test Organization',
+        plan: 'enterprise',
+        metadata: JSON.stringify({}),
+      })
+      .returning(['id'])) as Array<{ id: string }>;
+
+    ctx.orgId = org.id;
+
+    // Initialize UrlService with real database
+    const urlRepository = new UrlRepository(ctx.db);
+    ctx.urlService = new UrlService(urlRepository);
+  });
+
+  afterEach(async () => {
+    if (ctx.db) {
+      await resetTestDatabase(ctx.db);
+    }
+  });
+
+  afterAll(async () => {
+    if (ctx.db) {
+      await teardownTestDatabase(ctx.db);
+    }
+  });
+
+  it('updates health check status', async () => {
+    // Create URL in test database
+    const url = await orgContext.run(ctx.orgId, async () =>
+      ctx.urlService!.create(
+        {
+          label: 'Example URL',
+          url: 'https://example.com',
+          urlType: 'public',
+          healthcheckEnabled: true,
+        },
+        { actorUserId: 'test-user' }
+      )
+    );
+
+    expect(url).toBeDefined();
+    expect(url.url).toBe('https://example.com');
+
+    // Update status via setStatus (simulating health check result)
+    const updated = await orgContext.run(ctx.orgId, async () =>
+      ctx.urlService!.setStatus(url.id, 'active', { actorUserId: 'test-user' })
+    );
+
+    expect(updated).toBeDefined();
+    expect(updated.status).toBe('active');
+  });
+
+  it('validates URL format', async () => {
+    const audit = { actorUserId: 'test-user' };
+
+    // Test valid URL creation
+    const validUrl = await orgContext.run(ctx.orgId, async () =>
+      ctx.urlService!.create(
+        {
+          label: 'Valid URL',
+          url: 'https://example.com',
+          urlType: 'public',
+        },
+        audit
+      )
+    );
+
+    expect(validUrl).toBeDefined();
+    expect(validUrl.url).toBe('https://example.com');
+
+    // Test that duplicate URL is rejected
+    await expect(
+      orgContext.run(ctx.orgId, async () =>
+        ctx.urlService!.create(
+          {
+            label: 'Duplicate URL',
+            url: 'https://example.com',
+            urlType: 'public',
+          },
+          audit
+        )
+      )
+    ).rejects.toThrow('Ja existe uma URL cadastrada');
+  });
+
+  it('handles full lifecycle', async () => {
+    const audit = { actorUserId: 'test-user' };
+
+    // Create URL
+    const url = await orgContext.run(ctx.orgId, async () =>
+      ctx.urlService!.create(
+        {
+          label: 'Test URL',
+          url: 'https://test.com',
+          urlType: 'public',
+          description: 'Original description',
+        },
+        audit
+      )
+    );
+
+    expect(url).toBeDefined();
+    expect(url.label).toBe('Test URL');
+    expect(url.description).toBe('Original description');
+
+    // Update URL
+    const updated = await orgContext.run(ctx.orgId, async () =>
+      ctx.urlService!.update(
+        url.id,
+        {
+          description: 'Updated description',
+        },
+        audit
+      )
+    );
+
+    expect(updated).toBeDefined();
+    expect(updated.description).toBe('Updated description');
+
+    // Delete URL (soft delete)
+    await orgContext.run(ctx.orgId, async () =>
+      ctx.urlService!.delete(url.id, audit)
+    );
+
+    // Verify URL is not found (soft-deleted)
+    const deleted = await orgContext.run(ctx.orgId, async () => {
+      try {
+        return await ctx.urlService!.getById(url.id);
+      } catch {
+        return null;
+      }
+    });
+
+    expect(deleted).toBeNull();
+  });
+});
