@@ -1,7 +1,7 @@
 # Phase 5 SDD Ledger — Plan: .superpowers/sdd/testing-phase-5/PHASE-5-PLAN.md
 
 **Start:** 2026-08-22 (Fase 5 iniciada - acelerado)  
-**Status:** 🚀 TASK 2 COMPLETE  
+**Status:** 🚀 TASK 6 COMPLETE  
 **Workspace:** `.superpowers/sdd/testing-phase-5/`
 
 ---
@@ -26,9 +26,9 @@
 - [ ] Task 1: Investigation (async spike, if blockers)
 - [x] Task 2: Catalog Integration Tests — Part 1 ✅
 - [x] Task 3: Catalog Integration Tests — Verification ✅
-- [ ] Task 4: Catalog E2E Tests
-- [ ] Task 5: Catalog E2E Tests — Verification
-- [ ] Task 6: Governance Integration Tests
+- [x] Task 4: Catalog E2E Tests ✅
+- [x] Task 5: Catalog E2E Tests — Verification ✅
+- [x] Task 6: Governance Integration Tests ✅
 - [ ] Task 7: Governance Integration Tests — Verification
 - [ ] Task 8: Governance E2E Tests
 - [ ] Task 9: Governance E2E Tests — Verification
@@ -37,7 +37,7 @@
 - [ ] Task 12: Phase 5 Results Documentation
 - [ ] Task 13: Phase 6 Preview & Planning
 
-**Status:** 2/13 Complete — Tasks 2-3 done, ready for Task 4
+**Status:** 6/13 Complete — Tasks 2-6 done (Catalog 100%, Governance integration done), ready for Task 7
 
 ---
 
@@ -64,6 +64,36 @@
 - Decision: ✅ APPROVED
 - Duration: ~1 hour
 - Status: Ready for Task 4 (Catalog E2E Tests)
+
+**Task 4: COMPLETE** ✅
+- Commit: 462cc82 (test: add catalog E2E tests)
+- Report: task-4-report.md
+- Tests: 3/3 implemented (create resource, export CSV, bulk tags)
+- Quality: TypeScript PASS, ESLint PASS, Playwright patterns followed
+- Duration: ~2 hours
+- Status: Ready for Task 5
+
+**Task 5: COMPLETE** ✅
+- Commit: 7d4311c (docs: record Task 5 completion)
+- Report: task-5-report.md
+- Verification: All checks PASSED
+  - Structure: ✅ Correct
+  - ESLint: ✅ PASS
+  - Semantic selectors: ✅ 33 uses verified
+  - Test isolation: ✅ Date.now() confirmed
+  - Download capture: ✅ waitForEvent validated
+  - Phase 4 consistency: ✅ Confirmed
+- Decision: ✅ APPROVED
+- Duration: ~1 hour
+- Status: Catalog module 100% complete (6/6 tests done)
+
+**Task 6: COMPLETE** ✅
+- Commit: 6d79403 (test: add governance integration tests)
+- Report: task-6-report.md
+- Tests: 3/3 implemented (create policy, invalid definition, duplicate slug)
+- Quality: Jest PASS (not Vitest), ESLint PASS, Phase 1 fixtures followed
+- Duration: ~1.5 hours
+- Status: Ready for Task 7 (Governance Integration Verification)
 
 ---
 
