@@ -231,68 +231,7 @@ function DeletableEdge({
 
 const EDGE_TYPES = { deletable: DeletableEdge };
 
-/* ── Edge builder ───────────────────────────────────────────────────────── */
-
-interface PropEdge {
-  id: string;
-  sourceId: string;
-  targetId: string;
-  relationType: string;
-}
-
-interface BuildEdgeOpts {
-  editMode?: boolean;
-  onDelete?: (id: string) => void;
-}
-
-function buildEdge(
-  e: PropEdge,
-  impactedNodeIds: Set<string>,
-  simulationSourceId?: string,
-  opts?: BuildEdgeOpts,
-): RFEdge {
-  const touchesSource = e.sourceId === simulationSourceId || e.targetId === simulationSourceId;
-  const touchesImpact = impactedNodeIds.has(e.sourceId) || impactedNodeIds.has(e.targetId);
-  const simulationActive = !!simulationSourceId;
-
-  let stroke: string;
-  let animated: boolean;
-  if (touchesSource) {
-    stroke = '#ef4444';
-    animated = true;
-  } else if (touchesImpact) {
-    stroke = '#f59e0b';
-    animated = true;
-  } else {
-    stroke = '#334155';
-    animated = false;
-  }
-
-  const isDimmed = simulationActive && !touchesSource && !touchesImpact;
-  const isImplicit = e.id.startsWith('deploy:') || e.id.startsWith('url-owner:') || e.id.startsWith('edge-');
-
-  return {
-    id:     e.id,
-    source: e.sourceId,
-    target: e.targetId,
-    type:   'deletable',
-    animated,
-    markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 14, height: 14 },
-    style: {
-      stroke,
-      strokeWidth: touchesSource || touchesImpact ? 2 : 1.5,
-      opacity: isDimmed ? 0.08 : 1,
-      transition: 'stroke 0.4s, opacity 0.4s',
-    },
-    data: {
-      editMode:       !!opts?.editMode,
-      isImplicit,
-      edgeLabel:      EDGE_LABEL[e.relationType] ?? e.relationType,
-      edgeLabelColor: isDimmed ? '#334155' : '#94a3b8',
-      onDelete:       opts?.onDelete,
-    } as DeletableEdgeData,
-  };
-}
+/* ── Edge builder (now inlined in Effects for better control) ────────────── */
 
 /* ── Custom node: resource ──────────────────────────────────────────────── */
 
@@ -851,13 +790,25 @@ export function ResourceGraph({
       // Keep all other edges
       return true;
     });
-    const builtEdges = visibleEdges.map((e) => buildEdge(
-      { id: e.id, sourceId: e.sourceId, targetId: e.targetId, relationType: e.relationType },
-      impactedNodeIds,
-      simulationSourceId,
-      { editMode: editModeRef.current, onDelete: onEdgeDeleteRef.current },
-    ));
-    setRfEdges(builtEdges);
+
+    // Build initial edges (these will be updated by Effect 2 for colors)
+    const initialEdges = visibleEdges.map((e) => ({
+      id: e.id,
+      source: e.sourceId,
+      target: e.targetId,
+      type: 'deletable',
+      markerEnd: { type: MarkerType.ArrowClosed, color: '#334155', width: 14, height: 14 },
+      style: { stroke: '#334155', strokeWidth: 1.5, opacity: 1 },
+      data: {
+        editMode: editModeRef.current,
+        isImplicit: e.id.startsWith('deploy:') || e.id.startsWith('url-owner:') || e.id.startsWith('edge-'),
+        edgeLabel: EDGE_LABEL[e.relationType] ?? e.relationType,
+        edgeLabelColor: '#94a3b8',
+        onDelete: onEdgeDeleteRef.current,
+      } as DeletableEdgeData,
+    } as RFEdge));
+
+    setRfEdges(initialEdges);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     } catch (err) {
       console.error('ResourceGraph Effect 1 error:', err);
@@ -880,20 +831,42 @@ export function ResourceGraph({
         } as NodeData,
       })),
     );
-    const visibleEdges = propEdges.filter((e) => {
-      // Remove edges that connect to/from chip-only apps
-      if (hostedAppIdsRef.current.has(e.sourceId) || hostedAppIdsRef.current.has(e.targetId)) return false;
-      // Keep all other edges
-      return true;
-    });
-    const builtEdges2 = visibleEdges.map((e) => buildEdge(
-      { id: e.id, sourceId: e.sourceId, targetId: e.targetId, relationType: e.relationType },
-      impactedNodeIds,
-      simulationSourceId,
-      { editMode: editModeRef.current, onDelete: onEdgeDeleteRef.current },
-    ));
-    setRfEdges(builtEdges2);
-  }, [impactedKey, simulationSourceId, compactMode, highlightedKey, propEdges, impactedNodeIds]);
+
+    // Update edge colors based on simulation state
+    setRfEdges((prev) =>
+      prev.map((e) => {
+        const touchesSource = e.source === simulationSourceId || e.target === simulationSourceId;
+        const touchesImpact = impactedNodeIds.has(e.source) || impactedNodeIds.has(e.target);
+        const simulationActive = !!simulationSourceId;
+        const isDimmed = simulationActive && !touchesSource && !touchesImpact;
+
+        let stroke: string;
+        if (touchesSource) {
+          stroke = '#ef4444';
+        } else if (touchesImpact) {
+          stroke = '#f59e0b';
+        } else {
+          stroke = '#334155';
+        }
+
+        return {
+          ...e,
+          animated: touchesSource || touchesImpact,
+          markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 14, height: 14 },
+          style: {
+            stroke,
+            strokeWidth: touchesSource || touchesImpact ? 2 : 1.5,
+            opacity: isDimmed ? 0.08 : 1,
+            transition: 'stroke 0.4s, opacity 0.4s',
+          },
+          data: {
+            ...(e.data as DeletableEdgeData),
+            edgeLabelColor: isDimmed ? '#334155' : '#94a3b8',
+          },
+        };
+      }),
+    );
+  }, [impactedKey, simulationSourceId, compactMode, highlightedKey, impactedNodeIds]);
 
   // ── Effect 3: propagate editMode / onEdgeDelete ───────────────────────
   useEffect(() => {
