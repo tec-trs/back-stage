@@ -23,10 +23,11 @@ const RESOURCE_TYPE_LABELS: Record<string, string> = {
 };
 
 export function SearchResultsPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const query = searchParams.get('q') || '';
   const selectedTags = searchParams.get('tags')?.split(',').filter(Boolean) || [];
+  const selectedType = searchParams.get('type') || null;
 
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -34,6 +35,8 @@ export function SearchResultsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const pageSize = 20;
+
+  const RESOURCE_TYPES = ['server', 'application', 'database', 'url'];
 
   useEffect(() => {
     if (!query) {
@@ -49,6 +52,9 @@ export function SearchResultsPage() {
         if (selectedTags.length > 0) {
           url += `&tags=${selectedTags.join(',')}`;
         }
+        if (selectedType) {
+          url += `&type=${encodeURIComponent(selectedType)}`;
+        }
         const response = await fetch(url);
         if (!response.ok) throw new Error('Erro ao buscar');
         const data = await response.json();
@@ -63,7 +69,7 @@ export function SearchResultsPage() {
     };
 
     fetchResults();
-  }, [query, selectedTags, page]);
+  }, [query, selectedTags, selectedType, page]);
 
   const handleResultClick = (result: SearchResult) => {
     const pathMap: Record<string, string> = {
@@ -88,6 +94,17 @@ export function SearchResultsPage() {
     );
   }
 
+  const handleTypeFilter = (type: string) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (selectedType === type) {
+      newParams.delete('type');
+    } else {
+      newParams.set('type', type);
+    }
+    setSearchParams(newParams);
+    setPage(1);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -96,6 +113,36 @@ export function SearchResultsPage() {
           "{query}" {total > 0 ? `(${total} resultado${total !== 1 ? 's' : ''})` : ''}
         </p>
       </div>
+
+      {query && (
+        <div className="flex flex-wrap gap-2">
+          {RESOURCE_TYPES.map((type) => (
+            <Button
+              key={type}
+              data-testid={`filter-${type}`}
+              variant={selectedType === type ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => handleTypeFilter(type)}
+            >
+              {RESOURCE_TYPE_LABELS[type] || type}
+            </Button>
+          ))}
+          {selectedType && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const newParams = new URLSearchParams(searchParams);
+                newParams.delete('type');
+                setSearchParams(newParams);
+                setPage(1);
+              }}
+            >
+              Limpar filtro
+            </Button>
+          )}
+        </div>
+      )}
 
       {error && <ErrorMessage message={error} />}
 
@@ -111,6 +158,7 @@ export function SearchResultsPage() {
             {results.map((result) => (
               <button
                 key={`${result.resourceType}-${result.id}`}
+                data-testid="search-result"
                 onClick={() => handleResultClick(result)}
                 className="w-full text-left p-4 rounded-lg border border-slate-800 hover:border-slate-600 hover:bg-slate-900/50 transition-colors"
               >

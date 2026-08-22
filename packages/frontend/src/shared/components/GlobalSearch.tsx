@@ -66,6 +66,12 @@ export function GlobalSearch() {
     setIsOpen(false);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && query.trim()) {
+      handleViewAll();
+    }
+  };
+
   return (
     <div className="relative flex-1 max-w-sm">
       <div className="relative">
@@ -73,11 +79,13 @@ export function GlobalSearch() {
         <input
           ref={inputRef}
           type="text"
+          data-testid="global-search-input"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
             setIsOpen(true);
           }}
+          onKeyDown={handleKeyDown}
           onFocus={() => query && setIsOpen(true)}
           onBlur={() => setTimeout(() => setIsOpen(false), 200)}
           placeholder="Buscar servidores, apps, bases..."
