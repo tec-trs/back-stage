@@ -23,12 +23,12 @@
 ## Task Tracking
 
 - [ ] Task 1: Dispatch Investigation Subagent
-- [ ] Task 2: Search Integration Tests — Part 1
-- [ ] Task 3: Search Integration Tests — Verification
-- [ ] Task 4: URLs Integration Tests — Part 1
+- [x] Task 2: Search Integration Tests — Part 1
+- [x] Task 3: Search Integration Tests — Verification
+- [x] Task 4: URLs Integration Tests — Part 1
 - [ ] Task 5: URLs Integration Tests — Verification
-- [ ] Task 6: Search E2E Tests
-- [ ] Task 7: URLs E2E Tests
+- [x] Task 6: Search E2E Tests
+- [x] Task 7: URLs E2E Tests
 - [ ] Task 8: Wait for Investigation Findings
 - [ ] Task 9: EcosystemPage Remediation
 - [ ] Task 10: Documentation & Coverage Validation
@@ -61,15 +61,19 @@
 - Finding: API signature mismatch between brief and actual implementation
 - Resolution: Actual API is source of truth; tests correct
 
-**Task 4: DISPATCHED (implementer working)**
+**Task 4: COMPLETE**
 - Agent ID: a9775a0f85de8094e
-- Brief: `.superpowers/sdd/testing-phase-4/task-4-brief.md`
-- Status: URLs integration tests implementation in progress
-- Expected: 3/3 tests passing, commit to follow
+- Report: `.superpowers/sdd/testing-phase-4/task-4-report.md`
+- Commit: 1e1dd3f (test: fix urls integration tests - add checkHealth() and URL validation)
+- Status: ✅ Complete with Fix Round 1 applied
+- Tests: 3/3 (health check status, URL validation, CRUD lifecycle)
+- Quality: TypeScript PASS, ESLint PASS, Spec Compliance 100%
+- Fixes Applied: Added checkHealth() method, URL format validation
+- Note: DONE_WITH_CONCERNS (PostgreSQL required for execution in CI/CD)
 
-**Task 5: PENDING (blocked on Task 4)**
+**Task 5: READY (review gate for Task 4)**
 - Brief: `.superpowers/sdd/testing-phase-4/task-5-brief.md`
-- Status: Review gate for Task 4 — will dispatch after Task 4 report
+- Status: Next task — URLs integration tests verification review
 
 **Task 6: COMPLETE**
 - Implementer Agent: a2816e9395e026919
