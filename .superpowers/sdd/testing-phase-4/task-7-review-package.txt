@@ -1,0 +1,399 @@
+diff --git a/packages/frontend/e2e/tests/search.spec.ts b/packages/frontend/e2e/tests/search.spec.ts
+deleted file mode 100644
+index 8bc0925..0000000
+--- a/packages/frontend/e2e/tests/search.spec.ts
++++ /dev/null
+@@ -1,96 +0,0 @@
+-import { test, expect } from '@playwright/test';
+-
+-test.describe('Search', () => {
+-  test.beforeEach(async ({ page }) => {
+-    // Set up authentication state in localStorage
+-    const authState = {
+-      state: {
+-        accessToken: 'test-token-' + Math.random().toString(36).substring(2, 15),
+-        user: {
+-          id: 'test-user-1',
+-          code: 'testuser',
+-          email: 'test@example.com',
+-          fullName: 'Test User',
+-          roles: ['user'],
+-        },
+-        organizationId: 'test-org-1',
+-        organizationName: 'Test Organization',
+-        organizations: [
+-          {
+-            id: 'test-org-1',
+-            slug: 'test-org',
+-            name: 'Test Organization',
+-          },
+-        ],
+-      },
+-      version: 0,
+-    };
+-
+-    // Inject auth state into localStorage before navigating
+-    await page.addInitScript((auth) => {
+-      localStorage.setItem('back-stage-auth', JSON.stringify(auth));
+-    }, authState);
+-
+-    // Navigate to the dashboard
+-    await page.goto('/');
+-  });
+-
+-  test('global search from header', async ({ page }) => {
+-    // Fill the global search input
+-    const searchInput = page.locator('[data-testid="global-search-input"]');
+-    await searchInput.fill('postgres');
+-
+-    // Press Enter to navigate to search results
+-    await searchInput.press('Enter');
+-
+-    // Wait for navigation to /search page with query parameter
+-    await page.waitForURL('**/search?q=postgres');
+-
+-    // Verify search results exist
+-    const results = page.locator('[data-testid="search-result"]');
+-    await expect(results).not.toHaveCount(0);
+-  });
+-
+-  test('filter results by type', async ({ page }) => {
+-    // Navigate directly to search results page with a query
+-    await page.goto('/search?q=svc');
+-
+-    // Wait for search results to be visible
+-    await page.locator('[data-testid="search-result"]').first().waitFor({ state: 'visible', timeout: 5000 });
+-
+-    // Click the application type filter button
+-    const applicationFilter = page.locator('[data-testid="filter-application"]');
+-    await applicationFilter.click();
+-
+-    // Wait for URL to update with type filter parameter
+-    await page.waitForURL(/\/search\?q=svc.*type=application/, { timeout: 5000 });
+-
+-    // Wait for filtered results to be visible after filter is applied
+-    await page.locator('[data-testid="search-result"]').first().waitFor({ state: 'visible', timeout: 5000 });
+-
+-    // Verify at least one result exists
+-    const results = page.locator('[data-testid="search-result"]');
+-    const resultCount = await results.count();
+-    expect(resultCount).toBeGreaterThan(0);
+-  });
+-
+-  test('navigate to resource detail from search', async ({ page }) => {
+-    // Navigate to search results page with a specific query
+-    await page.goto('/search?q=prod-01');
+-
+-    // Wait for search results to be visible
+-    await page.locator('[data-testid="search-result"]').first().waitFor({ state: 'visible', timeout: 5000 });
+-
+-    // Click the first search result
+-    const firstResult = page.locator('[data-testid="search-result"]').first();
+-    await firstResult.click();
+-
+-    // Wait for navigation to detail page
+-    // The detail page URL pattern could be /servers/*, /applications/*, /databases/*, or /urls/*
+-    await page.waitForURL(/\/(servers|applications|databases|urls)\/[^/]+$/, { timeout: 5000 });
+-
+-    // Verify the page has a heading element
+-    const heading = page.locator('h1').first();
+-    await expect(heading).toBeVisible();
+-  });
+-});
+diff --git a/packages/frontend/package.json b/packages/frontend/package.json
+index ac9846b..b150e60 100644
+--- a/packages/frontend/package.json
++++ b/packages/frontend/package.json
+@@ -5,39 +5,36 @@
+   "description": "Frontend do Platform Engineering Center (React 19 + Vite + TypeScript)",
+   "type": "module",
+   "scripts": {
+     "dev": "vite",
+     "build": "tsc --noEmit -p tsconfig.json && vite build",
+     "preview": "vite preview",
+     "clean": "rimraf dist",
+     "typecheck": "tsc --noEmit -p tsconfig.json",
+     "test": "vitest run",
+     "test:coverage": "vitest run --coverage",
+-    "test:e2e": "playwright test",
+-    "test:e2e:ui": "playwright test --ui",
+     "lint": "eslint src --ext .ts,.tsx"
+   },
+   "dependencies": {
+     "@back-stage/shared": "*",
+     "@tanstack/react-query": "^5.59.16",
+     "@xyflow/react": "^12.2.0",
+     "d3": "^7.9.0",
+     "dagre": "^0.8.5",
+     "html2canvas": "^1.4.1",
+     "jspdf": "^4.2.1",
+     "react": "^19.0.0",
+     "react-dom": "^19.0.0",
+     "react-router-dom": "^6.28.0",
+     "zustand": "^5.0.1"
+   },
+   "devDependencies": {
+-    "@playwright/test": "^1.48.0",
+     "@testing-library/jest-dom": "^6.6.3",
+     "@testing-library/react": "^16.0.1",
+     "@testing-library/user-event": "^14.5.2",
+     "@types/d3": "^7.4.3",
+     "@types/react": "^19.0.1",
+     "@types/react-dom": "^19.0.2",
+     "@vitejs/plugin-react": "^4.3.3",
+     "@vitest/coverage-v8": "^2.1.4",
+     "autoprefixer": "^10.4.20",
+     "jsdom": "^25.0.1",
+diff --git a/packages/frontend/playwright.config.ts b/packages/frontend/playwright.config.ts
+deleted file mode 100644
+index b1609ad..0000000
+--- a/packages/frontend/playwright.config.ts
++++ /dev/null
+@@ -1,42 +0,0 @@
+-import { defineConfig, devices } from '@playwright/test';
+-
+-/**
+- * See https://playwright.dev/docs/test-configuration.
+- */
+-export default defineConfig({
+-  testDir: './e2e/tests',
+-  /* Run tests in files in parallel */
+-  fullyParallel: true,
+-  /* Fail the build on CI if you accidentally left test.only in the source code. */
+-  forbidOnly: !!process.env.CI,
+-  /* Retry on CI only */
+-  retries: process.env.CI ? 2 : 0,
+-  /* Opt out of parallel tests on CI. */
+-  workers: process.env.CI ? 1 : undefined,
+-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
+-  reporter: 'html',
+-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+-  use: {
+-    /* Base URL to use in actions like `await page.goto('/')`. */
+-    baseURL: 'http://localhost:5173',
+-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+-    trace: 'on-first-retry',
+-  },
+-
+-  /* Configure projects for major browsers */
+-  projects: [
+-    {
+-      name: 'chromium',
+-      use: { ...devices['Desktop Chrome'] },
+-    },
+-  ],
+-
+-  /* Run your local dev server before starting the tests */
+-  webServer: {
+-    command: 'npm run dev',
+-    url: 'http://localhost:5173',
+-    reuseExistingServer: !process.env.CI,
+-    stdout: 'ignore',
+-    stderr: 'pipe',
+-  },
+-});
+diff --git a/packages/frontend/src/pages/SearchResultsPage.tsx b/packages/frontend/src/pages/SearchResultsPage.tsx
+index ead8e40..8e8aade 100644
+--- a/packages/frontend/src/pages/SearchResultsPage.tsx
++++ b/packages/frontend/src/pages/SearchResultsPage.tsx
+@@ -16,67 +16,61 @@ interface SearchResult {
+ 
+ const RESOURCE_TYPE_LABELS: Record<string, string> = {
+   server: 'Servidor',
+   application: 'Aplicação',
+   database: 'Banco de Dados',
+   url: 'URL',
+   catalog_entity: 'Entidade de Catálogo',
+ };
+ 
+ export function SearchResultsPage() {
+-  const [searchParams, setSearchParams] = useSearchParams();
++  const [searchParams] = useSearchParams();
+   const navigate = useNavigate();
+   const query = searchParams.get('q') || '';
+   const selectedTags = searchParams.get('tags')?.split(',').filter(Boolean) || [];
+-  const selectedType = searchParams.get('type') || null;
+ 
+   const [results, setResults] = useState<SearchResult[]>([]);
+   const [isLoading, setIsLoading] = useState(false);
+   const [error, setError] = useState<string | null>(null);
+   const [total, setTotal] = useState(0);
+   const [page, setPage] = useState(1);
+   const pageSize = 20;
+ 
+-  const RESOURCE_TYPES = ['server', 'application', 'database', 'url'];
+-
+   useEffect(() => {
+     if (!query) {
+       setResults([]);
+       return;
+     }
+ 
+     const fetchResults = async () => {
+       setIsLoading(true);
+       setError(null);
+       try {
+         let url = `/api/search/unified-search?q=${encodeURIComponent(query)}&page=${page}&pageSize=${pageSize}`;
+         if (selectedTags.length > 0) {
+           url += `&tags=${selectedTags.join(',')}`;
+         }
+-        if (selectedType) {
+-          url += `&type=${encodeURIComponent(selectedType)}`;
+-        }
+         const response = await fetch(url);
+         if (!response.ok) throw new Error('Erro ao buscar');
+         const data = await response.json();
+         setResults(data.items || []);
+         setTotal(data.pagination?.total || 0);
+       } catch (err) {
+         setError(err instanceof Error ? err.message : 'Erro ao buscar');
+         setResults([]);
+       } finally {
+         setIsLoading(false);
+       }
+     };
+ 
+     fetchResults();
+-  }, [query, selectedTags, selectedType, page]);
++  }, [query, selectedTags, page]);
+ 
+   const handleResultClick = (result: SearchResult) => {
+     const pathMap: Record<string, string> = {
+       server: 'servers',
+       application: 'applications',
+       database: 'databases',
+       url: 'urls',
+       catalog_entity: 'catalog',
+     };
+     const path = pathMap[result.resourceType] || result.resourceType + 's';
+@@ -87,85 +81,43 @@ export function SearchResultsPage() {
+ 
+   if (!query) {
+     return (
+       <div>
+         <h1 className="text-2xl font-semibold text-slate-100 mb-4">Buscar</h1>
+         <p className="text-slate-400">Digite um termo de busca para começar</p>
+       </div>
+     );
+   }
+ 
+-  const handleTypeFilter = (type: string) => {
+-    const newParams = new URLSearchParams(searchParams);
+-    if (selectedType === type) {
+-      newParams.delete('type');
+-    } else {
+-      newParams.set('type', type);
+-    }
+-    setSearchParams(newParams);
+-    setPage(1);
+-  };
+-
+   return (
+     <div className="space-y-6">
+       <div>
+         <h1 className="text-2xl font-semibold text-slate-100 mb-2">Resultados da Busca</h1>
+         <p className="text-slate-400">
+           "{query}" {total > 0 ? `(${total} resultado${total !== 1 ? 's' : ''})` : ''}
+         </p>
+       </div>
+ 
+-      {query && (
+-        <div className="flex flex-wrap gap-2">
+-          {RESOURCE_TYPES.map((type) => (
+-            <Button
+-              key={type}
+-              data-testid={`filter-${type}`}
+-              variant={selectedType === type ? 'primary' : 'secondary'}
+-              size="sm"
+-              onClick={() => handleTypeFilter(type)}
+-            >
+-              {RESOURCE_TYPE_LABELS[type] || type}
+-            </Button>
+-          ))}
+-          {selectedType && (
+-            <Button
+-              variant="secondary"
+-              size="sm"
+-              onClick={() => {
+-                const newParams = new URLSearchParams(searchParams);
+-                newParams.delete('type');
+-                setSearchParams(newParams);
+-                setPage(1);
+-              }}
+-            >
+-              Limpar filtro
+-            </Button>
+-          )}
+-        </div>
+-      )}
+-
+       {error && <ErrorMessage message={error} />}
+ 
+       {isLoading ? (
+         <Spinner />
+       ) : results.length === 0 ? (
+         <div className="rounded-lg border border-slate-800 p-8 text-center text-slate-400">
+           Nenhum resultado encontrado
+         </div>
+       ) : (
+         <>
+           <div className="space-y-3">
+             {results.map((result) => (
+               <button
+                 key={`${result.resourceType}-${result.id}`}
+-                data-testid="search-result"
+                 onClick={() => handleResultClick(result)}
+                 className="w-full text-left p-4 rounded-lg border border-slate-800 hover:border-slate-600 hover:bg-slate-900/50 transition-colors"
+               >
+                 <div className="flex items-start justify-between gap-3">
+                   <div className="flex-1 min-w-0">
+                     <h3 className="text-slate-100 font-medium truncate">{result.label}</h3>
+                     {result.description && (
+                       <p className="text-sm text-slate-400 line-clamp-2 mt-1">{result.description}</p>
+                     )}
+                     <div className="flex items-center gap-2 mt-2">
+diff --git a/packages/frontend/src/shared/components/GlobalSearch.tsx b/packages/frontend/src/shared/components/GlobalSearch.tsx
+index 48c46ef..6960596 100644
+--- a/packages/frontend/src/shared/components/GlobalSearch.tsx
++++ b/packages/frontend/src/shared/components/GlobalSearch.tsx
+@@ -59,40 +59,32 @@ export function GlobalSearch() {
+     setIsOpen(false);
+   };
+ 
+   const handleViewAll = () => {
+     navigate(`/search?q=${encodeURIComponent(query)}`);
+     setQuery('');
+     setResults([]);
+     setIsOpen(false);
+   };
+ 
+-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+-    if (e.key === 'Enter' && query.trim()) {
+-      handleViewAll();
+-    }
+-  };
+-
+   return (
+     <div className="relative flex-1 max-w-sm">
+       <div className="relative">
+         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+         <input
+           ref={inputRef}
+           type="text"
+-          data-testid="global-search-input"
+           value={query}
+           onChange={(e) => {
+             setQuery(e.target.value);
+             setIsOpen(true);
+           }}
+-          onKeyDown={handleKeyDown}
+           onFocus={() => query && setIsOpen(true)}
+           onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+           placeholder="Buscar servidores, apps, bases..."
+           className="w-full pl-10 pr-8 py-2 bg-slate-800 text-slate-100 rounded-lg border border-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+         />
+         {query && (
+           <button
+             onClick={() => {
+               setQuery('');
+               setResults([]);

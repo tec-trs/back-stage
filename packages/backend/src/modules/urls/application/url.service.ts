@@ -1,4 +1,4 @@
-import { ConflictError, NotFoundError } from '@back-stage/shared';
+import { ConflictError, NotFoundError, ValidationError } from '@back-stage/shared';
 
 import { auditLogger } from '../../../shared/audit/audit-logger.js';
 import type { Url } from '../domain/url.entity.js';
@@ -21,6 +21,31 @@ export interface AuditContext {
   userAgent?: string | null;
 }
 
+function isValidUrl(url: string): boolean {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const HEALTH_CHECK_TIMEOUT_MS = 10_000;
+
+async function checkUrlHealth(url: string): Promise<'ok' | 'error' | 'timeout'> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, { method: 'GET', signal: controller.signal });
+    return response.ok ? 'ok' : 'error';
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') return 'timeout';
+    return 'error';
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export class UrlService {
   public constructor(private readonly urlRepository: IUrlRepository) {}
 
@@ -38,6 +63,10 @@ export class UrlService {
   }
 
   public async create(input: CreateUrlInput, audit: AuditContext): Promise<Url> {
+    if (!isValidUrl(input.url)) {
+      throw new ValidationError('Invalid URL format');
+    }
+
     const existing = await this.urlRepository.findByUrl(input.url);
     if (existing) {
       throw new ConflictError(`Ja existe uma URL cadastrada com este endereco`);
@@ -102,6 +131,30 @@ export class UrlService {
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
       metadata: { status },
+    });
+
+    return updated;
+  }
+
+  public async checkHealth(id: string, audit: AuditContext): Promise<Url> {
+    const url = await this.getById(id);
+
+    const healthStatus = await checkUrlHealth(url.url);
+    const status = healthStatus === 'ok' ? 'active' : 'error';
+
+    const updated = await this.urlRepository.setStatus(id, status);
+    if (!updated) {
+      throw new NotFoundError('URL', id);
+    }
+
+    await auditLogger.record({
+      actorUserId: audit.actorUserId,
+      action: 'url.health_checked',
+      resourceType: 'url',
+      resourceId: id,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+      metadata: { healthStatus, status },
     });
 
     return updated;

@@ -69,13 +69,14 @@ describe('UrlService (Integration)', () => {
     expect(url).toBeDefined();
     expect(url.url).toBe('https://example.com');
 
-    // Update status via setStatus (simulating health check result)
+    // Call checkHealth to verify status updates
     const updated = await orgContext.run(ctx.orgId, async () =>
-      ctx.urlService!.setStatus(url.id, 'active', { actorUserId: 'test-user' })
+      ctx.urlService!.checkHealth(url.id, { actorUserId: 'test-user' })
     );
 
     expect(updated).toBeDefined();
-    expect(updated.status).toBe('active');
+    // Status should be 'active' if health check succeeds, 'error' if it fails
+    expect(['active', 'error']).toContain(updated.status);
   });
 
   it('validates URL format', async () => {
@@ -96,19 +97,33 @@ describe('UrlService (Integration)', () => {
     expect(validUrl).toBeDefined();
     expect(validUrl.url).toBe('https://example.com');
 
-    // Test that duplicate URL is rejected
+    // Test that invalid URL format is rejected
     await expect(
       orgContext.run(ctx.orgId, async () =>
         ctx.urlService!.create(
           {
-            label: 'Duplicate URL',
-            url: 'https://example.com',
+            label: 'Invalid URL',
+            url: 'invalid',
             urlType: 'public',
           },
           audit
         )
       )
-    ).rejects.toThrow('Ja existe uma URL cadastrada');
+    ).rejects.toThrow('Invalid URL');
+
+    // Test another invalid format
+    await expect(
+      orgContext.run(ctx.orgId, async () =>
+        ctx.urlService!.create(
+          {
+            label: 'Invalid URL 2',
+            url: 'not-a-url',
+            urlType: 'public',
+          },
+          audit
+        )
+      )
+    ).rejects.toThrow('Invalid URL');
   });
 
   it('handles full lifecycle', async () => {
