@@ -681,6 +681,11 @@ export function ResourceGraph({
     [impactedNodeIds],
   );
 
+  const highlightedKey = useMemo(
+    () => [...highlightedNodeIds].sort().join(','),
+    [highlightedNodeIds],
+  );
+
   // ── Effect 1: recompute layout when graph data changes ─────────────────
   useEffect(() => {
     try {
@@ -888,8 +893,7 @@ export function ResourceGraph({
       { editMode: editModeRef.current, onDelete: onEdgeDeleteRef.current },
     ));
     setRfEdges(builtEdges2);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [impactedKey, simulationSourceId, compactMode, highlightedNodeIds]);
+  }, [impactedKey, simulationSourceId, compactMode, highlightedKey, propEdges, impactedNodeIds]);
 
   // ── Effect 3: propagate editMode / onEdgeDelete ───────────────────────
   useEffect(() => {
@@ -903,7 +907,6 @@ export function ResourceGraph({
         data: { ...e.data, editMode, onDelete: onEdgeDelete } as DeletableEdgeData,
       })),
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode, onEdgeDelete]);
 
   const onNodesChange = useCallback(
@@ -925,11 +928,14 @@ export function ResourceGraph({
     [],
   );
 
+  const rfNodesRef = useRef(rfNodes);
+  rfNodesRef.current = rfNodes;
+
   const handleConnect = useCallback(
     (connection: Connection) => {
       if (!onConnect || !connection.source || !connection.target) return;
-      const src = rfNodes.find((n) => n.id === connection.source);
-      const tgt = rfNodes.find((n) => n.id === connection.target);
+      const src = rfNodesRef.current.find((n) => n.id === connection.source);
+      const tgt = rfNodesRef.current.find((n) => n.id === connection.target);
       if (!src || !tgt) return;
       onConnect({
         sourceId:   connection.source,
@@ -938,21 +944,21 @@ export function ResourceGraph({
         targetType: (tgt.data as NodeData).resourceType,
       });
     },
-    [onConnect, rfNodes],
+    [onConnect],
   );
 
   const isValidConnection = useCallback(
     (connection: Connection | RFEdge) => {
       if (connection.source === connection.target) return false;
-      const src = rfNodes.find((n) => n.id === connection.source);
-      const tgt = rfNodes.find((n) => n.id === connection.target);
+      const src = rfNodesRef.current.find((n) => n.id === connection.source);
+      const tgt = rfNodesRef.current.find((n) => n.id === connection.target);
       if (!src || !tgt) return false;
       const srcType = (src.data as NodeData).resourceType;
       const tgtType = (tgt.data as NodeData).resourceType;
       return srcType !== 'db-group' && tgtType !== 'db-group'
         && srcType !== 'server-group' && tgtType !== 'server-group';
     },
-    [rfNodes],
+    [],
   );
 
   const onNodeClick = useCallback(
