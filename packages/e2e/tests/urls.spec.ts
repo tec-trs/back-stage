@@ -95,7 +95,6 @@ test.describe('URLs Workflows', () => {
     await expect(healthcheckCell).toBeVisible();
 
     // Verify the healthcheck status shows a badge or pending indicator
-    const healthcheckBadge = healthcheckCell.locator('[class*="badge"], span');
     const healthcheckText = await healthcheckCell.textContent();
     expect(healthcheckText).toMatch(/ok|error|timeout|pendente|—/);
   });
