@@ -1,7 +1,7 @@
 # Phase 5 SDD Ledger — Plan: .superpowers/sdd/testing-phase-5/PHASE-5-PLAN.md
 
 **Start:** 2026-08-22 (Fase 5 iniciada - acelerado)  
-**Status:** 🚀 TASK 7 COMPLETE  
+**Status:** 🚀 TASK 8 COMPLETE  
 **Workspace:** `.superpowers/sdd/testing-phase-5/`
 
 ---
@@ -30,14 +30,14 @@
 - [x] Task 5: Catalog E2E Tests — Verification ✅
 - [x] Task 6: Governance Integration Tests ✅
 - [x] Task 7: Governance Integration Tests — Verification ✅
-- [ ] Task 8: Governance E2E Tests
+- [x] Task 8: Governance E2E Tests ✅
 - [ ] Task 9: Governance E2E Tests — Verification
 - [ ] Task 10: Cross-module Integration (Ecosystem + Governance)
 - [ ] Task 11: Coverage Validation (60%+ check)
 - [ ] Task 12: Phase 5 Results Documentation
 - [ ] Task 13: Phase 6 Preview & Planning
 
-**Status:** 7/13 Complete — Tasks 2-7 done (Catalog 100%, Governance integration 100%), ready for Task 8
+**Status:** 8/13 Complete — Tasks 2-8 done (Catalog 100%, Governance 100%), ready for Task 9
 
 ---
 
@@ -110,6 +110,14 @@
 - Decision: ✅ APPROVED
 - Duration: ~1 hour
 - Status: Governance module integration 100% complete (6/6 tests done - 3 integration + 3 verification)
+
+**Task 8: COMPLETE** ✅
+- Commit: 7cef17a (test: add governance E2E tests)
+- Report: task-8-report.md
+- Tests: 3/3 implemented (view with filtering, edit details, validate permissions)
+- Quality: TypeScript PASS, ESLint PASS, Playwright patterns followed
+- Duration: ~1.5 hours
+- Status: Ready for Task 9 (Governance E2E Tests Verification)
 
 ---
 
