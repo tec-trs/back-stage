@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useReducer } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -604,8 +604,22 @@ export function ResourceGraph({
   storageKey,
   resetLayoutKey = 0,
 }: ResourceGraphProps) {
-  const [rfNodes, setRfNodes] = useState<RFNode<NodeData>[]>([]);
-  const [rfEdges, setRfEdges] = useState<RFEdge[]>([]);
+  type GraphState = { nodes: RFNode<NodeData>[]; edges: RFEdge[] };
+  const [graphState, dispatch] = useReducer(
+    (state: GraphState, action: Partial<GraphState>): GraphState => ({
+      nodes: action.nodes ?? state.nodes,
+      edges: action.edges ?? state.edges,
+    }),
+    { nodes: [], edges: [] }
+  );
+  const setRfNodes = (nodes: RFNode<NodeData>[] | ((prev: RFNode<NodeData>[]) => RFNode<NodeData>[])) => {
+    dispatch({ nodes: typeof nodes === 'function' ? nodes(graphState.nodes) : nodes });
+  };
+  const setRfEdges = (edges: RFEdge[] | ((prev: RFEdge[]) => RFEdge[])) => {
+    dispatch({ edges: typeof edges === 'function' ? edges(graphState.edges) : edges });
+  };
+  const rfNodes = graphState.nodes;
+  const rfEdges = graphState.edges;
 
   const editModeRef     = useRef(editMode);
   const onEdgeDeleteRef = useRef(onEdgeDelete);
