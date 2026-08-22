@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import * as httpClient from '../../shared/api/http-client';
 
 import { useEcosystemGraph } from './use-ecosystem-graph';
-import * as httpClient from '../../shared/api/http-client';
 
 vi.mock('../../shared/api/http-client');
 
@@ -54,7 +55,11 @@ describe('useEcosystemGraph', () => {
   });
 
   function wrapper({ children }: { children: ReactNode }) {
-    return QueryClientProvider({ client: queryClient, children });
+    return (
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    );
   }
 
   it('should return ecosystem graph data on success', async () => {
