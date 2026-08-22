@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -16,9 +16,10 @@ import { Button } from '../shared/components/Button';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Modal } from '../shared/components/Modal';
 import { PageHeader } from '../shared/components/PageHeader';
-import { ResourceGraph } from '../shared/components/ResourceGraph';
 import type { ConnPayload } from '../shared/components/ResourceGraph';
 import { Spinner } from '../shared/components/Spinner';
+
+const ResourceGraph = lazy(() => import('../shared/components/ResourceGraph').then(m => ({ default: m.ResourceGraph })));
 
 type ResourceType = 'server' | 'application' | 'database' | 'url' | 'vip';
 
@@ -730,24 +731,26 @@ export function EcosystemPage() {
       <div className="relative flex flex-1 overflow-hidden">
         {/* Grafo — largura total */}
         <div ref={graphContainerRef} className="flex-1 overflow-hidden bg-slate-950">
-          <ResourceGraph
-            nodes={graphNodes}
-            edges={graphEdges}
-            mode="overview"
-            impactedNodeIds={impactedNodeIds}
-            impactedByDepth={impactedByDepth}
-            simulationSourceId={simulationSourceId}
-            highlightedNodeIds={highlightedNodeIds}
-            onNodeSelect={editMode ? undefined : handleNodeSelect}
-            onNodeNavigate={editMode ? undefined : handleNodeNavigate}
-            isLoading={isLoading}
-            editMode={editMode}
-            compactMode={compactMode}
-            onConnect={handleConnect}
-            onEdgeDelete={handleEdgeDelete}
-            storageKey="ecosystem-graph-positions"
-            resetLayoutKey={resetLayoutKey}
-          />
+          <Suspense fallback={<div className="flex items-center justify-center h-full"><Spinner /></div>}>
+            <ResourceGraph
+              nodes={graphNodes}
+              edges={graphEdges}
+              mode="overview"
+              impactedNodeIds={impactedNodeIds}
+              impactedByDepth={impactedByDepth}
+              simulationSourceId={simulationSourceId}
+              highlightedNodeIds={highlightedNodeIds}
+              onNodeSelect={editMode ? undefined : handleNodeSelect}
+              onNodeNavigate={editMode ? undefined : handleNodeNavigate}
+              isLoading={isLoading}
+              editMode={editMode}
+              compactMode={compactMode}
+              onConnect={handleConnect}
+              onEdgeDelete={handleEdgeDelete}
+              storageKey="ecosystem-graph-positions"
+              resetLayoutKey={resetLayoutKey}
+            />
+          </Suspense>
         </div>
 
         {/* Painel flutuante do nó selecionado — canto direito */}
