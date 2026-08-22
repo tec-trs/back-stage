@@ -1,25 +1,39 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter } from 'react-router-dom';
+import React from 'react';
 
-// Mock all dependencies before importing component
-vi.mock('../features/ecosystem/use-ecosystem-graph', () => ({
-  useEcosystemGraph: vi.fn(),
-}));
+// Mock heavy dependencies before importing component
+vi.mock('../features/ecosystem/use-ecosystem-graph');
 vi.mock('../features/resource-graph/use-resource-graph', () => ({
-  useCreateRelationship: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
-  useDeleteRelationship: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useCreateRelationship: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteRelationship: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
-vi.mock('../shared/components/ResourceGraph');
-vi.mock('../shared/components/ImpactAnalysisPanel');
-vi.mock('../shared/components/Button');
-vi.mock('../shared/components/Badge');
-vi.mock('../shared/components/Modal');
-vi.mock('../shared/components/PageHeader');
-vi.mock('../shared/components/ErrorMessage');
-vi.mock('../shared/components/Spinner');
-vi.mock('@xyflow/react');
+vi.mock('@xyflow/react', () => ({
+  ReactFlow: () => null,
+  Background: () => null,
+  Handle: () => null,
+  BaseEdge: () => null,
+  EdgeLabelRenderer: () => null,
+  applyEdgeChanges: (edges: any) => edges,
+  applyNodeChanges: (nodes: any) => nodes,
+  getSmoothStepPath: () => ['', '', ''],
+  useUpdateNodeInternals: () => vi.fn(),
+  Position: {},
+  MarkerType: {},
+}));
+vi.mock('../shared/components/ResourceGraph', () => ({
+  ResourceGraph: () => React.createElement('div', { 'data-testid': 'resource-graph' }),
+}));
+vi.mock('../shared/components/ImpactAnalysisPanel', () => ({
+  ImpactAnalysisPanel: () => null,
+}));
 vi.mock('html2canvas');
 vi.mock('jspdf');
 
+import { EcosystemPage } from './EcosystemPage';
 import * as useEcosystemGraphModule from '../features/ecosystem/use-ecosystem-graph';
 
 const mockEcosystemData = {
@@ -37,61 +51,128 @@ const mockEcosystemData = {
   ],
 };
 
+function renderEcosystemPage() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return {
+    ...render(
+      React.createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        React.createElement(BrowserRouter, {}, React.createElement(EcosystemPage)),
+      ),
+    ),
+    user: userEvent.setup(),
+  };
+}
+
 describe('EcosystemPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    vi.mocked(useEcosystemGraphModule.useEcosystemGraph).mockReturnValue({
+      data: mockEcosystemData,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as any);
+  });
+
+  afterEach(() => {
+    localStorage.clear();
   });
 
   it('should render page title and header', () => {
-    vi.mocked(useEcosystemGraphModule.useEcosystemGraph).mockReturnValue({
-      data: mockEcosystemData,
-      isLoading: false,
-      isError: false,
-      error: null,
-    } as any);
-    expect(useEcosystemGraphModule.useEcosystemGraph).toBeDefined();
+    // SETUP: render with mock data
+    renderEcosystemPage();
+
+    // ASSERT: "Ecossistema" title visible in actual DOM
+    expect(screen.getByText('Ecossistema')).toBeInTheDocument();
+
+    // ASSERT: header subtitle visible in actual DOM
+    expect(screen.getByText(/Duplo clique no nó para abrir detalhes/i)).toBeInTheDocument();
   });
 
-  it('should display nodes from hook data', () => {
-    vi.mocked(useEcosystemGraphModule.useEcosystemGraph).mockReturnValue({
-      data: mockEcosystemData,
-      isLoading: false,
-      isError: false,
-      error: null,
-    } as any);
-    expect(mockEcosystemData.nodes).toHaveLength(5);
-    expect(mockEcosystemData.edges).toHaveLength(3);
+  it('should display nodes from hook data', async () => {
+    // SETUP: render with 5 nodes and 3 edges
+    renderEcosystemPage();
+
+    // ASSERT: ResourceGraph component rendered (receives node data)
+    expect(await screen.findByTestId('resource-graph')).toBeInTheDocument();
+
+    // ASSERT: useEcosystemGraph called with correct params
+    expect(useEcosystemGraphModule.useEcosystemGraph).toHaveBeenCalledWith({ page: 1, pageSize: 500 });
+
+    // ASSERT: Resource type labels visible in DOM (indicating nodes are rendered)
+    expect(screen.getByText('Servidor')).toBeInTheDocument();
+    expect(screen.getByText('Aplicacao')).toBeInTheDocument();
   });
 
-  it('should filter nodes by search term', () => {
-    vi.mocked(useEcosystemGraphModule.useEcosystemGraph).mockReturnValue({
-      data: mockEcosystemData,
-      isLoading: false,
-      isError: false,
-      error: null,
-    } as any);
-    const searchTerm = 'prod-01';
-    const matching = mockEcosystemData.nodes.find((n) => n.name.includes(searchTerm));
-    expect(matching?.name).toBe('prod-01');
+  it('should filter nodes by search term', async () => {
+    // SETUP: render component
+    const { user } = renderEcosystemPage();
+
+    // ACT: find search input and type search term
+    const searchInput = await screen.findByPlaceholderText('🔍 Procurar recurso...');
+    await user.type(searchInput, 'prod-01');
+
+    // ASSERT: search input value updated in actual DOM
+    expect(searchInput).toHaveValue('prod-01');
   });
 
-  it('should persist compact mode to localStorage', () => {
-    localStorage.setItem('ecosystem-compact-mode', JSON.stringify(true));
+  it('should persist compact mode to localStorage', async () => {
+    // SETUP: render component
+    const { user } = renderEcosystemPage();
+
+    // ASSERT: compact mode button exists and initially shows "Compacto"
+    const compactButton = await screen.findByTitle(/Modo compacto/i);
+    expect(compactButton.textContent).toContain('Compacto');
+
+    // ASSERT: localStorage initialized with true
     expect(localStorage.getItem('ecosystem-compact-mode')).toBe('true');
-    localStorage.setItem('ecosystem-compact-mode', JSON.stringify(false));
+
+    // ACT: click to toggle off
+    await user.click(compactButton);
+
+    // ASSERT: button text changed in DOM to "Expandido"
+    await waitFor(() => {
+      expect(compactButton.textContent).toContain('Expandido');
+    });
+
+    // ASSERT: localStorage persisted to false
     expect(localStorage.getItem('ecosystem-compact-mode')).toBe('false');
+
+    // ACT: click again to toggle back on
+    await user.click(compactButton);
+
+    // ASSERT: button text back to "Compacto"
+    await waitFor(() => {
+      expect(compactButton.textContent).toContain('Compacto');
+    });
+
+    // ASSERT: localStorage back to true
+    expect(localStorage.getItem('ecosystem-compact-mode')).toBe('true');
   });
 
   it('should handle loading state with spinner', () => {
+    // SETUP: mock isLoading=true
     vi.mocked(useEcosystemGraphModule.useEcosystemGraph).mockReturnValue({
       data: undefined,
       isLoading: true,
       isError: false,
       error: null,
     } as any);
-    const result = useEcosystemGraphModule.useEcosystemGraph();
-    expect(result.isLoading).toBe(true);
-    expect(result.data).toBeUndefined();
+
+    // ACT: render component in loading state
+    renderEcosystemPage();
+
+    // ASSERT: Spinner visible in actual DOM
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    const spinner = document.querySelector('.animate-spin');
+    expect(spinner).toBeInTheDocument();
+
+    // ASSERT: main page content not visible (Spinner returned early)
+    expect(screen.queryByText('Ecossistema')).not.toBeInTheDocument();
   });
 });
