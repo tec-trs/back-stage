@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useAllRelationships, useCreateRelationship, useDeleteRelationship, useFullGraph } from '../features/resource-graph/use-resource-graph';
+import { useAllRelationships, useDeleteRelationship, useFullGraph } from '../features/resource-graph/use-resource-graph';
 import { AddRelationshipDialog } from '../features/resource-graph/AddRelationshipDialog';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
@@ -17,8 +17,6 @@ const RELATION_TYPE_LABELS: Record<string, { label: string; hint: string }> = {
   consumes: { label: 'Consome', hint: 'A origem consome serviço do destino' },
   part_of: { label: 'Parte de', hint: 'A origem é parte do destino' },
 };
-
-type ResourceType = 'server' | 'application' | 'database' | 'url';
 
 export function RelationshipsPage() {
   const navigate = useNavigate();

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Locator } from '@playwright/test';
 
 async function login(page: Page): Promise<void> {
   await page.goto('/login');
@@ -41,7 +41,7 @@ test.describe('Ecosystem + Governance Integration', () => {
     ];
 
     let graphFound = false;
-    let graphContainer;
+    let graphContainer: Locator | undefined;
 
     for (const selector of graphSelectors) {
       const element = page.locator(selector).first();
@@ -54,8 +54,9 @@ test.describe('Ecosystem + Governance Integration', () => {
     }
 
     // Graph may not exist, but test should handle gracefully
-    if (graphFound) {
-      await expect(graphContainer).toBeVisible({ timeout: 5000 });
+    if (graphFound && graphContainer) {
+      const isGraphVisible = await graphContainer.isVisible({ timeout: 5000 }).catch(() => false);
+      expect(isGraphVisible).toBe(true);
 
       // Verify resources are displayed
       const resourceNodeSelectors = [

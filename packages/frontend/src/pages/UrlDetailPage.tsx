@@ -8,7 +8,6 @@ import { ImpactAnalysisPanel } from '../features/resource-graph/ImpactAnalysisPa
 import { useSubgraph } from '../features/resource-graph/use-resource-graph';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
-import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { NotFoundError } from '../shared/components/NotFoundError';
 import { ChevronLeftIcon } from '../shared/components/icons';
 import { ResourceGraph } from '../shared/components/ResourceGraph';
@@ -39,7 +38,7 @@ const HEALTHCHECK_TONE: Record<string, 'success' | 'warning' | 'danger' | 'defau
 export function UrlDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: url, isLoading, isError, error } = useUrl(id ?? '');
+  const { data: url, isLoading, isError } = useUrl(id ?? '');
   const { data: subgraph, isLoading: isSubgraphLoading } = useSubgraph('url', id ?? null, 2);
   const [isRelationshipDialogOpen, setIsRelationshipDialogOpen] = useState(false);
   const [simulationSourceId, setSimulationSourceId] = useState<string | undefined>();

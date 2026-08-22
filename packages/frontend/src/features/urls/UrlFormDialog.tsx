@@ -110,7 +110,7 @@ export function UrlFormDialog({
     'depends_on',
   );
 
-  const { data: allRelationships, isLoading: isLoadingRelationships } = useAllRelationships({
+  const { data: allRelationships } = useAllRelationships({
     relationType: 'exposes',
   });
 

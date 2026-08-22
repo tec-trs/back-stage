@@ -9,7 +9,6 @@ import { useSubgraph } from '../features/resource-graph/use-resource-graph';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
 import { ResourceGraph } from '../shared/components/ResourceGraph';
-import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { NotFoundError } from '../shared/components/NotFoundError';
 import { Spinner } from '../shared/components/Spinner';
 import {
@@ -31,7 +30,7 @@ function Field({ label, value }: { label: string; value: string | number | null 
 export function ApplicationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data, isLoading, isError, error } = useApplication(id);
+  const { data, isLoading, isError } = useApplication(id);
   const { data: subgraph, isLoading: isSubgraphLoading } = useSubgraph(
     'application',
     id ?? null,

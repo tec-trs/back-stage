@@ -7,15 +7,6 @@ import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Spinner } from '../shared/components/Spinner';
 
-type ResourceType = 'server' | 'application' | 'database' | 'url';
-
-const RESOURCE_TYPE_LABELS: Record<ResourceType, string> = {
-  server: 'Servidor',
-  application: 'Aplicação',
-  database: 'Banco de Dados',
-  url: 'URL',
-};
-
 const CRITICALITY_COLORS: Record<string, { bg: string; text: string }> = {
   critical: { bg: 'bg-red-900/40', text: 'text-red-400' },
   high: { bg: 'bg-orange-900/40', text: 'text-orange-400' },

@@ -16,7 +16,7 @@ import { translateLifecycle } from '../shared/constants/labels';
 export function ServiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data, isLoading, isError, error } = useService(id);
+  const { data, isLoading, isError } = useService(id);
   const graph = useDependencyGraph();
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
 

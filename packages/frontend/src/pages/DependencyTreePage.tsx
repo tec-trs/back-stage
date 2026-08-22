@@ -157,11 +157,10 @@ export function DependencyTreePage() {
       };
     };
 
-    // Build trees from root resources: URLs first (entry points), then groups, then orphans
+    // Build trees from root resources: URLs first (entry points), then orphans
     const urlRoots = data.nodes.filter(n => n.resourceType === 'url');
-    const groupRoots = data.nodes.filter(n => n.resourceType === 'group' && !edgesByTarget.has(n.id));
-    const orphans = data.nodes.filter(n => !['url', 'group'].includes(n.resourceType) && !edgesByTarget.has(n.id));
-    const roots = [...urlRoots, ...groupRoots, ...orphans];
+    const orphans = data.nodes.filter(n => n.resourceType !== 'url' && !edgesByTarget.has(n.id));
+    const roots = [...urlRoots, ...orphans];
 
     return roots
       .map(root => buildTree(root.id))
@@ -196,7 +195,7 @@ export function DependencyTreePage() {
     }
   };
 
-  const renderTreeNode = (node: TreeNode, depth: number = 0): JSX.Element => {
+  const renderTreeNode = (node: TreeNode, depth: number = 0) => {
     const isExpanded = expandedNodes.has(node.id);
     const isAffected = impactedResources.has(node.id);
     const icon = RESOURCE_ICONS[node.resourceType] || '📦';

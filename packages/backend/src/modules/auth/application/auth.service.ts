@@ -29,20 +29,29 @@ export class AuthService {
   constructor(private userRepository: UserAuthRepository) {}
 
   async login(code: string, password: string): Promise<{ token: string; user: User }> {
-    const user = await this.userRepository.findByCode(code);
+    const userRecord = await this.userRepository.findByCode(code);
 
-    if (!user) {
+    if (!userRecord) {
       throw new UnauthorizedError('User not found');
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    const isPasswordValid = await bcrypt.compare(password, userRecord.password_hash);
     if (!isPasswordValid) {
       throw new UnauthorizedError('Invalid password');
     }
 
-    const token = jwt.sign({ id: user.id, role: user.roles[0] }, JWT_SECRET, {
+    const token = jwt.sign({ id: userRecord.id, role: userRecord.roles[0] }, JWT_SECRET, {
       expiresIn: '1h',
     });
+
+    const user: User = {
+      id: userRecord.id,
+      code: userRecord.code,
+      email: userRecord.email,
+      fullName: userRecord.full_name,
+      roles: userRecord.roles,
+      password_hash: userRecord.password_hash,
+    };
 
     return {
       token,

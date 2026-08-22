@@ -42,7 +42,7 @@ export function DatabaseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { data: database, isLoading, isError, error } = useDatabase(id ?? '');
+  const { data: database, isLoading, isError } = useDatabase(id ?? '');
   const { data: subgraph, isLoading: isSubgraphLoading } = useSubgraph('database', id ?? null, 2);
 
   const [isRelationshipDialogOpen, setIsRelationshipDialogOpen] = useState(false);

@@ -27,19 +27,15 @@ export function GroupsPage() {
     );
   }
 
-  // Filtrar grupos
-  const groups = data?.nodes.filter(n => n.resourceType === 'group') || [];
-  const groupsMap = new Map(groups.map(g => [g.id, g]));
-
   // Filtrar URLs
   const urls = data?.nodes.filter(n => n.resourceType === 'url') || [];
 
-  // Encontrar relacionamentos URL → Group
+  // Encontrar relacionamentos URL → VIP (grupos agora são VIPs)
   const urlGroupRelationships = data?.edges.filter(
-    e => e.sourceType === 'url' && e.targetType === 'group' && e.relationType === 'depends_on'
+    e => e.sourceType === 'url' && e.targetType === 'vip' && e.relationType === 'depends_on'
   ) || [];
 
-  // Agrupar relacionamentos por group
+  // Agrupar relacionamentos por VIP
   const relationshipsByGroup = new Map<string, string[]>();
   for (const rel of urlGroupRelationships) {
     if (!relationshipsByGroup.has(rel.targetId)) {
@@ -47,6 +43,9 @@ export function GroupsPage() {
     }
     relationshipsByGroup.get(rel.targetId)!.push(rel.sourceId);
   }
+
+  // Filtrar VIPs (grupos)
+  const groups = data?.nodes.filter(n => n.resourceType === 'vip') || [];
 
   const handleDeleteRelationship = async (relationshipId: string) => {
     if (confirm('Tem certeza que deseja remover este relacionamento?')) {
@@ -84,7 +83,6 @@ export function GroupsPage() {
         ) : (
           groups.map(group => {
             const linkedUrls = relationshipsByGroup.get(group.id) || [];
-            const urlNames = linkedUrls.map(urlId => urls.find(u => u.id === urlId)?.label || urlId);
 
             return (
               <div

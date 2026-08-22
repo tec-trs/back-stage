@@ -9,7 +9,6 @@ import { useSubgraph } from '../features/resource-graph/use-resource-graph';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
 import { ResourceGraph } from '../shared/components/ResourceGraph';
-import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { NotFoundError } from '../shared/components/NotFoundError';
 import { Spinner } from '../shared/components/Spinner';
 import {
@@ -33,7 +32,7 @@ function Field({ label, value }: { label: string; value: string | number | null 
 export function ServerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data, isLoading, isError, error } = useServer(id);
+  const { data, isLoading, isError } = useServer(id);
   const { data: subgraph, isLoading: isSubgraphLoading } = useSubgraph('server', id ?? null, 2);
   const [isRelationshipDialogOpen, setIsRelationshipDialogOpen] = useState(false);
   const [simulationSourceId, setSimulationSourceId] = useState<string | undefined>();
