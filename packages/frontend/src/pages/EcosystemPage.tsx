@@ -92,28 +92,28 @@ function ConnectionModal({
     <Modal title="Criar relacao" isOpen onClose={onCancel}>
       <div className="flex flex-col gap-4">
         {error && <ErrorMessage message={error} />}
-        <div className="rounded-md border border-slate-700 bg-slate-800/50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Relacionamento</p>
+        <div className="rounded-md border border-slate-600 bg-slate-700/60 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">Relacionamento</p>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm">
               <span className="font-medium text-slate-100">{sourceLabel}</span>
-              <span className="text-slate-500">→</span>
+              <span className="text-slate-400">→</span>
               <span className="font-medium text-slate-100">{targetLabel}</span>
             </div>
             <button
               type="button"
               onClick={() => setIsInverted(!isInverted)}
-              className="px-2 py-1 text-xs rounded bg-slate-700 hover:bg-slate-600 text-slate-300 transition"
+              className="px-2 py-1 text-xs rounded bg-slate-700 hover:bg-slate-600 text-slate-100 transition"
               title="Inverter direção"
             >
               ⇄
             </button>
           </div>
-          <p className="text-xs text-slate-400 mt-2">Clique ⇄ para inverter a direção se necessário</p>
+          <p className="text-xs text-slate-300 mt-2">Clique ⇄ para inverter a direção se necessário</p>
         </div>
 
         <fieldset className="flex flex-col gap-1">
-          <legend className="mb-1 text-xs font-medium text-slate-400">Tipo de relacao</legend>
+          <legend className="mb-1 text-xs font-medium text-slate-300">Tipo de relacao</legend>
           {RELATION_OPTIONS.map((opt) => (
             <label
               key={opt.value}
@@ -129,24 +129,24 @@ function ConnectionModal({
               />
               <div>
                 <p className="text-sm font-medium text-slate-200">{opt.label}</p>
-                <p className="text-xs text-slate-500">{opt.hint}</p>
+                <p className="text-xs text-slate-400">{opt.hint}</p>
               </div>
             </label>
           ))}
         </fieldset>
 
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-medium text-slate-400">Motivo (opcional)</label>
+          <label className="text-xs font-medium text-slate-300">Motivo (opcional)</label>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Ex: X precisa acessar Y para autenticação"
-            className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:border-slate-500 focus:outline-none resize-none"
+            className="rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:border-slate-500 focus:outline-none resize-none"
             rows={2}
           />
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-slate-800 pt-3">
+        <div className="flex justify-end gap-3 border-t border-slate-600 pt-3">
           <Button variant="secondary" size="sm" onClick={onCancel} disabled={isBusy}>
             Cancelar
           </Button>
@@ -522,11 +522,11 @@ export function EcosystemPage() {
   return (
     <div className="-mx-6 -mt-6 flex flex-col" style={{ height: 'calc(100vh - 61px)' }}>
       {/* ── Toolbar refinada: seções com divisores ──────────────── */}
-      <div className="border-b border-slate-800 bg-slate-950/80 px-4 py-3">
+      <div className="border-b border-slate-600 bg-slate-900/90 px-4 py-3">
         {/* Header com titulo */}
-        <div className="mb-3 pb-3 border-b border-slate-800/50">
+        <div className="mb-3 pb-3 border-b border-slate-600/50">
           <h1 className="text-base font-semibold text-slate-50">Ecossistema</h1>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-300 mt-0.5">
             {editMode
               ? 'Arraste da bolinha azul de um nó até outro · clique × na aresta para remover'
               : 'Duplo clique no nó para abrir detalhes'}
@@ -539,13 +539,13 @@ export function EcosystemPage() {
           <div className="flex gap-2">
             <a
               href="/relationships"
-              className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70 transition-colors"
             >
               Ver relações
             </a>
             <a
               href="/risk-analysis"
-              className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70 transition-colors"
             >
               Análise de risco
             </a>
@@ -562,7 +562,7 @@ export function EcosystemPage() {
               className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
                 visualizationMode === 'flow'
                   ? 'border-blue-600/50 bg-blue-900/30 text-blue-200'
-                  : 'border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50'
+                  : 'border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70'
               }`}
               title={visualizationMode === 'flow' ? 'Cascata (hierárquica)' : 'Grafo (aninhado)'}
             >
@@ -576,7 +576,7 @@ export function EcosystemPage() {
                 className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
                   compactMode
                     ? 'border-slate-600 bg-slate-700/40 text-slate-100'
-                    : 'border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50'
+                    : 'border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70'
                 }`}
               >
                 {compactMode ? 'Compacto' : 'Expandido'}
@@ -598,7 +598,7 @@ export function EcosystemPage() {
               className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
                 editMode
                   ? 'border-amber-600/50 bg-amber-900/30 text-amber-200'
-                  : 'border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50'
+                  : 'border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70'
               }`}
             >
               {editMode ? 'Sair edição' : 'Editar'}
@@ -608,21 +608,21 @@ export function EcosystemPage() {
               <button
                 type="button"
                 onClick={() => setShowExportMenu(!showExportMenu)}
-                className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70 transition-colors"
                 title="Exportar gráfico"
               >
                 Exportar
               </button>
 
               {showExportMenu && (
-                <div className="absolute top-full mt-1 left-0 rounded-md border border-slate-700 bg-slate-800 shadow-lg z-50 min-w-max">
+                <div className="absolute top-full mt-1 left-0 rounded-md border border-slate-600 bg-slate-800 shadow-lg z-50 min-w-max">
                   <button
                     type="button"
                     onClick={() => {
                       handleExportPNG();
                       setShowExportMenu(false);
                     }}
-                    className="block w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-700/50 transition-colors"
+                    className="block w-full text-left px-3 py-2 text-xs text-slate-100 hover:bg-slate-600/70 transition-colors"
                   >
                     Exportar PNG
                   </button>
@@ -632,7 +632,7 @@ export function EcosystemPage() {
                       handleExportPDF();
                       setShowExportMenu(false);
                     }}
-                    className="block w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-700/50 transition-colors border-t border-slate-700/50"
+                    className="block w-full text-left px-3 py-2 text-xs text-slate-100 hover:bg-slate-600/70 transition-colors border-t border-slate-600/50"
                   >
                     Exportar PDF
                   </button>
@@ -643,7 +643,7 @@ export function EcosystemPage() {
             <button
               type="button"
               onClick={() => setResetLayoutKey((k) => k + 1)}
-              className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70 transition-colors"
               title="Resetar layout automático"
             >
               Reset
@@ -659,7 +659,7 @@ export function EcosystemPage() {
             placeholder="Procurar recurso..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="rounded-md border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-xs text-slate-300 placeholder-slate-500 focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
+            className="rounded-md border border-slate-600 bg-slate-700/60 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-400 focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
           />
 
           {/* Divider */}
@@ -677,7 +677,7 @@ export function EcosystemPage() {
                   className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all ${
                     visibleTypes.has(type)
                       ? 'bg-slate-700/50 text-slate-200'
-                      : 'opacity-40 text-slate-400 hover:opacity-60'
+                      : 'opacity-40 text-slate-300 hover:opacity-60'
                   }`}
                   title={`${visibleTypes.has(type) ? 'Ocultar' : 'Mostrar'} ${NODE_LABELS[type] ?? type}`}
                 >
@@ -694,7 +694,7 @@ export function EcosystemPage() {
           <select
             value={groupBy}
             onChange={(e) => setGroupBy(e.target.value as 'none' | 'environment' | 'tag')}
-            className="rounded-md border border-slate-700 bg-slate-800/50 px-2.5 py-1.5 text-xs text-slate-300 font-medium hover:bg-slate-700/50 focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
+            className="rounded-md border border-slate-600 bg-slate-700/60 px-2.5 py-1.5 text-xs text-slate-100 font-medium hover:bg-slate-600/70 focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
           >
             <option value="none">Sem agrupar</option>
             <option value="environment">Por ambiente</option>
@@ -728,7 +728,7 @@ export function EcosystemPage() {
               <button
                 type="button"
                 onClick={handleImpactReset}
-                className="text-xs text-slate-400 hover:text-slate-200 underline"
+                className="text-xs text-slate-300 hover:text-slate-200 underline"
               >
                 Encerrar
               </button>
@@ -773,7 +773,7 @@ export function EcosystemPage() {
 
         {/* Painel flutuante do nó selecionado — canto direito */}
         {selectedNode && (
-          <div className="absolute right-3 top-3 z-10 flex w-64 flex-col gap-3 rounded-lg border border-slate-700 bg-slate-900/95 p-4 shadow-xl backdrop-blur">
+          <div className="absolute right-3 top-3 z-10 flex w-64 flex-col gap-3 rounded-lg border border-slate-600 bg-slate-900/95 p-4 shadow-xl backdrop-blur">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <h3 className="font-semibold text-slate-100 text-sm leading-tight">{selectedNode.label}</h3>
@@ -784,23 +784,23 @@ export function EcosystemPage() {
               <button
                 type="button"
                 onClick={() => setSelectedNodeId(null)}
-                className="text-slate-500 hover:text-slate-300 mt-0.5 text-sm leading-none"
+                className="text-slate-400 hover:text-slate-100 mt-0.5 text-sm leading-none"
               >
                 ✕
               </button>
             </div>
 
             {(selectedNode.status || selectedNode.environment) && (
-              <dl className="flex flex-col gap-1 text-xs border-t border-slate-800 pt-2">
+              <dl className="flex flex-col gap-1 text-xs border-t border-slate-600 pt-2">
                 {selectedNode.status && (
                   <div className="flex justify-between">
-                    <dt className="text-slate-500">Status</dt>
+                    <dt className="text-slate-400">Status</dt>
                     <dd className="text-slate-200">{selectedNode.status}</dd>
                   </div>
                 )}
                 {selectedNode.environment && (
                   <div className="flex justify-between">
-                    <dt className="text-slate-500">Ambiente</dt>
+                    <dt className="text-slate-400">Ambiente</dt>
                     <dd className="text-slate-200">{selectedNode.environment}</dd>
                   </div>
                 )}
@@ -808,14 +808,14 @@ export function EcosystemPage() {
             )}
 
             {selectedNode.resourceType === 'db-group' && selectedNode.dbLabels && (
-              <ul className="flex flex-col gap-0.5 text-xs border-t border-slate-800 pt-2">
+              <ul className="flex flex-col gap-0.5 text-xs border-t border-slate-600 pt-2">
                 {selectedNode.dbLabels.map((name, i) => (
-                  <li key={i} className="text-slate-300">• {name}</li>
+                  <li key={i} className="text-slate-100">• {name}</li>
                 ))}
               </ul>
             )}
 
-            <div className="flex flex-col gap-2 border-t border-slate-800 pt-2">
+            <div className="flex flex-col gap-2 border-t border-slate-600 pt-2">
               {selectedNode.resourceType !== 'db-group' && (
                 <Button
                   variant="secondary"
