@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import * as Dagre from 'dagre';
 import type { GraphNode, GraphEdge } from '../../features/resource-graph/use-resource-graph';
 
 interface Props {
@@ -15,78 +16,56 @@ const NODE_COLORS: Record<string, string> = {
   vip: '#06b6d4',
 };
 
-interface LayoutNode {
-  id: string;
+const NODE_WIDTH = 180;
+const NODE_HEIGHT = 60;
+
+interface LayoutNode extends GraphNode {
   x: number;
   y: number;
-  width: number;
-  height: number;
-  label: string;
-  resourceType: string;
   isRoot: boolean;
 }
 
-function calculateLayout(nodes: GraphNode[], edges: GraphEdge[], rootNodeId?: string): LayoutNode[] {
-  const nodeWidth = 160;
-  const nodeHeight = 50;
-  const horizontalSpacing = 250;
-  const verticalSpacing = 80;
-
-  // BFS para calcular profundidade
-  const depths = new Map<string, number>();
-  const visited = new Set<string>();
-  const queue: { id: string; depth: number }[] = [];
-
-  const rootId = rootNodeId || nodes[0]?.id;
-  if (rootId) {
-    queue.push({ id: rootId, depth: 0 });
-    depths.set(rootId, 0);
-  }
-
-  while (queue.length > 0) {
-    const { id, depth } = queue.shift()!;
-    if (visited.has(id)) continue;
-    visited.add(id);
-
-    edges
-      .filter((e) => e.sourceId === id)
-      .forEach((edge) => {
-        if (!visited.has(edge.targetId)) {
-          depths.set(edge.targetId, depth + 1);
-          queue.push({ id: edge.targetId, depth: depth + 1 });
-        }
-      });
-  }
-
-  // Agrupar nós por profundidade
-  const nodesByDepth = new Map<number, string[]>();
-  nodes.forEach((node) => {
-    const depth = depths.get(node.id) ?? nodes.length;
-    if (!nodesByDepth.has(depth)) {
-      nodesByDepth.set(depth, []);
-    }
-    nodesByDepth.get(depth)!.push(node.id);
+function layoutGraph(nodes: GraphNode[], edges: GraphEdge[], rootNodeId?: string): LayoutNode[] {
+  const g = new Dagre.graphlib.Graph();
+  g.setDefaultEdgeLabel(() => ({}));
+  g.setGraph({
+    rankdir: 'LR',
+    nodesep: 50,
+    ranksep: 100,
+    marginx: 40,
+    marginy: 40,
   });
 
-  // Calcular posições
-  const layoutNodes: LayoutNode[] = [];
-  nodesByDepth.forEach((nodeIds, depth) => {
-    const x = depth * horizontalSpacing;
-    nodeIds.forEach((nodeId, index) => {
-      const node = nodes.find((n) => n.id === nodeId)!;
-      const y = index * verticalSpacing - ((nodeIds.length - 1) * verticalSpacing) / 2;
+  // Adicionar nós
+  nodes.forEach((node) => {
+    g.setNode(node.id, {
+      label: node.label,
+      width: NODE_WIDTH,
+      height: NODE_HEIGHT,
+    });
+  });
 
+  // Adicionar arestas
+  edges.forEach((edge) => {
+    g.setEdge(edge.sourceId, edge.targetId);
+  });
+
+  // Executar layout
+  Dagre.layout(g);
+
+  // Extrair posições
+  const layoutNodes: LayoutNode[] = [];
+  g.nodes().forEach((nodeId: string) => {
+    const node = nodes.find((n) => n.id === nodeId);
+    const dagNode = g.node(nodeId);
+    if (node && dagNode) {
       layoutNodes.push({
-        id: nodeId,
-        x,
-        y,
-        width: nodeWidth,
-        height: nodeHeight,
-        label: node.label,
-        resourceType: node.resourceType,
+        ...node,
+        x: dagNode.x,
+        y: dagNode.y,
         isRoot: nodeId === rootNodeId,
       });
-    });
+    }
   });
 
   return layoutNodes;
@@ -96,19 +75,24 @@ export function DependencyGraphVizualizer({ nodes, edges, rootNodeId }: Props) {
   const [zoom, setZoom] = useState(1);
 
   const layoutNodes = useMemo(() => {
-    return calculateLayout(nodes, edges, rootNodeId);
+    return layoutGraph(nodes, edges, rootNodeId);
   }, [nodes, edges, rootNodeId]);
 
-  const svgWidth = useMemo(() => {
-    const maxDepth = Math.max(...layoutNodes.map((n) => n.x)) + 200;
-    return Math.max(800, maxDepth);
+  const bounds = useMemo(() => {
+    if (layoutNodes.length === 0) {
+      return { minX: 0, minY: 0, maxX: 800, maxY: 600 };
+    }
+
+    const minX = Math.min(...layoutNodes.map((n) => n.x - NODE_WIDTH / 2)) - 40;
+    const maxX = Math.max(...layoutNodes.map((n) => n.x + NODE_WIDTH / 2)) + 40;
+    const minY = Math.min(...layoutNodes.map((n) => n.y - NODE_HEIGHT / 2)) - 40;
+    const maxY = Math.max(...layoutNodes.map((n) => n.y + NODE_HEIGHT / 2)) + 40;
+
+    return { minX, minY, maxX, maxY };
   }, [layoutNodes]);
 
-  const svgHeight = useMemo(() => {
-    const maxY = Math.max(...layoutNodes.map((n) => n.y + n.height / 2));
-    const minY = Math.min(...layoutNodes.map((n) => n.y - n.height / 2));
-    return Math.max(600, maxY - minY + 100);
-  }, [layoutNodes]);
+  const svgWidth = bounds.maxX - bounds.minX;
+  const svgHeight = bounds.maxY - bounds.minY;
 
   return (
     <div className="w-full h-full flex flex-col bg-slate-950">
@@ -139,37 +123,10 @@ export function DependencyGraphVizualizer({ nodes, edges, rootNodeId }: Props) {
         <svg
           width={svgWidth * zoom}
           height={svgHeight * zoom}
-          style={{ minWidth: '100%', minHeight: '100%' }}
-          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+          viewBox={`${bounds.minX} ${bounds.minY} ${svgWidth} ${svgHeight}`}
+          className="bg-slate-950"
         >
-          {/* Arestas */}
-          {edges.map((edge) => {
-            const sourceNode = layoutNodes.find((n) => n.id === edge.sourceId);
-            const targetNode = layoutNodes.find((n) => n.id === edge.targetId);
-
-            if (!sourceNode || !targetNode) return null;
-
-            const x1 = sourceNode.x + sourceNode.width / 2;
-            const y1 = sourceNode.y;
-            const x2 = targetNode.x - targetNode.width / 2;
-            const y2 = targetNode.y;
-
-            return (
-              <g key={`edge-${edge.id}`}>
-                <line
-                  x1={x1}
-                  y1={y1}
-                  x2={x2}
-                  y2={y2}
-                  stroke="#64748b"
-                  strokeWidth="2"
-                  markerEnd="url(#arrowhead)"
-                />
-              </g>
-            );
-          })}
-
-          {/* Marcador de seta */}
+          {/* Defs para seta */}
           <defs>
             <marker
               id="arrowhead"
@@ -183,6 +140,32 @@ export function DependencyGraphVizualizer({ nodes, edges, rootNodeId }: Props) {
             </marker>
           </defs>
 
+          {/* Arestas */}
+          {edges.map((edge) => {
+            const sourceNode = layoutNodes.find((n) => n.id === edge.sourceId);
+            const targetNode = layoutNodes.find((n) => n.id === edge.targetId);
+
+            if (!sourceNode || !targetNode) return null;
+
+            const x1 = sourceNode.x + NODE_WIDTH / 2;
+            const y1 = sourceNode.y;
+            const x2 = targetNode.x - NODE_WIDTH / 2;
+            const y2 = targetNode.y;
+
+            return (
+              <line
+                key={`edge-${edge.id}`}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="#64748b"
+                strokeWidth="2"
+                markerEnd="url(#arrowhead)"
+              />
+            );
+          })}
+
           {/* Nós */}
           {layoutNodes.map((node) => {
             const color = NODE_COLORS[node.resourceType] || '#6b7280';
@@ -192,14 +175,14 @@ export function DependencyGraphVizualizer({ nodes, edges, rootNodeId }: Props) {
             return (
               <g key={`node-${node.id}`}>
                 <rect
-                  x={node.x - node.width / 2}
-                  y={node.y - node.height / 2}
-                  width={node.width}
-                  height={node.height}
+                  x={node.x - NODE_WIDTH / 2}
+                  y={node.y - NODE_HEIGHT / 2}
+                  width={NODE_WIDTH}
+                  height={NODE_HEIGHT}
                   fill={color}
                   stroke={borderColor}
                   strokeWidth={borderWidth}
-                  rx="6"
+                  rx="8"
                 />
                 <text
                   x={node.x}
@@ -207,12 +190,11 @@ export function DependencyGraphVizualizer({ nodes, edges, rootNodeId }: Props) {
                   textAnchor="middle"
                   dominantBaseline="middle"
                   fill="white"
-                  fontSize="12"
-                  fontWeight={node.isRoot ? 'bold' : 'normal'}
-                  textLength={node.width - 20}
-                  lengthAdjust="spacingAndGlyphs"
+                  fontSize="13"
+                  fontWeight={node.isRoot ? 'bold' : '500'}
+                  pointerEvents="none"
                 >
-                  {node.label.substring(0, 20)}
+                  {node.label.length > 25 ? node.label.substring(0, 22) + '...' : node.label}
                 </text>
               </g>
             );
