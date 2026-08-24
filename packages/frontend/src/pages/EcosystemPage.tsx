@@ -191,9 +191,11 @@ function adaptEcosystemData(ecosystemData: EcosystemGraphResponse | undefined): 
   };
 }
 
+const EMPTY_SET = new Set<string>();
+
 export function EcosystemPage() {
   const { data: ecosystemData, isLoading, isError, error } = useEcosystemGraph({ page: 1, pageSize: 500 });
-  const data = adaptEcosystemData(ecosystemData);
+  const data = useMemo(() => adaptEcosystemData(ecosystemData), [ecosystemData]);
   const navigate = useNavigate();
 
 
@@ -224,7 +226,6 @@ export function EcosystemPage() {
 
   // Search/highlight
   const [searchTerm, setSearchTerm] = useState('');
-  const [highlightedNodeIds, setHighlightedNodeIds] = useState<Set<string>>(new Set());
 
   // Grouping by environment/tag
   const [groupBy, setGroupBy] = useState<'none' | 'environment' | 'tag'>('none');
@@ -308,13 +309,9 @@ export function EcosystemPage() {
     }
   }, []);
 
-  // Search functionality
-  useEffect(() => {
-    if (!searchTerm.trim() || !data) {
-      setHighlightedNodeIds(new Set());
-      return;
-    }
-
+  // Search/highlight — derived, no setState-in-effect pattern
+  const highlightedNodeIds = useMemo(() => {
+    if (!searchTerm.trim() || !data) return EMPTY_SET;
     const term = searchTerm.toLowerCase();
     const matches = new Set<string>();
     for (const node of data.nodes) {
@@ -322,7 +319,7 @@ export function EcosystemPage() {
         matches.add(node.id);
       }
     }
-    setHighlightedNodeIds(matches);
+    return matches;
   }, [searchTerm, data]);
 
   // ── Opção A: agrupar bancos quando aplicação tem ≥ 2 ──────────────────────

@@ -624,8 +624,10 @@ export function ResourceGraph({
   const editModeRef     = useRef(editMode);
   const onEdgeDeleteRef = useRef(onEdgeDelete);
   const hostedAppIdsRef = useRef<Set<string>>(new Set());
+  const rfEdgesRef      = useRef(rfEdges);
   editModeRef.current     = editMode;
   onEdgeDeleteRef.current = onEdgeDelete;
+  rfEdgesRef.current      = rfEdges;
 
   const prevResetKeyRef = useRef(resetLayoutKey);
 
@@ -833,68 +835,66 @@ export function ResourceGraph({
 
   // ── Effect 2: update colors/states when simulation changes (no relayout) ─
   useEffect(() => {
-    setRfNodes((prev) =>
-      prev.map((n) => ({
-        ...n,
+    if (!rfNodesRef.current.length) return;
+
+    const newNodes = rfNodesRef.current.map((n) => ({
+      ...n,
+      data: {
+        ...n.data,
+        impactDepth:      n.id === simulationSourceId ? 0 : impactedByDepth?.get(n.id),
+        simulationActive: !!simulationSourceId,
+        compactMode,
+        isHighlighted:    highlightedNodeIds.has(n.id),
+      } as NodeData,
+    }));
+
+    const newEdges = rfEdgesRef.current.map((e) => {
+      const touchesSource = e.source === simulationSourceId || e.target === simulationSourceId;
+      const touchesImpact = impactedNodeIds.has(e.source) || impactedNodeIds.has(e.target);
+      const simulationActive = !!simulationSourceId;
+      const isDimmed = simulationActive && !touchesSource && !touchesImpact;
+
+      let stroke: string;
+      if (touchesSource) {
+        stroke = '#ef4444';
+      } else if (touchesImpact) {
+        stroke = '#f59e0b';
+      } else {
+        stroke = '#334155';
+      }
+
+      return {
+        ...e,
+        animated: touchesSource || touchesImpact,
+        markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 14, height: 14 },
+        style: {
+          stroke,
+          strokeWidth: touchesSource || touchesImpact ? 2 : 1.5,
+          opacity: isDimmed ? 0.08 : 1,
+          transition: 'stroke 0.4s, opacity 0.4s',
+        },
         data: {
-          ...n.data,
-          impactDepth:      n.id === simulationSourceId ? 0 : impactedByDepth?.get(n.id),
-          simulationActive: !!simulationSourceId,
-          compactMode,
-          isHighlighted:    highlightedNodeIds.has(n.id),
-        } as NodeData,
-      })),
-    );
+          ...(e.data as DeletableEdgeData),
+          edgeLabelColor: isDimmed ? '#334155' : '#94a3b8',
+        },
+      };
+    });
 
-    // Update edge colors based on simulation state
-    setRfEdges((prev) =>
-      prev.map((e) => {
-        const touchesSource = e.source === simulationSourceId || e.target === simulationSourceId;
-        const touchesImpact = impactedNodeIds.has(e.source) || impactedNodeIds.has(e.target);
-        const simulationActive = !!simulationSourceId;
-        const isDimmed = simulationActive && !touchesSource && !touchesImpact;
-
-        let stroke: string;
-        if (touchesSource) {
-          stroke = '#ef4444';
-        } else if (touchesImpact) {
-          stroke = '#f59e0b';
-        } else {
-          stroke = '#334155';
-        }
-
-        return {
-          ...e,
-          animated: touchesSource || touchesImpact,
-          markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 14, height: 14 },
-          style: {
-            stroke,
-            strokeWidth: touchesSource || touchesImpact ? 2 : 1.5,
-            opacity: isDimmed ? 0.08 : 1,
-            transition: 'stroke 0.4s, opacity 0.4s',
-          },
-          data: {
-            ...(e.data as DeletableEdgeData),
-            edgeLabelColor: isDimmed ? '#334155' : '#94a3b8',
-          },
-        };
-      }),
-    );
-  }, [impactedKey, simulationSourceId, compactMode, highlightedKey, impactedNodeIds]);
+    dispatch({ nodes: newNodes, edges: newEdges });
+  }, [impactedKey, simulationSourceId, compactMode, highlightedKey]);
 
   // ── Effect 3: propagate editMode / onEdgeDelete ───────────────────────
   useEffect(() => {
-    if (!rfNodes.length) return;
-    setRfNodes((prev) =>
-      prev.map((n) => ({ ...n, data: { ...n.data, editMode } as NodeData })),
-    );
-    setRfEdges((prev) =>
-      prev.map((e) => ({
-        ...e,
-        data: { ...e.data, editMode, onDelete: onEdgeDelete } as DeletableEdgeData,
-      })),
-    );
-  }, [editMode, onEdgeDelete]);
+    if (!rfNodesRef.current.length) return;
+
+    const newNodes = rfNodesRef.current.map((n) => ({ ...n, data: { ...n.data, editMode } as NodeData }));
+    const newEdges = rfEdgesRef.current.map((e) => ({
+      ...e,
+      data: { ...e.data, editMode, onDelete: onEdgeDeleteRef.current } as DeletableEdgeData,
+    }));
+
+    dispatch({ nodes: newNodes, edges: newEdges });
+  }, [editMode]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange<RFNode<NodeData>>[]) => {
