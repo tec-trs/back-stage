@@ -624,10 +624,8 @@ export function ResourceGraph({
   const editModeRef     = useRef(editMode);
   const onEdgeDeleteRef = useRef(onEdgeDelete);
   const hostedAppIdsRef = useRef<Set<string>>(new Set());
-  const rfEdgesRef      = useRef(rfEdges);
   editModeRef.current     = editMode;
   onEdgeDeleteRef.current = onEdgeDelete;
-  rfEdgesRef.current      = rfEdges;
 
   const prevResetKeyRef = useRef(resetLayoutKey);
 
@@ -833,11 +831,10 @@ export function ResourceGraph({
     }
   }, [propNodes, propEdges, resetLayoutKey, compactMode]);
 
-  // ── Effect 2: update colors/states when simulation changes (no relayout) ─
-  useEffect(() => {
-    if (!rfNodesRef.current.length) return;
-
-    const newNodes = rfNodesRef.current.map((n) => ({
+  // ── Memoized node/edge decoration (combines Effect 2 + 3 logic) ─────────
+  const decoratedNodes = useMemo(() => {
+    if (!rfNodes.length) return [];
+    return rfNodes.map((n) => ({
       ...n,
       data: {
         ...n.data,
@@ -845,10 +842,14 @@ export function ResourceGraph({
         simulationActive: !!simulationSourceId,
         compactMode,
         isHighlighted:    highlightedNodeIds.has(n.id),
+        editMode,
       } as NodeData,
     }));
+  }, [rfNodes, simulationSourceId, impactedByDepth, impactedKey, compactMode, highlightedKey, editMode]);
 
-    const newEdges = rfEdgesRef.current.map((e) => {
+  const decoratedEdges = useMemo(() => {
+    if (!rfEdges.length) return [];
+    return rfEdges.map((e) => {
       const touchesSource = e.source === simulationSourceId || e.target === simulationSourceId;
       const touchesImpact = impactedNodeIds.has(e.source) || impactedNodeIds.has(e.target);
       const simulationActive = !!simulationSourceId;
@@ -875,26 +876,13 @@ export function ResourceGraph({
         },
         data: {
           ...(e.data as DeletableEdgeData),
+          editMode,
+          onDelete: onEdgeDeleteRef.current,
           edgeLabelColor: isDimmed ? '#334155' : '#94a3b8',
         },
       };
     });
-
-    dispatch({ nodes: newNodes, edges: newEdges });
-  }, [impactedKey, simulationSourceId, compactMode, highlightedKey]);
-
-  // ── Effect 3: propagate editMode / onEdgeDelete ───────────────────────
-  useEffect(() => {
-    if (!rfNodesRef.current.length) return;
-
-    const newNodes = rfNodesRef.current.map((n) => ({ ...n, data: { ...n.data, editMode } as NodeData }));
-    const newEdges = rfEdgesRef.current.map((e) => ({
-      ...e,
-      data: { ...e.data, editMode, onDelete: onEdgeDeleteRef.current } as DeletableEdgeData,
-    }));
-
-    dispatch({ nodes: newNodes, edges: newEdges });
-  }, [editMode]);
+  }, [rfEdges, simulationSourceId, impactedNodeIds, compactMode, editMode]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange<RFNode<NodeData>>[]) => {
@@ -975,8 +963,8 @@ export function ResourceGraph({
 
   return (
     <ReactFlow
-      nodes={rfNodes}
-      edges={rfEdges}
+      nodes={decoratedNodes}
+      edges={decoratedEdges}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onNodeClick={onNodeClick}
