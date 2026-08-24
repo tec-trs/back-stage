@@ -1,9 +1,6 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { ReactFlow, Background } from '@xyflow/react';
 import type { GraphNode, GraphEdge } from '../../features/resource-graph/use-resource-graph';
-import { Spinner } from './Spinner';
-
-const ReactFlow = lazy(() => import('@xyflow/react').then(m => ({ default: m.ReactFlow })));
-const Background = lazy(() => import('@xyflow/react').then(m => ({ default: m.Background })));
 
 interface GroupedNode {
   id: string;
@@ -238,16 +235,14 @@ export function DependencyFlowVisualizer({
       </div>
 
       <div className="flex-1 relative">
-        <Suspense fallback={<Spinner />}>
-          <ReactFlow
-            nodes={positionedNodes}
-            edges={rfEdges}
-            fitView
-            fitViewOptions={{ padding: 0.2 }}
-          >
-            <Background />
-          </ReactFlow>
-        </Suspense>
+        <ReactFlow
+          nodes={positionedNodes}
+          edges={rfEdges}
+          fitView
+          fitViewOptions={{ padding: 0.2 }}
+        >
+          <Background />
+        </ReactFlow>
       </div>
     </div>
   );
