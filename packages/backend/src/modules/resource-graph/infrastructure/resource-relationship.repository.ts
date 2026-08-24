@@ -58,72 +58,81 @@ interface ImpactRow {
 }
 
 export class ResourceRelationshipRepository {
+  private criticalResourcesCache: { data: CriticalResource[]; expiry: number } | null = null;
+  private readonly CRITICAL_RESOURCES_TTL_MS = 120_000; // 2 minutes
+
   public constructor(private readonly db: Knex) {}
 
-  private async getResourceNode(resourceType: ResourceType, resourceId: string): Promise<GraphNode | null> {
-    let table: string;
-    let labelColumn: string;
+  private async getResourceNodesByTypeAndIds(
+    resourcesByType: Record<ResourceType, string[]>,
+  ): Promise<Map<string, GraphNode>> {
+    const result = new Map<string, GraphNode>();
 
-    switch (resourceType) {
-      case 'vip':
-        table = 'vips';
-        labelColumn = 'hostname';
-        break;
-      case 'server':
-        table = 'servers';
-        labelColumn = 'hostname';
-        break;
-      case 'application':
-        table = 'applications';
-        labelColumn = 'display_name';
-        break;
-      case 'database':
-        table = 'databases';
-        labelColumn = 'display_name';
-        break;
-      case 'url':
-        table = 'urls';
-        labelColumn = 'label';
-        break;
-      case 'group':
-        table = 'server_groups';
-        labelColumn = 'name';
-        break;
-      default:
-        return null;
+    for (const [resourceType, ids] of Object.entries(resourcesByType)) {
+      if (!ids.length) continue;
+
+      let table: string;
+      let labelColumn: string;
+
+      switch (resourceType) {
+        case 'vip':
+          table = 'vips';
+          labelColumn = 'hostname';
+          break;
+        case 'server':
+          table = 'servers';
+          labelColumn = 'hostname';
+          break;
+        case 'application':
+          table = 'applications';
+          labelColumn = 'display_name';
+          break;
+        case 'database':
+          table = 'databases';
+          labelColumn = 'display_name';
+          break;
+        case 'url':
+          table = 'urls';
+          labelColumn = 'label';
+          break;
+        case 'group':
+          table = 'server_groups';
+          labelColumn = 'name';
+          break;
+        default:
+          continue;
+      }
+
+      const selectCols = [
+        'id',
+        `${labelColumn} as label`,
+        'status',
+        ...(resourceType === 'application' || resourceType === 'database' || resourceType === 'vip' ? ['criticality'] : []),
+        ...(resourceType === 'server' || resourceType === 'database' ? ['environment'] : []),
+        ...(resourceType === 'database' ? ['hosted_on_server_id'] : []),
+        ...(resourceType === 'server' || resourceType === 'database' ? ['monitoring_url'] : []),
+      ];
+
+      const rows = await this.db(table)
+        .select(...selectCols)
+        .whereIn('id', ids)
+        .whereNull('deleted_at');
+
+      for (const row of rows) {
+        result.set(`${resourceType}:${row.id}`, {
+          id: row.id,
+          resourceType: resourceType as ResourceType,
+          label: row.label,
+          status: row.status,
+          criticality: row.criticality,
+          environment: row.environment,
+          hostedOnServerId: row.hosted_on_server_id,
+          monitoringUrl: row.monitoring_url,
+        });
+      }
     }
 
-    const selectCols = [
-      this.db.raw(`'${resourceType}' as resource_type`),
-      'id',
-      `${labelColumn} as label`,
-      'status',
-      ...(resourceType === 'application' || resourceType === 'database' || resourceType === 'vip' ? ['criticality'] : []),
-      ...(resourceType === 'server' || resourceType === 'database' ? ['environment'] : []),
-      ...(resourceType === 'database' ? ['hosted_on_server_id'] : []),
-      ...(resourceType === 'server' || resourceType === 'database' ? ['monitoring_url'] : []),
-    ];
-
-    const row = await this.db(table)
-      .select(...selectCols)
-      .where('id', resourceId)
-      .whereNull('deleted_at')
-      .first();
-
-    if (!row) {
-      return null;
-    }
-
-    return {
-      id: row.id,
-      resourceType,
-      label: row.label,
-      status: row.status,
-      criticality: row.criticality,
-      environment: row.environment,
-      hostedOnServerId: row.hosted_on_server_id,
-      monitoringUrl: row.monitoring_url,
-    };
+    return result;
   }
 
   private buildResourceUnion(orgId: string): string {
@@ -383,16 +392,24 @@ export class ResourceRelationshipRepository {
       uniqueResourceIds.add(`${row.target_type}:${row.target_id}`);
     }
 
-    const nodes: GraphNode[] = [];
-    const root = await this.getResourceNode(rootType, rootId);
-    if (root) nodes.push(root);
+    const resourcesByType: Record<ResourceType, string[]> = {
+      server: [],
+      application: [],
+      database: [],
+      url: [],
+      vip: [],
+      group: [],
+    };
 
     for (const resourceId of uniqueResourceIds) {
-      if (resourceId === `${rootType}:${rootId}`) continue;
       const [type, id] = resourceId.split(':') as [ResourceType, string];
-      const node = await this.getResourceNode(type, id);
-      if (node) nodes.push(node);
+      if (!resourcesByType[type].includes(id)) {
+        resourcesByType[type].push(id);
+      }
     }
+
+    const nodeMap = await this.getResourceNodesByTypeAndIds(resourcesByType);
+    const nodes: GraphNode[] = Array.from(nodeMap.values());
 
     const edges = rows.map((r) => ({
       id: `${r.source_type}:${r.source_id}→${r.target_type}:${r.target_id}`,
@@ -491,8 +508,26 @@ export class ResourceRelationshipRepository {
     };
     const byDepth: Record<number, ImpactNode[]> = {};
 
+    const resourcesByType: Record<ResourceType, string[]> = {
+      server: [],
+      application: [],
+      database: [],
+      url: [],
+      vip: [],
+      group: [],
+    };
+
     for (const row of rows) {
-      const node = await this.getResourceNode(row.resource_type, row.resource_id);
+      if (!resourcesByType[row.resource_type].includes(row.resource_id)) {
+        resourcesByType[row.resource_type].push(row.resource_id);
+      }
+    }
+
+    const nodeMap = await this.getResourceNodesByTypeAndIds(resourcesByType);
+
+    for (const row of rows) {
+      const key = `${row.resource_type}:${row.resource_id}`;
+      const node = nodeMap.get(key);
       if (node) {
         const impactNode: ImpactNode = {
           resourceType: row.resource_type,
@@ -588,6 +623,8 @@ export class ResourceRelationshipRepository {
       })
       .returning(['id', 'created_at'])) as { id: string; created_at: string }[];
 
+    this.invalidateCriticalResourcesCache();
+
     return {
       id: row.id,
       sourceType,
@@ -665,6 +702,9 @@ export class ResourceRelationshipRepository {
 
   public async deleteRelationship(id: string): Promise<boolean> {
     const result = await this.db(TABLE_NAME).where({ id }).delete();
+    if (result > 0) {
+      this.invalidateCriticalResourcesCache();
+    }
     return result > 0;
   }
 
@@ -691,6 +731,11 @@ export class ResourceRelationshipRepository {
   }
 
   public async getCriticalResources(): Promise<CriticalResource[]> {
+    const now = Date.now();
+    if (this.criticalResourcesCache && this.criticalResourcesCache.expiry > now) {
+      return this.criticalResourcesCache.data;
+    }
+
     orgContext.getOrThrow();
     const { nodes, edges } = await this.getFullGraph({}, { page: 1, pageSize: 500 });
 
@@ -764,6 +809,15 @@ export class ResourceRelationshipRepository {
     }
 
     // Ordene por totalImpacted desc
-    return results.sort((a, b) => b.totalImpacted - a.totalImpacted);
+    const sorted = results.sort((a, b) => b.totalImpacted - a.totalImpacted);
+    this.criticalResourcesCache = {
+      data: sorted,
+      expiry: Date.now() + this.CRITICAL_RESOURCES_TTL_MS,
+    };
+    return sorted;
+  }
+
+  public invalidateCriticalResourcesCache(): void {
+    this.criticalResourcesCache = null;
   }
 }
