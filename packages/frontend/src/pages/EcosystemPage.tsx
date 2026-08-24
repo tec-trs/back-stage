@@ -7,10 +7,9 @@ import { ImpactAnalysisPanel } from '../features/resource-graph/ImpactAnalysisPa
 import {
   useCreateRelationship,
   useDeleteRelationship,
+  useFullGraph,
 } from '../features/resource-graph/use-resource-graph';
 import type { GraphNode, GraphEdge, ImpactResult, FullGraphResponse } from '../features/resource-graph/use-resource-graph';
-import { useEcosystemGraph } from '../features/ecosystem/use-ecosystem-graph';
-import type { EcosystemGraphResponse, EcosystemNode, EcosystemEdge } from '../features/ecosystem/types';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
@@ -159,43 +158,19 @@ function ConnectionModal({
   );
 }
 
-/**
- * Adapter function to transform EcosystemGraphResponse to FullGraphResponse format
- * Maps EcosystemNode/EcosystemEdge properties to GraphNode/GraphEdge expectations
- */
-function adaptEcosystemData(ecosystemData: EcosystemGraphResponse | undefined): FullGraphResponse | undefined {
-  if (!ecosystemData) return undefined;
-
-  return {
-    nodes: ecosystemData.nodes.map((node: EcosystemNode): GraphNode => ({
-      id: node.id,
-      resourceType: node.kind === 'server' ? 'server' : 'application',
-      label: node.name,
-      status: undefined,
-      criticality: undefined,
-      environment: undefined,
-    })),
-    edges: ecosystemData.edges.map((edge: EcosystemEdge): GraphEdge => ({
-      id: edge.id,
-      sourceType: ecosystemData.nodes.find((n: EcosystemNode) => n.id === edge.source)?.kind === 'server' ? 'server' : 'application',
-      sourceId: edge.source,
-      targetType: ecosystemData.nodes.find((n: EcosystemNode) => n.id === edge.target)?.kind === 'server' ? 'server' : 'application',
-      targetId: edge.target,
-      relationType: edge.relationType === 'dependsOn' ? 'depends_on' : 'connects_to',
-    })),
-    pagination: {
-      page: 1,
-      pageSize: 500,
-      total: ecosystemData.nodes.length,
-    },
-  };
-}
-
 const EMPTY_SET = new Set<string>();
 
 export function EcosystemPage() {
-  const { data: ecosystemData, isLoading, isError, error } = useEcosystemGraph({ page: 1, pageSize: 500 });
-  const data = useMemo(() => adaptEcosystemData(ecosystemData), [ecosystemData]);
+  const { data: fullGraphData, isLoading, isError, error } = useFullGraph({ page: 1, pageSize: 500 });
+  const data = useMemo(() => {
+    if (!fullGraphData) return undefined;
+    const nonGroupNodeIds = new Set(fullGraphData.nodes.filter(n => n.resourceType !== 'group').map(n => n.id));
+    return {
+      ...fullGraphData,
+      nodes: fullGraphData.nodes.filter(n => n.resourceType !== 'group'),
+      edges: fullGraphData.edges.filter(e => nonGroupNodeIds.has(e.sourceId) && nonGroupNodeIds.has(e.targetId)),
+    };
+  }, [fullGraphData]);
   const navigate = useNavigate();
 
 

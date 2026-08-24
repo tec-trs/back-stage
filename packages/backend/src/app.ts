@@ -20,7 +20,6 @@ import { registerAuthModule } from './modules/auth/auth.module.js';
 import { registerOrganizationsModule } from './modules/organizations/organizations.module.js';
 import { registerCatalogModule } from './modules/catalog/catalog.module.js';
 import { registerDeploymentsModule } from './modules/deployments/deployments.module.js';
-import { registerEcosystemModule } from './modules/ecosystem/ecosystem.module.js';
 import { registerGovernanceModule } from './modules/governance/governance.module.js';
 import { registerHealthModule } from './modules/health/health.module.js';
 import { registerSearchModule } from './modules/search/search.module.js';
@@ -108,7 +107,6 @@ export function createApp(): Express {
   app.use('/api/databases', ...withOrg, registerDatabasesModule());
   app.use('/api/urls', ...withOrg, registerUrlsModule());
   app.use('/api/resource-graph', ...withOrg, registerResourceGraphModule());
-  app.use('/api/ecosystem', ...withOrg, registerEcosystemModule());
   app.use(registerDeploymentsModule());
 
   app.use(notFoundMiddleware);

@@ -6,10 +6,10 @@ import { BrowserRouter } from 'react-router-dom';
 import React from 'react';
 
 // Mock heavy dependencies before importing component
-vi.mock('../features/ecosystem/use-ecosystem-graph');
 vi.mock('../features/resource-graph/use-resource-graph', () => ({
-  useCreateRelationship: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useDeleteRelationship: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useFullGraph: vi.fn(() => ({ data: undefined, isLoading: false, isError: false, error: null })),
+  useCreateRelationship: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useDeleteRelationship: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 vi.mock('@xyflow/react', () => ({
   ReactFlow: () => null,
@@ -35,21 +35,22 @@ vi.mock('html2canvas');
 vi.mock('jspdf');
 
 import { EcosystemPage } from './EcosystemPage';
-import * as useEcosystemGraphModule from '../features/ecosystem/use-ecosystem-graph';
+import * as useFullGraphModule from '../features/resource-graph/use-resource-graph';
 
-const mockEcosystemData = {
+const mockGraphData = {
   nodes: [
-    { id: 'srv-1', kind: 'server' as const, type: 'compute', name: 'prod-01', lifecycle: 'active' },
-    { id: 'app-1', kind: 'application' as const, type: 'api', name: 'user-svc', lifecycle: 'active' },
-    { id: 'app-2', kind: 'application' as const, type: 'api', name: 'order-svc', lifecycle: 'active' },
-    { id: 'db-1', kind: 'server' as const, type: 'database', name: 'postgres-main', lifecycle: 'active' },
-    { id: 'vip-1', kind: 'application' as const, type: 'vip', name: 'balancer', lifecycle: 'active' },
+    { id: 'srv-1', resourceType: 'server' as const, label: 'prod-01', status: 'running' },
+    { id: 'app-1', resourceType: 'application' as const, label: 'user-svc', status: 'running' },
+    { id: 'app-2', resourceType: 'application' as const, label: 'order-svc', status: 'running' },
+    { id: 'db-1', resourceType: 'database' as const, label: 'postgres-main', status: 'running' },
+    { id: 'vip-1', resourceType: 'vip' as const, label: 'balancer', status: 'running' },
   ],
   edges: [
-    { id: 'e1', source: 'srv-1', target: 'app-1', relationType: 'hosts' as const },
-    { id: 'e2', source: 'app-1', target: 'db-1', relationType: 'dependsOn' as const },
-    { id: 'e3', source: 'app-2', target: 'db-1', relationType: 'dependsOn' as const },
+    { id: 'e1', sourceId: 'srv-1', sourceType: 'server' as const, targetId: 'app-1', targetType: 'application' as const, relationType: 'hosts' as const },
+    { id: 'e2', sourceId: 'app-1', sourceType: 'application' as const, targetId: 'db-1', targetType: 'database' as const, relationType: 'depends_on' as const },
+    { id: 'e3', sourceId: 'app-2', sourceType: 'application' as const, targetId: 'db-1', targetType: 'database' as const, relationType: 'depends_on' as const },
   ],
+  pagination: { page: 1, pageSize: 500, total: 5 },
 };
 
 function renderEcosystemPage() {
@@ -72,8 +73,8 @@ describe('EcosystemPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    vi.mocked(useEcosystemGraphModule.useEcosystemGraph).mockReturnValue({
-      data: mockEcosystemData,
+    vi.mocked(useFullGraphModule.useFullGraph).mockReturnValue({
+      data: mockGraphData,
       isLoading: false,
       isError: false,
       error: null,
@@ -103,7 +104,7 @@ describe('EcosystemPage', () => {
     expect(await screen.findByTestId('resource-graph')).toBeInTheDocument();
 
     // ASSERT: useEcosystemGraph called with correct params
-    expect(useEcosystemGraphModule.useEcosystemGraph).toHaveBeenCalledWith({ page: 1, pageSize: 500 });
+    expect(useFullGraphModule.useFullGraph).toHaveBeenCalledWith({ page: 1, pageSize: 500 });
 
     // ASSERT: Resource type labels visible in DOM (indicating nodes are rendered)
     expect(screen.getByText('Servidor')).toBeInTheDocument();
@@ -158,7 +159,7 @@ describe('EcosystemPage', () => {
 
   it('should handle loading state with spinner', () => {
     // SETUP: mock isLoading=true
-    vi.mocked(useEcosystemGraphModule.useEcosystemGraph).mockReturnValue({
+    vi.mocked(useFullGraphModule.useFullGraph).mockReturnValue({
       data: undefined,
       isLoading: true,
       isError: false,
