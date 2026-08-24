@@ -17,6 +17,8 @@ export const resourceGraphQueryPredicate = createQueryKeyPredicate([
   'resource-graph-subgraph',
   'resource-graph-all-relationships',
   'resource-graph-relationships',
+  'resource-graph-critical-resources',
+  'dependency-graph',
   'applications',
   'servers',
   'urls',
