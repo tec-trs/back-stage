@@ -1,6 +1,4 @@
-import { useEffect, useRef, useMemo, useState } from 'react';
-import Raphael from 'raphael';
-import { Graphviz } from '@hpcc-js/wasm';
+import { useMemo, useState } from 'react';
 import type { GraphNode, GraphEdge } from '../../features/resource-graph/use-resource-graph';
 
 interface Props {
@@ -17,103 +15,107 @@ const NODE_COLORS: Record<string, string> = {
   vip: '#06b6d4',
 };
 
-export function DependencyGraphVizualizer({ nodes, edges, rootNodeId }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const paperRef = useRef<any>(null);
-  const [zoom, setZoom] = useState(1);
-  const [groupingThreshold, setGroupingThreshold] = useState(3);
+interface LayoutNode {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label: string;
+  resourceType: string;
+  isRoot: boolean;
+}
 
-  const dotString = useMemo(() => {
-    // Agrupar nós por tipo
-    const nodesByType: Record<string, GraphNode[]> = {};
-    nodes.forEach((node) => {
-      if (!nodesByType[node.resourceType]) {
-        nodesByType[node.resourceType] = [];
-      }
-      nodesByType[node.resourceType].push(node);
-    });
+function calculateLayout(nodes: GraphNode[], edges: GraphEdge[], rootNodeId?: string): LayoutNode[] {
+  const nodeWidth = 160;
+  const nodeHeight = 50;
+  const horizontalSpacing = 250;
+  const verticalSpacing = 80;
 
-    let dotCode = 'digraph {rankdir=LR;graph[bgcolor=transparent,splines=ortho];';
-    dotCode += 'node[style=filled,shape=box,fontname=Arial,fontsize=10];';
+  // BFS para calcular profundidade
+  const depths = new Map<string, number>();
+  const visited = new Set<string>();
+  const queue: { id: string; depth: number }[] = [];
 
-    // Adicionar nós
-    nodes.forEach((node) => {
-      const typeGroup = nodesByType[node.resourceType];
-      const isGroup = typeGroup.length >= groupingThreshold;
-      const isRoot = node.id === rootNodeId;
-      const color = NODE_COLORS[node.resourceType] || '#6b7280';
+  const rootId = rootNodeId || nodes[0]?.id;
+  if (rootId) {
+    queue.push({ id: rootId, depth: 0 });
+    depths.set(rootId, 0);
+  }
 
-      if (!isGroup) {
-        const label = `${node.label}`;
-        const borderColor = isRoot ? '#2563eb' : color;
-        const style = isRoot ? 'filled,bold' : 'filled';
-        dotCode += `"${node.id}"[label="${label}",fillcolor="${color}",color="${borderColor}",fontcolor=white,style="${style}"];`;
-      }
-    });
+  while (queue.length > 0) {
+    const { id, depth } = queue.shift()!;
+    if (visited.has(id)) continue;
+    visited.add(id);
 
-    // Adicionar arestas
     edges
-      .filter((edge) => {
-        const srcGroup = nodesByType[nodes.find((n) => n.id === edge.sourceId)?.resourceType || ''];
-        const tgtGroup = nodesByType[nodes.find((n) => n.id === edge.targetId)?.resourceType || ''];
-        return srcGroup.length < groupingThreshold && tgtGroup.length < groupingThreshold;
-      })
+      .filter((e) => e.sourceId === id)
       .forEach((edge) => {
-        dotCode += `"${edge.sourceId}"->"${edge.targetId}"[color="#64748b",penwidth=1.5];`;
-      });
-
-    dotCode += '}';
-    return dotCode;
-  }, [nodes, edges, rootNodeId, groupingThreshold]);
-
-  useEffect(() => {
-    const renderGraph = async () => {
-      if (!containerRef.current) return;
-
-      try {
-        const graphviz = await Graphviz.load();
-        const svg = graphviz.renderDotString(dotString);
-
-        containerRef.current.innerHTML = svg;
-
-        // Aplicar zoom
-        if (paperRef.current) {
-          paperRef.current.clear();
+        if (!visited.has(edge.targetId)) {
+          depths.set(edge.targetId, depth + 1);
+          queue.push({ id: edge.targetId, depth: depth + 1 });
         }
+      });
+  }
 
-        paperRef.current = Raphael(containerRef.current, containerRef.current.offsetWidth, 600);
+  // Agrupar nós por profundidade
+  const nodesByDepth = new Map<number, string[]>();
+  nodes.forEach((node) => {
+    const depth = depths.get(node.id) ?? nodes.length;
+    if (!nodesByDepth.has(depth)) {
+      nodesByDepth.set(depth, []);
+    }
+    nodesByDepth.get(depth)!.push(node.id);
+  });
 
-        // Re-render com Raphael
-        const parser = new DOMParser();
-        const svgDoc = parser.parseFromString(svg, 'image/svg+xml');
-        const svgElement = svgDoc.documentElement;
+  // Calcular posições
+  const layoutNodes: LayoutNode[] = [];
+  nodesByDepth.forEach((nodeIds, depth) => {
+    const x = depth * horizontalSpacing;
+    nodeIds.forEach((nodeId, index) => {
+      const node = nodes.find((n) => n.id === nodeId)!;
+      const y = index * verticalSpacing - ((nodeIds.length - 1) * verticalSpacing) / 2;
 
-        const width = parseInt(svgElement.getAttribute('width') || '800', 10);
-        const height = parseInt(svgElement.getAttribute('height') || '600', 10);
+      layoutNodes.push({
+        id: nodeId,
+        x,
+        y,
+        width: nodeWidth,
+        height: nodeHeight,
+        label: node.label,
+        resourceType: node.resourceType,
+        isRoot: nodeId === rootNodeId,
+      });
+    });
+  });
 
-        paperRef.current.setSize(width * zoom, height * zoom);
-        paperRef.current.scale(zoom, zoom, 0, 0);
-      } catch (err) {
-        console.error('Erro ao renderizar grafo:', err);
-      }
-    };
+  return layoutNodes;
+}
 
-    renderGraph();
-  }, [dotString, zoom]);
+export function DependencyGraphVizualizer({ nodes, edges, rootNodeId }: Props) {
+  const [zoom, setZoom] = useState(1);
+
+  const layoutNodes = useMemo(() => {
+    return calculateLayout(nodes, edges, rootNodeId);
+  }, [nodes, edges, rootNodeId]);
+
+  const svgWidth = useMemo(() => {
+    const maxDepth = Math.max(...layoutNodes.map((n) => n.x)) + 200;
+    return Math.max(800, maxDepth);
+  }, [layoutNodes]);
+
+  const svgHeight = useMemo(() => {
+    const maxY = Math.max(...layoutNodes.map((n) => n.y + n.height / 2));
+    const minY = Math.min(...layoutNodes.map((n) => n.y - n.height / 2));
+    return Math.max(600, maxY - minY + 100);
+  }, [layoutNodes]);
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col bg-slate-950">
       <div className="flex gap-4 items-center p-4 bg-slate-900 border-b border-slate-800">
         <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-400">Limite de agrupamento:</label>
-          <input
-            type="number"
-            min="2"
-            max="20"
-            value={groupingThreshold}
-            onChange={(e) => setGroupingThreshold(Math.max(2, parseInt(e.target.value, 10)))}
-            className="w-16 px-2 py-1 rounded bg-slate-800 text-slate-100 text-sm border border-slate-700"
-          />
+          <label className="text-sm text-slate-400">Nós: {nodes.length}</label>
+          <label className="text-sm text-slate-400 ml-4">Relações: {edges.length}</label>
         </div>
 
         <div className="ml-auto flex gap-2">
@@ -133,7 +135,90 @@ export function DependencyGraphVizualizer({ nodes, edges, rootNodeId }: Props) {
         </div>
       </div>
 
-      <div ref={containerRef} className="flex-1 overflow-auto bg-slate-950" />
+      <div className="flex-1 overflow-auto bg-slate-950">
+        <svg
+          width={svgWidth * zoom}
+          height={svgHeight * zoom}
+          style={{ minWidth: '100%', minHeight: '100%' }}
+          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+        >
+          {/* Arestas */}
+          {edges.map((edge) => {
+            const sourceNode = layoutNodes.find((n) => n.id === edge.sourceId);
+            const targetNode = layoutNodes.find((n) => n.id === edge.targetId);
+
+            if (!sourceNode || !targetNode) return null;
+
+            const x1 = sourceNode.x + sourceNode.width / 2;
+            const y1 = sourceNode.y;
+            const x2 = targetNode.x - targetNode.width / 2;
+            const y2 = targetNode.y;
+
+            return (
+              <g key={`edge-${edge.id}`}>
+                <line
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke="#64748b"
+                  strokeWidth="2"
+                  markerEnd="url(#arrowhead)"
+                />
+              </g>
+            );
+          })}
+
+          {/* Marcador de seta */}
+          <defs>
+            <marker
+              id="arrowhead"
+              markerWidth="10"
+              markerHeight="10"
+              refX="9"
+              refY="3"
+              orient="auto"
+            >
+              <polygon points="0 0, 10 3, 0 6" fill="#64748b" />
+            </marker>
+          </defs>
+
+          {/* Nós */}
+          {layoutNodes.map((node) => {
+            const color = NODE_COLORS[node.resourceType] || '#6b7280';
+            const borderColor = node.isRoot ? '#2563eb' : color;
+            const borderWidth = node.isRoot ? 3 : 2;
+
+            return (
+              <g key={`node-${node.id}`}>
+                <rect
+                  x={node.x - node.width / 2}
+                  y={node.y - node.height / 2}
+                  width={node.width}
+                  height={node.height}
+                  fill={color}
+                  stroke={borderColor}
+                  strokeWidth={borderWidth}
+                  rx="6"
+                />
+                <text
+                  x={node.x}
+                  y={node.y}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="white"
+                  fontSize="12"
+                  fontWeight={node.isRoot ? 'bold' : 'normal'}
+                  textLength={node.width - 20}
+                  lengthAdjust="spacingAndGlyphs"
+                >
+                  {node.label.substring(0, 20)}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
     </div>
   );
 }
