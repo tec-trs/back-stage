@@ -12,7 +12,7 @@ import {
 import type { GraphNode, ImpactResult } from '../features/resource-graph/use-resource-graph';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
-import { DependencyFlowVisualizer } from '../shared/components/DependencyFlowVisualizer';
+import { DependencyGraphVizualizer } from '../shared/components/DependencyGraphVizualizer';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Modal } from '../shared/components/Modal';
 import { PageHeader } from '../shared/components/PageHeader';
@@ -725,11 +725,10 @@ export function EcosystemPage() {
         <div ref={graphContainerRef} className="flex-1 overflow-hidden bg-slate-950">
           <Suspense fallback={<div className="flex items-center justify-center h-full"><Spinner /></div>}>
             {visualizationMode === 'flow' && data ? (
-              <DependencyFlowVisualizer
+              <DependencyGraphVizualizer
                 nodes={data.nodes}
                 edges={data.edges}
                 rootNodeId={selectedNodeId || undefined}
-                onNodeSelect={handleNodeSelect}
               />
             ) : (
               <ResourceGraph
