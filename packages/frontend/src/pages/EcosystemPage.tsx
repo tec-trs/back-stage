@@ -521,168 +521,186 @@ export function EcosystemPage() {
 
   return (
     <div className="-mx-6 -mt-6 flex flex-col" style={{ height: 'calc(100vh - 61px)' }}>
-      {/* ── Cabeçalho compacto com legenda horizontal ──────────────── */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-slate-800 bg-slate-900/60 px-4 py-2">
-        <div className="shrink-0 flex-1">
-          <h1 className="text-sm font-semibold text-slate-100">Ecossistema</h1>
-          <p className="text-xs text-slate-500">
+      {/* ── Toolbar refinada: seções com divisores ──────────────── */}
+      <div className="border-b border-slate-800 bg-slate-950/80 px-4 py-3">
+        {/* Header com titulo */}
+        <div className="mb-3 pb-3 border-b border-slate-800/50">
+          <h1 className="text-base font-semibold text-slate-50">Ecossistema</h1>
+          <p className="text-xs text-slate-400 mt-0.5">
             {editMode
               ? 'Arraste da bolinha azul de um nó até outro · clique × na aresta para remover'
               : 'Duplo clique no nó para abrir detalhes'}
           </p>
         </div>
-        <div className="flex gap-2">
-          <a
-            href="/relationships"
-            className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 hover:bg-slate-700 transition-colors"
-          >
-            📋 Ver todas as relações
-          </a>
-          <a
-            href="/risk-analysis"
-            className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 hover:bg-slate-700 transition-colors"
-          >
-            ⚠️ Análise de Risco
-          </a>
-        </div>
 
-        {/* Visualização */}
-        <button
-          type="button"
-          onClick={() => setVisualizationMode((prev) => (prev === 'graph' ? 'flow' : 'graph'))}
-          className={`shrink-0 rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
-            visualizationMode === 'flow'
-              ? 'border-green-700 bg-green-900/40 text-green-300 hover:bg-green-900/60'
-              : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'
-          }`}
-          title={visualizationMode === 'flow' ? 'Visualização em cascata tipo iTop' : 'Visualização em grafo'}
-        >
-          {visualizationMode === 'flow' ? '🔀 Cascata' : '🔗 Grafo'}
-        </button>
+        {/* Controles principais em 3 linhas */}
+        <div className="flex flex-wrap items-center gap-3 mb-2">
+          {/* Seção 1: Navegação */}
+          <div className="flex gap-2">
+            <a
+              href="/relationships"
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 transition-colors"
+            >
+              Ver relações
+            </a>
+            <a
+              href="/risk-analysis"
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 transition-colors"
+            >
+              Análise de risco
+            </a>
+          </div>
 
-        {/* Modo compacto */}
-        {visualizationMode === 'graph' && (
-          <button
-            type="button"
-            onClick={() => setCompactMode((prev: boolean) => !prev)}
-            className={`shrink-0 rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
-              compactMode
-                ? 'border-purple-700 bg-purple-900/40 text-purple-300 hover:bg-purple-900/60'
-                : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-            title={compactMode ? 'Modo compacto ativado · nós menores e labels reduzidos' : 'Modo expandido'}
-          >
-            {compactMode ? '⊡ Compacto' : '⊞ Expandido'}
-          </button>
-        )}
+          {/* Divider */}
+          <div className="hidden h-5 w-px bg-slate-700/50 lg:block" />
 
-        <button
-          type="button"
-          onClick={() => setEditMode((prev) => {
-            if (!prev) setSelectedNodeId(null);
-            return !prev;
-          })}
-          className={`shrink-0 rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
-            editMode
-              ? 'border-blue-700 bg-blue-900/40 text-blue-300 hover:bg-blue-900/60'
-              : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'
-          }`}
-        >
-          {editMode ? 'Sair da edicao' : 'Editar relacoes'}
-        </button>
+          {/* Seção 2: Modo visualização + Compact */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setVisualizationMode((prev) => (prev === 'graph' ? 'flow' : 'graph'))}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
+                visualizationMode === 'flow'
+                  ? 'border-blue-600/50 bg-blue-900/30 text-blue-200'
+                  : 'border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50'
+              }`}
+              title={visualizationMode === 'flow' ? 'Cascata (hierárquica)' : 'Grafo (aninhado)'}
+            >
+              {visualizationMode === 'flow' ? 'Cascata' : 'Grafo'}
+            </button>
 
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowExportMenu(!showExportMenu)}
-            className="shrink-0 rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-700"
-            title="Exportar gráfico como imagem ou PDF"
-          >
-            📥 Exportar
-          </button>
-
-          {showExportMenu && (
-            <div className="absolute top-full mt-1 left-0 rounded-md border border-slate-700 bg-slate-800 shadow-lg z-50 min-w-max">
+            {visualizationMode === 'graph' && (
               <button
                 type="button"
-                onClick={() => {
-                  handleExportPNG();
-                  setShowExportMenu(false);
-                }}
-                className="block w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
-              >
-                📷 Exportar como PNG
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  handleExportPDF();
-                  setShowExportMenu(false);
-                }}
-                className="block w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors border-t border-slate-700"
-              >
-                📄 Exportar como PDF
-              </button>
-            </div>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setResetLayoutKey((k) => k + 1)}
-          className="shrink-0 rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-700"
-          title="Desfaz posicionamento manual e recalcula o layout automatico"
-        >
-          Resetar layout
-        </button>
-
-        <div className="mx-2 hidden h-6 w-px bg-slate-700 lg:block" />
-
-        {/* Search */}
-        <input
-          type="text"
-          placeholder="🔍 Procurar recurso..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="shrink-0 rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs text-slate-300 placeholder-slate-500 focus:border-slate-600 focus:outline-none"
-        />
-
-        <div className="mx-2 hidden h-6 w-px bg-slate-700 lg:block" />
-
-        {/* Filtros por tipo de recurso */}
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          {Object.entries(NODE_COLORS)
-            .filter(([type]) => type !== 'db-group')
-            .map(([type, color]) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => toggleTypeFilter(type)}
-                className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-all ${
-                  visibleTypes.has(type)
-                    ? 'bg-slate-700'
-                    : 'opacity-40 hover:opacity-60'
+                onClick={() => setCompactMode((prev: boolean) => !prev)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
+                  compactMode
+                    ? 'border-slate-600 bg-slate-700/40 text-slate-100'
+                    : 'border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50'
                 }`}
-                title={`${visibleTypes.has(type) ? 'Ocultar' : 'Mostrar'} ${NODE_LABELS[type] ?? type}`}
               >
-                <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: color }} />
-                <span className="text-slate-300">{NODE_LABELS[type] ?? type}</span>
+                {compactMode ? 'Compacto' : 'Expandido'}
               </button>
-            ))}
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="hidden h-5 w-px bg-slate-700/50 lg:block" />
+
+          {/* Seção 3: Edição + Export + Reset */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setEditMode((prev) => {
+                if (!prev) setSelectedNodeId(null);
+                return !prev;
+              })}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
+                editMode
+                  ? 'border-amber-600/50 bg-amber-900/30 text-amber-200'
+                  : 'border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50'
+              }`}
+            >
+              {editMode ? 'Sair edição' : 'Editar'}
+            </button>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 transition-colors"
+                title="Exportar gráfico"
+              >
+                Exportar
+              </button>
+
+              {showExportMenu && (
+                <div className="absolute top-full mt-1 left-0 rounded-md border border-slate-700 bg-slate-800 shadow-lg z-50 min-w-max">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleExportPNG();
+                      setShowExportMenu(false);
+                    }}
+                    className="block w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-700/50 transition-colors"
+                  >
+                    Exportar PNG
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleExportPDF();
+                      setShowExportMenu(false);
+                    }}
+                    className="block w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-700/50 transition-colors border-t border-slate-700/50"
+                  >
+                    Exportar PDF
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setResetLayoutKey((k) => k + 1)}
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 transition-colors"
+              title="Resetar layout automático"
+            >
+              Reset
+            </button>
+          </div>
         </div>
 
-        <div className="mx-2 hidden h-6 w-px bg-slate-700 lg:block" />
+        {/* Linha 2: Search + Filtros */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Search */}
+          <input
+            type="text"
+            placeholder="Procurar recurso..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="rounded-md border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-xs text-slate-300 placeholder-slate-500 focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
+          />
 
-        {/* Grouping */}
-        <select
-          value={groupBy}
-          onChange={(e) => setGroupBy(e.target.value as 'none' | 'environment' | 'tag')}
-          className="shrink-0 rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-300 focus:border-slate-600 focus:outline-none"
-        >
-          <option value="none">Sem agrupar</option>
-          <option value="environment">Agrupar por ambiente</option>
-          <option value="tag">Agrupar por tag</option>
-        </select>
+          {/* Divider */}
+          <div className="hidden h-5 w-px bg-slate-700/50 lg:block" />
+
+          {/* Filtros por tipo de recurso */}
+          <div className="flex flex-wrap items-center gap-2">
+            {Object.entries(NODE_COLORS)
+              .filter(([type]) => type !== 'db-group')
+              .map(([type, color]) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => toggleTypeFilter(type)}
+                  className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all ${
+                    visibleTypes.has(type)
+                      ? 'bg-slate-700/50 text-slate-200'
+                      : 'opacity-40 text-slate-400 hover:opacity-60'
+                  }`}
+                  title={`${visibleTypes.has(type) ? 'Ocultar' : 'Mostrar'} ${NODE_LABELS[type] ?? type}`}
+                >
+                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+                  <span>{NODE_LABELS[type] ?? type}</span>
+                </button>
+              ))}
+          </div>
+
+          {/* Divider */}
+          <div className="hidden h-5 w-px bg-slate-700/50 lg:block" />
+
+          {/* Grouping */}
+          <select
+            value={groupBy}
+            onChange={(e) => setGroupBy(e.target.value as 'none' | 'environment' | 'tag')}
+            className="rounded-md border border-slate-700 bg-slate-800/50 px-2.5 py-1.5 text-xs text-slate-300 font-medium hover:bg-slate-700/50 focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
+          >
+            <option value="none">Sem agrupar</option>
+            <option value="environment">Por ambiente</option>
+            <option value="tag">Por tag</option>
+          </select>
+        </div>
 
         {/* Legenda impacto — só aparece em modo simulação */}
         {simulationSourceId && (
