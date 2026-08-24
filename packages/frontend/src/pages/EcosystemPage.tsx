@@ -9,9 +9,10 @@ import {
   useDeleteRelationship,
   useFullGraph,
 } from '../features/resource-graph/use-resource-graph';
-import type { GraphNode, GraphEdge, ImpactResult, FullGraphResponse } from '../features/resource-graph/use-resource-graph';
+import type { GraphNode, ImpactResult } from '../features/resource-graph/use-resource-graph';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
+import { DependencyFlowVisualizer } from '../shared/components/DependencyFlowVisualizer';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Modal } from '../shared/components/Modal';
 import { PageHeader } from '../shared/components/PageHeader';
@@ -164,10 +165,10 @@ export function EcosystemPage() {
   const { data: fullGraphData, isLoading, isError, error } = useFullGraph({ page: 1, pageSize: 500 });
   const data = useMemo(() => {
     if (!fullGraphData) return undefined;
-    const nonGroupNodeIds = new Set(fullGraphData.nodes.filter(n => n.resourceType !== 'group').map(n => n.id));
+    const nonGroupNodeIds = new Set(fullGraphData.nodes.filter(n => (n.resourceType as string) !== 'group').map(n => n.id));
     return {
       ...fullGraphData,
-      nodes: fullGraphData.nodes.filter(n => n.resourceType !== 'group'),
+      nodes: fullGraphData.nodes.filter(n => (n.resourceType as string) !== 'group'),
       edges: fullGraphData.edges.filter(e => nonGroupNodeIds.has(e.sourceId) && nonGroupNodeIds.has(e.targetId)),
     };
   }, [fullGraphData]);
@@ -176,6 +177,9 @@ export function EcosystemPage() {
 
   const [selectedNodeId,   setSelectedNodeId]   = useState<string | null>(null);
   const [selectedNodeType, setSelectedNodeType] = useState<ResourceType | null>(null);
+
+  // Visualization mode
+  const [visualizationMode, setVisualizationMode] = useState<'graph' | 'flow'>('graph');
 
   // Compact mode (persisted in localStorage)
   const [compactMode, setCompactMode] = useState(() => {
@@ -542,19 +546,35 @@ export function EcosystemPage() {
           </a>
         </div>
 
-        {/* Modo compacto */}
+        {/* Visualização */}
         <button
           type="button"
-          onClick={() => setCompactMode((prev: boolean) => !prev)}
+          onClick={() => setVisualizationMode((prev) => (prev === 'graph' ? 'flow' : 'graph'))}
           className={`shrink-0 rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
-            compactMode
-              ? 'border-purple-700 bg-purple-900/40 text-purple-300 hover:bg-purple-900/60'
+            visualizationMode === 'flow'
+              ? 'border-green-700 bg-green-900/40 text-green-300 hover:bg-green-900/60'
               : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'
           }`}
-          title={compactMode ? 'Modo compacto ativado · nós menores e labels reduzidos' : 'Modo expandido'}
+          title={visualizationMode === 'flow' ? 'Visualização em cascata tipo iTop' : 'Visualização em grafo'}
         >
-          {compactMode ? '⊡ Compacto' : '⊞ Expandido'}
+          {visualizationMode === 'flow' ? '🔀 Cascata' : '🔗 Grafo'}
         </button>
+
+        {/* Modo compacto */}
+        {visualizationMode === 'graph' && (
+          <button
+            type="button"
+            onClick={() => setCompactMode((prev: boolean) => !prev)}
+            className={`shrink-0 rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
+              compactMode
+                ? 'border-purple-700 bg-purple-900/40 text-purple-300 hover:bg-purple-900/60'
+                : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'
+            }`}
+            title={compactMode ? 'Modo compacto ativado · nós menores e labels reduzidos' : 'Modo expandido'}
+          >
+            {compactMode ? '⊡ Compacto' : '⊞ Expandido'}
+          </button>
+        )}
 
         <button
           type="button"
@@ -704,24 +724,33 @@ export function EcosystemPage() {
         {/* Grafo — largura total */}
         <div ref={graphContainerRef} className="flex-1 overflow-hidden bg-slate-950">
           <Suspense fallback={<div className="flex items-center justify-center h-full"><Spinner /></div>}>
-            <ResourceGraph
-              nodes={graphNodes}
-              edges={graphEdges}
-              mode="overview"
-              impactedNodeIds={impactedNodeIds}
-              impactedByDepth={impactedByDepth}
-              simulationSourceId={simulationSourceId}
-              highlightedNodeIds={highlightedNodeIds}
-              onNodeSelect={editMode ? undefined : handleNodeSelect}
-              onNodeNavigate={editMode ? undefined : handleNodeNavigate}
-              isLoading={isLoading}
-              editMode={editMode}
-              compactMode={compactMode}
-              onConnect={handleConnect}
-              onEdgeDelete={handleEdgeDelete}
-              storageKey="ecosystem-graph-positions"
-              resetLayoutKey={resetLayoutKey}
-            />
+            {visualizationMode === 'flow' && data ? (
+              <DependencyFlowVisualizer
+                nodes={data.nodes}
+                edges={data.edges}
+                rootNodeId={selectedNodeId || undefined}
+                onNodeSelect={handleNodeSelect}
+              />
+            ) : (
+              <ResourceGraph
+                nodes={graphNodes}
+                edges={graphEdges}
+                mode="overview"
+                impactedNodeIds={impactedNodeIds}
+                impactedByDepth={impactedByDepth}
+                simulationSourceId={simulationSourceId}
+                highlightedNodeIds={highlightedNodeIds}
+                onNodeSelect={editMode ? undefined : handleNodeSelect}
+                onNodeNavigate={editMode ? undefined : handleNodeNavigate}
+                isLoading={isLoading}
+                editMode={editMode}
+                compactMode={compactMode}
+                onConnect={handleConnect}
+                onEdgeDelete={handleEdgeDelete}
+                storageKey="ecosystem-graph-positions"
+                resetLayoutKey={resetLayoutKey}
+              />
+            )}
           </Suspense>
         </div>
 
