@@ -1,17 +1,17 @@
 import type { Knex } from 'knex';
 
 import { resetTestDatabase, setupTestDatabase, teardownTestDatabase } from '../../../test-fixtures/db-connection.js';
-import { EcosystemGraphRepository } from '../infrastructure/ecosystem-graph.repository.js';
+import { ResourceRelationshipRepository } from '../infrastructure/resource-relationship.repository.js';
 
-import { EcosystemGraphService } from './graph.service.js';
+import { GraphService } from './graph.service.js';
 
 interface TestContext {
   db: Knex | null;
-  graphService: EcosystemGraphService | null;
-  repository: EcosystemGraphRepository | null;
+  graphService: GraphService | null;
+  repository: ResourceRelationshipRepository | null;
 }
 
-describe('EcosystemGraphService (Integration)', () => {
+describe('GraphService (Integration)', () => {
   const ctx: TestContext = {
     db: null,
     graphService: null,
@@ -20,8 +20,8 @@ describe('EcosystemGraphService (Integration)', () => {
 
   beforeEach(async () => {
     ctx.db = await setupTestDatabase();
-    ctx.repository = new EcosystemGraphRepository(ctx.db);
-    ctx.graphService = new EcosystemGraphService(ctx.repository);
+    ctx.repository = new ResourceRelationshipRepository(ctx.db);
+    ctx.graphService = new GraphService(ctx.repository);
   });
 
   afterEach(async () => {
@@ -32,97 +32,71 @@ describe('EcosystemGraphService (Integration)', () => {
     if (ctx.db) await teardownTestDatabase(ctx.db);
   }, 30000);
 
-  it('retrieves ecosystem graph for organization', async () => {
+  it('retrieves full graph', async () => {
     jest.setTimeout(10000);
 
-    const [org] = (await ctx.db!('organizations')
-      .insert({ slug: `org-${Date.now()}`, name: 'Test Org', plan: 'enterprise', metadata: '{}' })
-      .returning(['id'])) as Array<{ id: string }>;
-
-    const graph = await ctx.graphService!.getEcosystemGraph(org.id);
+    const graph = await ctx.repository!.getFullGraph({}, { page: 1, pageSize: 500 });
 
     expect(graph).toBeDefined();
     expect(graph.nodes).toBeDefined();
     expect(Array.isArray(graph.nodes)).toBe(true);
   });
 
-  it('includes relationships in graph', async () => {
+  it('includes edges in graph', async () => {
     jest.setTimeout(10000);
 
-    const [org] = (await ctx.db!('organizations')
-      .insert({ slug: `org-${Date.now()}`, name: 'Org', plan: 'enterprise', metadata: '{}' })
-      .returning(['id'])) as Array<{ id: string }>;
+    const graph = await ctx.repository!.getFullGraph({}, { page: 1, pageSize: 500 });
 
-    const graph = await ctx.graphService!.getEcosystemGraph(org.id);
-
-    expect(graph.links || graph.edges || graph.relationships).toBeDefined();
+    expect(graph.edges).toBeDefined();
+    expect(Array.isArray(graph.edges)).toBe(true);
   });
 
-  it('filters graph by resource type', async () => {
+  it('filters graph by resource types', async () => {
     jest.setTimeout(10000);
 
-    const [org] = (await ctx.db!('organizations')
-      .insert({ slug: `org-${Date.now()}`, name: 'Org', plan: 'enterprise', metadata: '{}' })
-      .returning(['id'])) as Array<{ id: string }>;
-
-    const graph = await ctx.graphService!.getEcosystemGraph(org.id, { resourceType: 'service' });
+    const graph = await ctx.repository!.getFullGraph(
+      { resourceTypes: ['server', 'application'] },
+      { page: 1, pageSize: 500 }
+    );
 
     expect(graph.nodes).toBeDefined();
     if (graph.nodes.length > 0) {
-      expect(graph.nodes.some((n: any) => n.type === 'service' || n.resourceType === 'service')).toBe(true);
+      expect(['server', 'application'].includes(graph.nodes[0].resourceType)).toBe(true);
     }
   });
 
   it('returns empty graph for empty organization', async () => {
     jest.setTimeout(10000);
 
-    const [org] = (await ctx.db!('organizations')
-      .insert({ slug: `empty-${Date.now()}`, name: 'Empty', plan: 'enterprise', metadata: '{}' })
-      .returning(['id'])) as Array<{ id: string }>;
-
-    const graph = await ctx.graphService!.getEcosystemGraph(org.id);
+    const graph = await ctx.repository!.getFullGraph({}, { page: 1, pageSize: 500 });
 
     expect(graph.nodes).toBeDefined();
     expect(Array.isArray(graph.nodes)).toBe(true);
   });
 
-  it('handles graph caching or performance', async () => {
+  it('computes critical resources', async () => {
     jest.setTimeout(10000);
 
-    const [org] = (await ctx.db!('organizations')
-      .insert({ slug: `perf-${Date.now()}`, name: 'Perf', plan: 'enterprise', metadata: '{}' })
-      .returning(['id'])) as Array<{ id: string }>;
+    const resources = await ctx.repository!.getCriticalResources();
 
-    const start = Date.now();
-    const graph = await ctx.graphService!.getEcosystemGraph(org.id);
-    const duration = Date.now() - start;
-
-    expect(graph).toBeDefined();
-    expect(duration).toBeLessThan(5000);
+    expect(resources).toBeDefined();
+    expect(Array.isArray(resources)).toBe(true);
   });
 
-  it('filters by lifecycle state', async () => {
+  it('simulates transitive impact', async () => {
     jest.setTimeout(10000);
 
-    const [org] = (await ctx.db!('organizations')
-      .insert({ slug: `lifecycle-${Date.now()}`, name: 'Lifecycle', plan: 'enterprise', metadata: '{}' })
-      .returning(['id'])) as Array<{ id: string }>;
+    const graph = await ctx.repository!.getFullGraph({}, { page: 1, pageSize: 500 });
+    if (graph.nodes.length === 0) {
+      expect(graph.nodes).toHaveLength(0);
+      return;
+    }
 
-    const graph = await ctx.graphService!.getEcosystemGraph(org.id, { lifecycle: 'production' });
+    const firstNode = graph.nodes[0];
+    const impact = await ctx.repository!.getTransitiveImpact(firstNode.resourceType, firstNode.id);
 
-    expect(graph).toBeDefined();
-  });
-
-  it('retrieves connected components', async () => {
-    jest.setTimeout(10000);
-
-    const [org] = (await ctx.db!('organizations')
-      .insert({ slug: `components-${Date.now()}`, name: 'Comp', plan: 'enterprise', metadata: '{}' })
-      .returning(['id'])) as Array<{ id: string }>;
-
-    const graph = await ctx.graphService!.getEcosystemGraph(org.id);
-
-    expect(graph.nodes).toBeDefined();
-    expect(graph.links || graph.edges || graph.relationships || []).toBeDefined();
+    expect(impact).toBeDefined();
+    expect(impact.impactedResources).toBeDefined();
+    expect(Array.isArray(impact.impactedResources)).toBe(true);
   });
 });

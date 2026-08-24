@@ -21,15 +21,13 @@ describe('GraphService.simulateImpact', () => {
 
   it('should identify direct dependents when a resource is deleted', async () => {
     // Arrange
-    const app1 = createMockApplication({ id: 'app1', name: 'App 1' });
-    const app2 = createMockApplication({ id: 'app2', name: 'App 2' });
-    const db1 = createMockDatabase({ id: 'db1', name: 'Database 1' });
+    const app1 = { resourceType: 'application' as const, resourceId: 'app1', label: 'App 1', depth: 1 };
+    const app2 = { resourceType: 'application' as const, resourceId: 'app2', label: 'App 2', depth: 1 };
 
     const impactResult = {
-      directlyImpacted: [app1, app2],
-      transitivelyImpacted: [],
-      byType: { application: 2 },
-      byDepth: { 1: 2 },
+      impactedResources: [app1, app2],
+      byType: { application: 2, server: 0, database: 0, url: 0, vip: 0, group: 0 },
+      byDepth: { 1: [app1, app2] },
       totalImpacted: 2,
       hasCycle: false,
     };
@@ -40,26 +38,24 @@ describe('GraphService.simulateImpact', () => {
     const impact = await service.simulateImpact('database', 'db1');
 
     // Assert
-    expect(impact.directlyImpacted).toHaveLength(2);
-    expect(impact.directlyImpacted).toContainEqual(
-      expect.objectContaining({ id: 'app1' })
+    expect(impact.impactedResources).toHaveLength(2);
+    expect(impact.impactedResources).toContainEqual(
+      expect.objectContaining({ resourceId: 'app1' })
     );
-    expect(impact.directlyImpacted).toContainEqual(
-      expect.objectContaining({ id: 'app2' })
+    expect(impact.impactedResources).toContainEqual(
+      expect.objectContaining({ resourceId: 'app2' })
     );
   });
 
   it('should calculate transitive impact (cascade effect)', async () => {
     // Arrange
-    const server1 = createMockServer({ id: 'server1', name: 'Server 1' });
-    const app1 = createMockApplication({ id: 'app1', name: 'App 1' });
-    const db1 = createMockDatabase({ id: 'db1', name: 'Database 1' });
+    const app1 = { resourceType: 'application' as const, resourceId: 'app1', label: 'App 1', depth: 1 };
+    const server1 = { resourceType: 'server' as const, resourceId: 'server1', label: 'Server 1', depth: 2 };
 
     const impactResult = {
-      directlyImpacted: [app1],
-      transitivelyImpacted: [server1],
-      byType: { application: 1, server: 1 },
-      byDepth: { 1: 1, 2: 1 },
+      impactedResources: [app1, server1],
+      byType: { application: 1, server: 1, database: 0, url: 0, vip: 0, group: 0 },
+      byDepth: { 1: [app1], 2: [server1] },
       totalImpacted: 2,
       hasCycle: false,
     };
@@ -70,22 +66,21 @@ describe('GraphService.simulateImpact', () => {
     const impact = await service.simulateImpact('database', 'db1');
 
     // Assert
-    expect(impact.transitivelyImpacted).toBeDefined();
-    expect(impact.transitivelyImpacted).toContainEqual(
-      expect.objectContaining({ id: 'server1' })
+    expect(impact.impactedResources).toBeDefined();
+    expect(impact.impactedResources).toContainEqual(
+      expect.objectContaining({ resourceId: 'server1', depth: 2 })
     );
   });
 
   it('should handle cycles without infinite loops', async () => {
     // Arrange
-    const app1 = createMockApplication({ id: 'app1', name: 'App 1' });
-    const app2 = createMockApplication({ id: 'app2', name: 'App 2' });
+    const app2 = { resourceType: 'application' as const, resourceId: 'app2', label: 'App 2', depth: 1 };
+    const app1 = { resourceType: 'application' as const, resourceId: 'app1', label: 'App 1', depth: 2 };
 
     const impactResult = {
-      directlyImpacted: [app2],
-      transitivelyImpacted: [app1],
-      byType: { application: 2 },
-      byDepth: { 1: 1, 2: 1 },
+      impactedResources: [app2, app1],
+      byType: { application: 2, server: 0, database: 0, url: 0, vip: 0, group: 0 },
+      byDepth: { 1: [app2], 2: [app1] },
       totalImpacted: 2,
       hasCycle: true,
     };
