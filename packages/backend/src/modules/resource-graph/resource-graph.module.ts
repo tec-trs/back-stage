@@ -5,6 +5,7 @@ import { container } from '../../shared/container.js';
 
 import { GraphService } from './application/graph.service.js';
 import { ResourceRelationshipRepository } from './infrastructure/resource-relationship.repository.js';
+import { NodePositionRepository } from './infrastructure/node-position.repository.js';
 import { GraphController } from './interfaces/http/graph.controller.js';
 import { createGraphRouter } from './interfaces/http/graph.routes.js';
 
@@ -14,8 +15,15 @@ export function registerResourceGraphModule(): Router {
     () => new ResourceRelationshipRepository(db),
   );
   container.register(
+    'NodePositionRepository',
+    () => new NodePositionRepository(db),
+  );
+  container.register(
     'GraphService',
-    () => new GraphService(container.resolve('ResourceRelationshipRepository')),
+    () => new GraphService(
+      container.resolve('ResourceRelationshipRepository'),
+      container.resolve('NodePositionRepository'),
+    ),
   );
   container.register(
     'GraphController',

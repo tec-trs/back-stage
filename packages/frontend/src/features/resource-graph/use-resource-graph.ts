@@ -218,3 +218,39 @@ export function useDeleteRelationship() {
     },
   });
 }
+
+interface NodePosition {
+  nodeId: string;
+  x: number;
+  y: number;
+}
+
+export function useSaveNodePositions() {
+  return useMutation({
+    mutationFn: (positions: NodePosition[]) =>
+      apiRequest<{ saved: any[]; count: number }>('/api/resource-graph/node-positions', {
+        method: 'POST',
+        body: { positions },
+      }),
+  });
+}
+
+export function useGetNodePositions() {
+  return useQuery({
+    queryKey: ['node-positions'],
+    queryFn: () =>
+      apiRequest<{ positions: NodePosition[] }>('/api/resource-graph/node-positions', {
+        method: 'GET',
+      }).then(r => r.positions),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useClearNodePositions() {
+  return useMutation({
+    mutationFn: () =>
+      apiRequest<void>('/api/resource-graph/node-positions', {
+        method: 'DELETE',
+      }),
+  });
+}

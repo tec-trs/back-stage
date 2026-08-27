@@ -127,4 +127,26 @@ export class GraphController {
 
     response.status(204).send();
   };
+
+  public saveNodePositions = async (request: Request, response: Response): Promise<void> => {
+    const body = request.body as { positions: Array<{ nodeId: string; x: number; y: number }> };
+
+    const saved = await Promise.all(
+      body.positions.map(pos =>
+        this.graphService.saveNodePosition(pos.nodeId, pos.x, pos.y),
+      ),
+    );
+
+    response.status(200).json({ saved, count: saved.length });
+  };
+
+  public getNodePositions = async (_request: Request, response: Response): Promise<void> => {
+    const positions = await this.graphService.getNodePositions();
+    response.status(200).json({ positions });
+  };
+
+  public clearNodePositions = async (_request: Request, response: Response): Promise<void> => {
+    await this.graphService.clearNodePositions();
+    response.status(204).send();
+  };
 }

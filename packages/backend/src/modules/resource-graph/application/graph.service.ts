@@ -12,6 +12,7 @@ import type {
   ResourceType,
 } from '../domain/graph.types.js';
 import { ResourceRelationshipRepository } from '../infrastructure/resource-relationship.repository.js';
+import { NodePositionRepository } from '../infrastructure/node-position.repository.js';
 
 export interface AuditContext {
   actorUserId?: string | null;
@@ -31,7 +32,10 @@ export interface GetSubgraphResult {
 }
 
 export class GraphService {
-  public constructor(private readonly repository: ResourceRelationshipRepository) {}
+  public constructor(
+    private readonly repository: ResourceRelationshipRepository,
+    private readonly positionRepository?: NodePositionRepository,
+  ) {}
 
   public async getFullGraph(filters: GraphFilters, pagination: Pagination): Promise<GetFullGraphResult> {
     const { nodes, edges, total } = await this.repository.getFullGraph(filters, pagination);
@@ -140,5 +144,26 @@ export class GraphService {
 
   public async getCriticalResources(): Promise<CriticalResource[]> {
     return this.repository.getCriticalResources();
+  }
+
+  public async saveNodePosition(nodeId: string, x: number, y: number) {
+    if (!this.positionRepository) {
+      throw new Error('Position repository not available');
+    }
+    return this.positionRepository.savePosition(nodeId, x, y);
+  }
+
+  public async getNodePositions() {
+    if (!this.positionRepository) {
+      return [];
+    }
+    return this.positionRepository.getPositions();
+  }
+
+  public async clearNodePositions() {
+    if (!this.positionRepository) {
+      return;
+    }
+    await this.positionRepository.deleteAllPositions();
   }
 }

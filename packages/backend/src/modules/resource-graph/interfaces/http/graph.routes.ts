@@ -132,5 +132,30 @@ export function createGraphRouter(controller: GraphController): Router {
     asyncHandler(controller.deleteRelationship),
   );
 
+  /**
+   * @openapi
+   * /resource-graph/node-positions:
+   *   get:
+   *     summary: Obtém as posições salvas dos nodes
+   *     tags: [Resource Graph]
+   *     responses:
+   *       200: { description: Posições dos nodes }
+   *   post:
+   *     summary: Salva as posições dos nodes
+   *     tags: [Resource Graph]
+   *     security: [{ bearerAuth: [] }]
+   *     responses:
+   *       200: { description: Posições salvas }
+   *   delete:
+   *     summary: Limpa todas as posições dos nodes
+   *     tags: [Resource Graph]
+   *     security: [{ bearerAuth: [] }]
+   *     responses:
+   *       204: { description: Posições limpas }
+   */
+  router.get('/node-positions', asyncHandler(controller.getNodePositions));
+  router.post('/node-positions', authorizeMiddleware(...WRITE_ROLES), asyncHandler(controller.saveNodePositions));
+  router.delete('/node-positions', authorizeMiddleware(...DELETE_ROLES), asyncHandler(controller.clearNodePositions));
+
   return router;
 }

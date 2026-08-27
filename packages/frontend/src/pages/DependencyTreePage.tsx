@@ -3,7 +3,7 @@ import { useAllApplications } from '../features/applications/use-applications';
 import { useAllServers } from '../features/servers/use-servers';
 import { useAllUrls } from '../features/urls/use-urls';
 import { useAllDatabases } from '../features/databases/use-databases';
-import { useCreateRelationship, useFullGraph, useDeleteRelationship } from '../features/resource-graph/use-resource-graph';
+import { useCreateRelationship, useFullGraph, useDeleteRelationship, useSaveNodePositions, useGetNodePositions, useClearNodePositions } from '../features/resource-graph/use-resource-graph';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Button } from '../shared/components/Button';
 import { Spinner } from '../shared/components/Spinner';
@@ -56,6 +56,9 @@ export function DependencyTreePage() {
   const graphQuery = useFullGraph({ page: 1, pageSize: 500 });
   const createRelationship = useCreateRelationship();
   const deleteRelationship = useDeleteRelationship();
+  const savePositions = useSaveNodePositions();
+  const getPositions = useGetNodePositions();
+  const clearPositions = useClearNodePositions();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedSource, setSelectedSource] = useState<ResourceOption | null>(null);
@@ -132,9 +135,37 @@ export function DependencyTreePage() {
   const handleClear = () => {
     setPendingLinks([]);
     setShowGraph(false);
+    clearPositions.mutate();
     setMessage({ type: 'success', text: '✅ Limpo!' });
     setTimeout(() => setMessage(null), 1500);
   };
+
+  // Carregar posições salvas quando o gráfico aparece
+  useEffect(() => {
+    if (showGraph && getPositions.data) {
+      const posMap = new Map<string, Position>();
+      getPositions.data.forEach(pos => {
+        posMap.set(pos.nodeId, { x: pos.x, y: pos.y });
+      });
+      setNodePositions(posMap);
+    }
+  }, [showGraph, getPositions.data]);
+
+  // Salvar posições após arrasto
+  useEffect(() => {
+    if (!showGraph || nodePositions.size === 0) return;
+
+    const timer = setTimeout(() => {
+      const positions = Array.from(nodePositions.entries()).map(([nodeId, pos]) => ({
+        nodeId,
+        x: pos.x,
+        y: pos.y,
+      }));
+      savePositions.mutate(positions);
+    }, 500); // Aguarda 500ms após parar de arrastar
+
+    return () => clearTimeout(timer);
+  }, [nodePositions, showGraph, savePositions]);
 
   useEffect(() => {
     if (!showGraph || !canvasRef.current || !graphQuery.data) return;
