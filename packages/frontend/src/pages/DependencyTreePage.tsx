@@ -438,42 +438,58 @@ export function DependencyTreePage() {
                     <div
                       key={edge.id}
                       style={{
-                        padding: '8px',
+                        padding: '10px',
                         backgroundColor: '#1f2937',
                         border: '1px solid #374151',
                         borderRadius: '4px',
-                        marginBottom: '6px',
-                        fontSize: '10px',
+                        marginBottom: '8px',
+                        fontSize: '11px',
                         color: '#9ca3af',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        gap: '4px',
+                        gap: '8px',
                       }}
                     >
                       <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {source?.label} → {target?.label}
+                        {source?.label?.substring(0, 15)} → {target?.label?.substring(0, 15)}
                       </span>
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log('Deletando:', edge.id);
                           deleteRelationship.mutate(edge.id, {
                             onSuccess: () => {
                               graphQuery.refetch();
                               setMessage({ type: 'success', text: '✅ Removido!' });
                               setTimeout(() => setMessage(null), 2000);
                             },
+                            onError: (error) => {
+                              setMessage({ type: 'error', text: 'Erro ao remover' });
+                            },
                           });
                         }}
                         style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#ef4444',
+                          background: '#ef4444',
+                          border: '1px solid #dc2626',
+                          color: '#ffffff',
                           cursor: 'pointer',
-                          fontSize: '12px',
-                          padding: '2px 4px',
+                          fontSize: '14px',
+                          padding: '4px 8px',
+                          borderRadius: '3px',
                           flexShrink: 0,
+                          fontWeight: 'bold',
+                          transition: 'all 0.2s',
                         }}
-                        title="Deletar relacionamento"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#dc2626';
+                          e.currentTarget.style.transform = 'scale(1.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#ef4444';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                        title="Clique para deletar este relacionamento"
                       >
                         ✕
                       </button>
