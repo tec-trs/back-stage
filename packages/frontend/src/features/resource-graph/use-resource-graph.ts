@@ -96,7 +96,7 @@ export function useSubgraph(
       case 'url':
         return { direction: 'downstream', depth: 1 };
       case 'application':
-        return { direction: 'upstream', depth: requestedDepth };
+        return { direction: 'both', depth: 1 };
       case 'server':
         return { direction: 'downstream', depth: requestedDepth };
       case 'database':
