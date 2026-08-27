@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { db } from '../../database/connection.js';
+import { db as knexDb } from '../../database/connection.js';
 import { container } from '../../shared/container.js';
 
 import { GraphService } from './application/graph.service.js';
@@ -12,11 +12,11 @@ import { createGraphRouter } from './interfaces/http/graph.routes.js';
 export function registerResourceGraphModule(): Router {
   container.register(
     'ResourceRelationshipRepository',
-    () => new ResourceRelationshipRepository(db),
+    () => new ResourceRelationshipRepository(knexDb),
   );
   container.register(
     'NodePositionRepository',
-    () => new NodePositionRepository(db),
+    () => new NodePositionRepository(knexDb),
   );
   container.register(
     'GraphService',
