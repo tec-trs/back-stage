@@ -27,10 +27,10 @@ const RESOURCE_ICONS: Record<string, string> = {
 };
 
 const COLORS: Record<string, string> = {
-  server: '#3b82f6',
-  application: '#8b5cf6',
-  database: '#ec4899',
-  url: '#f59e0b',
+  server: '#06b6d4',      // cyan
+  application: '#8b5cf6', // purple
+  database: '#ec4899',    // pink
+  url: '#10b981',         // green
 };
 
 const RELATION_TYPES = [
@@ -56,6 +56,8 @@ export function DependencyTreePage() {
   const [relationType, setRelationType] = useState('exposes');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [positions, setPositions] = useState<Map<string, Position>>(new Map());
+  const [draggingNode, setDraggingNode] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const allResources: ResourceOption[] = useMemo(() => [
     ...(serversQuery.data?.map(s => ({ id: s.id, label: s.displayName || s.hostname, type: 'server' as const })) || []),
@@ -80,19 +82,68 @@ export function DependencyTreePage() {
 
     const resourcesArray = Array.from(resourcesInGraph);
     const cols = Math.ceil(Math.sqrt(resourcesArray.length)) || 1;
-    const spacing = 150;
+    const spacing = 200;
 
     resourcesArray.forEach((id, index) => {
-      const row = Math.floor(index / cols);
-      const col = index % cols;
-      map.set(id, {
-        x: col * spacing + 50,
-        y: row * spacing + 50,
-      });
+      // Se já tem posição arrastada, usar
+      if (positions.has(id)) {
+        map.set(id, positions.get(id)!);
+      } else {
+        // Senão, usar grid
+        const row = Math.floor(index / cols);
+        const col = index % cols;
+        map.set(id, {
+          x: col * spacing + 100,
+          y: row * spacing + 100,
+        });
+      }
     });
 
     return map;
-  }, [graphQuery.data]);
+  }, [graphQuery.data, positions]);
+
+  // Handlers de mouse para drag and drop
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const boxSize = 110;
+
+    // Detectar qual nó foi clicado
+    for (const [nodeId, pos] of layoutPositions) {
+      const dx = mouseX - pos.x;
+      const dy = mouseY - pos.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < boxSize / 2) {
+        setDraggingNode(nodeId);
+        setDragOffset({ x: dx, y: dy });
+        return;
+      }
+    }
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!draggingNode || !canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const newPositions = new Map(positions);
+    newPositions.set(draggingNode, {
+      x: mouseX - dragOffset.x,
+      y: mouseY - dragOffset.y,
+    });
+
+    setPositions(newPositions);
+  };
+
+  const handleCanvasMouseUp = () => {
+    setDraggingNode(null);
+  };
 
   // Desenhar grafo no canvas
   useEffect(() => {
@@ -108,8 +159,24 @@ export function DependencyTreePage() {
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, width, height);
 
+    // Grid de fundo (opcional)
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < width; i += 50) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i, height);
+      ctx.stroke();
+    }
+    for (let i = 0; i < height; i += 50) {
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(width, i);
+      ctx.stroke();
+    }
+
     // Desenhar edges (linhas)
-    ctx.strokeStyle = '#475569';
+    ctx.strokeStyle = '#64748b';
     ctx.lineWidth = 2;
     for (const edge of graphQuery.data.edges) {
       const sourcePos = layoutPositions.get(edge.sourceId);
@@ -122,8 +189,8 @@ export function DependencyTreePage() {
 
         // Desenhar seta
         const angle = Math.atan2(targetPos.y - sourcePos.y, targetPos.x - sourcePos.x);
-        const arrowSize = 10;
-        ctx.fillStyle = '#475569';
+        const arrowSize = 12;
+        ctx.fillStyle = '#64748b';
         ctx.beginPath();
         ctx.moveTo(targetPos.x, targetPos.y);
         ctx.lineTo(targetPos.x - arrowSize * Math.cos(angle - Math.PI / 6), targetPos.y - arrowSize * Math.sin(angle - Math.PI / 6));
@@ -139,34 +206,66 @@ export function DependencyTreePage() {
       if (!node) continue;
 
       const color = COLORS[node.resourceType] || '#6b7280';
-      const boxWidth = 100;
-      const boxHeight = 60;
+      const boxWidth = 110;
+      const boxHeight = 80;
+      const isDragging = nodeId === draggingNode;
 
-      // Desenhar retângulo
+      // Desenhar sombra (se arrastar)
+      if (isDragging) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 15;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+      }
+
+      // Desenhar retângulo arredondado
       ctx.fillStyle = color;
-      ctx.fillRect(pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight);
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight);
+      ctx.globalAlpha = isDragging ? 0.95 : 0.85;
+      roundRect(ctx, pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight, 8);
+      ctx.fill();
+
+      ctx.globalAlpha = 1;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+
+      // Borda
+      ctx.strokeStyle = isDragging ? '#ffffff' : '#e2e8f0';
+      ctx.lineWidth = isDragging ? 3 : 2;
+      roundRect(ctx, pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight, 8);
+      ctx.stroke();
 
       // Desenhar ícone e texto
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 14px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
       const icon = RESOURCE_ICONS[node.resourceType] || '📦';
       const lines = node.label.split(' ');
 
-      ctx.font = '12px Arial';
-      ctx.fillText(icon, pos.x, pos.y - 15);
+      ctx.font = 'bold 28px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(icon, pos.x, pos.y - 20);
 
       ctx.font = 'bold 11px Arial';
+      ctx.fillStyle = '#ffffff';
       lines.slice(0, 2).forEach((line, i) => {
-        ctx.fillText(line.substring(0, 10), pos.x, pos.y + 5 + (i * 12));
+        ctx.fillText(line.substring(0, 12), pos.x, pos.y + 15 + (i * 13));
       });
     }
-  }, [graphQuery.data, layoutPositions]);
+  }, [graphQuery.data, layoutPositions, draggingNode]);
+
+  // Helper para desenhar retângulo arredondado
+  const roundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) => {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  };
 
   const handleAddLink = async () => {
     if (!selectedSource || !selectedTarget) {
@@ -359,7 +458,16 @@ export function DependencyTreePage() {
               ref={canvasRef}
               width={1000}
               height={600}
-              style={{ display: 'block', width: '100%', height: '600px' }}
+              onMouseDown={handleCanvasMouseDown}
+              onMouseMove={handleCanvasMouseMove}
+              onMouseUp={handleCanvasMouseUp}
+              onMouseLeave={handleCanvasMouseUp}
+              style={{
+                display: 'block',
+                width: '100%',
+                height: '600px',
+                cursor: draggingNode ? 'grabbing' : 'grab',
+              }}
             />
           ) : (
             <div style={{ height: '600px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
