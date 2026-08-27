@@ -27,10 +27,10 @@ const RESOURCE_ICONS: Record<string, string> = {
 };
 
 const COLORS: Record<string, string> = {
-  server: '#3b82f6',      // blue
-  application: '#f59e0b', // amber
-  database: '#ef4444',    // red
-  url: '#10b981',         // emerald
+  server: '#0ea5e9',      // sky blue vibrante
+  application: '#a855f7', // purple vibrante
+  database: '#ec4899',    // pink vibrante
+  url: '#14b8a6',         // teal vibrante
 };
 
 const RELATION_TYPES = [
@@ -210,51 +210,74 @@ export function DependencyTreePage() {
       if (!node) continue;
 
       const color = COLORS[node.resourceType] || '#6b7280';
-      const boxWidth = 130;
-      const boxHeight = 100;
+      const boxWidth = 160;
+      const boxHeight = 120;
       const isDragging = nodeId === draggingNode;
 
       // Desenhar sombra
-      ctx.shadowColor = isDragging ? 'rgba(59, 130, 246, 0.6)' : 'rgba(0, 0, 0, 0.3)';
-      ctx.shadowBlur = isDragging ? 20 : 10;
+      ctx.shadowColor = isDragging ? adjustColor(color, 30) + 'aa' : 'rgba(0, 0, 0, 0.4)';
+      ctx.shadowBlur = isDragging ? 25 : 12;
       ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = isDragging ? 8 : 4;
+      ctx.shadowOffsetY = isDragging ? 10 : 5;
 
       // Desenhar retângulo arredondado com gradiente
       const gradient = ctx.createLinearGradient(pos.x - boxWidth / 2, pos.y - boxHeight / 2, pos.x - boxWidth / 2, pos.y + boxHeight / 2);
-      gradient.addColorStop(0, color);
-      gradient.addColorStop(1, adjustColor(color, -20));
+      gradient.addColorStop(0, adjustColor(color, 15));
+      gradient.addColorStop(1, adjustColor(color, -10));
 
       ctx.fillStyle = gradient;
       ctx.globalAlpha = 1;
-      roundRect(ctx, pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight, 10);
+      roundRect(ctx, pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight, 12);
       ctx.fill();
 
-      // Borda mais espessa se arrastando
-      ctx.strokeStyle = isDragging ? '#ffffff' : '#ffffff';
+      // Borda
+      ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = isDragging ? 3 : 2;
-      ctx.globalAlpha = isDragging ? 1 : 0.7;
-      roundRect(ctx, pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight, 10);
+      ctx.globalAlpha = isDragging ? 1 : 0.8;
+      roundRect(ctx, pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight, 12);
       ctx.stroke();
 
       ctx.globalAlpha = 1;
       ctx.shadowColor = 'rgba(0, 0, 0, 0)';
 
       // Desenhar ícone e texto
-      ctx.fillStyle = '#ffffff';
       const icon = RESOURCE_ICONS[node.resourceType] || '📦';
-      const lines = node.label.split(' ');
 
-      ctx.font = 'bold 32px Arial';
+      // Ícone grande no topo
+      ctx.font = 'bold 36px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(icon, pos.x, pos.y - 25);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(icon, pos.x, pos.y - 35);
 
-      ctx.font = 'bold 12px Arial';
+      // Texto do label - quebrar em múltiplas linhas se necessário
+      const maxWidth = boxWidth - 20;
+      const words = node.label.split(' ');
+      const lines: string[] = [];
+      let currentLine = '';
+
+      ctx.font = '10px Arial';
+      for (const word of words) {
+        const testLine = currentLine ? currentLine + ' ' + word : word;
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth - 10) {
+          if (currentLine) lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      if (currentLine) lines.push(currentLine);
+
+      // Limitar a 3 linhas máximo
+      const displayLines = lines.slice(0, 3);
+
+      ctx.font = 'bold 11px Arial';
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';
-      lines.slice(0, 2).forEach((line, i) => {
-        ctx.fillText(line.substring(0, 13), pos.x, pos.y + 8 + (i * 14));
+      displayLines.forEach((line, i) => {
+        const startY = pos.y - 8 + (i - (displayLines.length - 1) / 2) * 15;
+        ctx.fillText(line, pos.x, startY);
       });
     }
   }, [graphQuery.data, layoutPositions, draggingNode]);
