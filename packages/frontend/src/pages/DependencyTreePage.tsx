@@ -58,6 +58,9 @@ export function DependencyTreePage() {
   const [positions, setPositions] = useState<Map<string, Position>>(new Map());
   const [draggingNode, setDraggingNode] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [sizes, setSizes] = useState<Map<string, { width: number; height: number }>>(new Map());
+  const [resizingNode, setResizingNode] = useState<string | null>(null);
+  const [resizeStartSize, setResizeStartSize] = useState<{ width: number; height: number }>({ width: 160, height: 120 });
 
   const allResources: ResourceOption[] = useMemo(() => [
     ...(serversQuery.data?.map(s => ({ id: s.id, label: s.displayName || s.hostname, type: 'server' as const })) || []),
@@ -109,15 +112,30 @@ export function DependencyTreePage() {
     const rect = canvasRef.current.getBoundingClientRect();
     const mouseX = (e.clientX - rect.left) * (canvasRef.current.width / rect.width);
     const mouseY = (e.clientY - rect.top) * (canvasRef.current.height / rect.height);
-    const boxWidth = 110;
-    const boxHeight = 80;
 
     // Detectar qual nó foi clicado
     for (const [nodeId, pos] of layoutPositions) {
-      const dx = Math.abs(mouseX - pos.x);
-      const dy = Math.abs(mouseY - pos.y);
+      const nodeSize = sizes.get(nodeId) || { width: 160, height: 120 };
+      const boxWidth = nodeSize.width;
+      const boxHeight = nodeSize.height;
 
-      if (dx < boxWidth / 2 && dy < boxHeight / 2) {
+      // Detectar se clicou no canto (resize handle)
+      const handleSize = 20;
+      const dx = mouseX - (pos.x + boxWidth / 2);
+      const dy = mouseY - (pos.y + boxHeight / 2);
+
+      if (dx > -handleSize && dx < handleSize && dy > -handleSize && dy < handleSize) {
+        setResizingNode(nodeId);
+        setResizeStartSize(nodeSize);
+        console.log('📐 Redimensionando:', nodeId);
+        return;
+      }
+
+      // Detectar se clicou dentro da caixa (mover)
+      const dx2 = Math.abs(mouseX - pos.x);
+      const dy2 = Math.abs(mouseY - pos.y);
+
+      if (dx2 < boxWidth / 2 && dy2 < boxHeight / 2) {
         setDraggingNode(nodeId);
         setDragOffset({ x: mouseX - pos.x, y: mouseY - pos.y });
         console.log('🖱️ Arrastrando:', nodeId);
@@ -127,26 +145,62 @@ export function DependencyTreePage() {
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!draggingNode || !canvasRef.current) return;
+    if (!canvasRef.current) return;
 
     const rect = canvasRef.current.getBoundingClientRect();
     const mouseX = (e.clientX - rect.left) * (canvasRef.current.width / rect.width);
     const mouseY = (e.clientY - rect.top) * (canvasRef.current.height / rect.height);
 
-    const newPositions = new Map(positions);
-    newPositions.set(draggingNode, {
-      x: mouseX - dragOffset.x,
-      y: mouseY - dragOffset.y,
-    });
+    // Resizing
+    if (resizingNode) {
+      const pos = layoutPositions.get(resizingNode);
+      if (!pos) return;
 
-    setPositions(newPositions);
+      const newWidth = Math.max(100, resizeStartSize.width + (mouseX - pos.x) * 2);
+      const newHeight = Math.max(80, resizeStartSize.height + (mouseY - pos.y) * 2);
+
+      const newSizes = new Map(sizes);
+      newSizes.set(resizingNode, { width: newWidth, height: newHeight });
+      setSizes(newSizes);
+      return;
+    }
+
+    // Dragging
+    if (draggingNode) {
+      const newPositions = new Map(positions);
+      newPositions.set(draggingNode, {
+        x: mouseX - dragOffset.x,
+        y: mouseY - dragOffset.y,
+      });
+
+      setPositions(newPositions);
+    }
+
+    // Mudar cursor baseado no que está sob o mouse
+    if (!draggingNode && !resizingNode && canvasRef.current) {
+      let onHandle = false;
+      for (const [nodeId, pos] of layoutPositions) {
+        const nodeSize = sizes.get(nodeId) || { width: 160, height: 120 };
+        const dx = mouseX - (pos.x + nodeSize.width / 2);
+        const dy = mouseY - (pos.y + nodeSize.height / 2);
+        if (dx > -20 && dx < 20 && dy > -20 && dy < 20) {
+          onHandle = true;
+          break;
+        }
+      }
+      canvasRef.current.style.cursor = onHandle ? 'nwse-resize' : 'grab';
+    }
   };
 
   const handleCanvasMouseUp = () => {
     if (draggingNode) {
       console.log('✋ Soltou:', draggingNode);
     }
+    if (resizingNode) {
+      console.log('✋ Resize finalizado:', resizingNode);
+    }
     setDraggingNode(null);
+    setResizingNode(null);
   };
 
   // Desenhar grafo no canvas
@@ -210,9 +264,11 @@ export function DependencyTreePage() {
       if (!node) continue;
 
       const color = COLORS[node.resourceType] || '#6b7280';
-      const boxWidth = 160;
-      const boxHeight = 120;
+      const nodeSize = sizes.get(nodeId) || { width: 160, height: 120 };
+      const boxWidth = nodeSize.width;
+      const boxHeight = nodeSize.height;
       const isDragging = nodeId === draggingNode;
+      const isResizing = nodeId === resizingNode;
 
       // Desenhar sombra
       ctx.shadowColor = isDragging ? adjustColor(color, 30) + 'aa' : 'rgba(0, 0, 0, 0.4)';
@@ -279,6 +335,22 @@ export function DependencyTreePage() {
         const startY = pos.y - 8 + (i - (displayLines.length - 1) / 2) * 15;
         ctx.fillText(line, pos.x, startY);
       });
+
+      // Desenhar handle de resize no canto inferior direito
+      const handleX = pos.x + boxWidth / 2 - 8;
+      const handleY = pos.y + boxHeight / 2 - 8;
+      ctx.fillStyle = isResizing ? '#ffffff' : 'rgba(255, 255, 255, 0.6)';
+      ctx.fillRect(handleX, handleY, 16, 16);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(handleX, handleY, 16, 16);
+
+      // Desenhar linhas diagonais no handle
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(handleX + 4, handleY + 12);
+      ctx.lineTo(handleX + 12, handleY + 4);
+      ctx.stroke();
     }
   }, [graphQuery.data, layoutPositions, draggingNode]);
 
