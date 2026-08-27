@@ -91,38 +91,24 @@ export class GraphController {
   };
 
   public createRelationship = async (request: Request, response: Response): Promise<void> => {
-    try {
-      const body = request.body as CreateRelationshipBody;
+    const body = request.body as CreateRelationshipBody;
 
-      const result = await this.graphService.createRelationship(
-        body.sourceType,
-        body.sourceId,
-        body.targetType,
-        body.targetId,
-        body.relationType,
-        body.metadata,
-        {
-          actorUserId: request.user?.id,
-          ipAddress: request.ip,
-          userAgent: request.header('user-agent'),
-        },
-        body.reason,
-      );
+    const result = await this.graphService.createRelationship(
+      body.sourceType,
+      body.sourceId,
+      body.targetType,
+      body.targetId,
+      body.relationType,
+      body.metadata,
+      {
+        actorUserId: request.user?.id,
+        ipAddress: request.ip,
+        userAgent: request.header('user-agent'),
+      },
+      body.reason,
+    );
 
-      response.status(201).json(result);
-    } catch (error: unknown) {
-      if (
-        error instanceof Error &&
-        (error.message.includes('duplicate key') || error.message.includes('violates unique constraint'))
-      ) {
-        response.status(409).json({
-          error: 'Conflito',
-          message: 'Este relacionamento já existe',
-        });
-      } else {
-        throw error;
-      }
-    }
+    response.status(201).json(result);
   };
 
   public getCriticalResources = async (_request: Request, response: Response): Promise<void> => {

@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { ConflictError } from '@back-stage/shared';
 import { orgContext } from '../../../shared/context/org-context.js';
 import type {
   CriticalResource,
@@ -615,34 +616,41 @@ export class ResourceRelationshipRepository {
       return this.createExposesRelationship(orgId, sourceType, sourceId, targetId);
     }
 
-    const [row] = (await this.db(TABLE_NAME)
-      .insert({
-        organization_id: orgId,
-        source_type: sourceType,
-        source_id: sourceId,
-        target_type: targetType,
-        target_id: targetId,
-        relation_type: relationType,
-        metadata: metadata ?? {},
+    try {
+      const [row] = (await this.db(TABLE_NAME)
+        .insert({
+          organization_id: orgId,
+          source_type: sourceType,
+          source_id: sourceId,
+          target_type: targetType,
+          target_id: targetId,
+          relation_type: relationType,
+          metadata: metadata ?? {},
+          reason: reason ?? null,
+          created_by_user_id: createdByUserId ?? null,
+        })
+        .returning(['id', 'created_at'])) as { id: string; created_at: string }[];
+
+      this.invalidateCriticalResourcesCache();
+
+      return {
+        id: row.id,
+        sourceType,
+        sourceId,
+        targetType,
+        targetId,
+        relationType: relationType as any,
+        metadata,
         reason: reason ?? null,
-        created_by_user_id: createdByUserId ?? null,
-      })
-      .returning(['id', 'created_at'])) as { id: string; created_at: string }[];
-
-    this.invalidateCriticalResourcesCache();
-
-    return {
-      id: row.id,
-      sourceType,
-      sourceId,
-      targetType,
-      targetId,
-      relationType: relationType as any,
-      metadata,
-      reason: reason ?? null,
-      createdByUserId: createdByUserId ?? null,
-      createdAt: row.created_at,
-    };
+        createdByUserId: createdByUserId ?? null,
+        createdAt: row.created_at,
+      };
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes('violates unique constraint')) {
+        throw new ConflictError('Este relacionamento já existe');
+      }
+      throw error;
+    }
   }
 
   private async createHostsRelationship(orgId: string, serverId: string, appId: string): Promise<GraphEdge> {
