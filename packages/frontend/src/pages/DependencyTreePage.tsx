@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useAllApplications } from '../features/applications/use-applications';
 import { useAllServers } from '../features/servers/use-servers';
 import { useAllUrls } from '../features/urls/use-urls';
 import { useAllDatabases } from '../features/databases/use-databases';
-import { useCreateRelationship } from '../features/resource-graph/use-resource-graph';
+import { useCreateRelationship, useFullGraph, useDeleteRelationship } from '../features/resource-graph/use-resource-graph';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Button } from '../shared/components/Button';
 import { Spinner } from '../shared/components/Spinner';
@@ -14,11 +14,9 @@ interface ResourceOption {
   type: 'server' | 'application' | 'database' | 'url';
 }
 
-interface Link {
-  id: string;
-  source: ResourceOption;
-  target: ResourceOption;
-  relationType: string;
+interface Position {
+  x: number;
+  y: number;
 }
 
 const RESOURCE_ICONS: Record<string, string> = {
@@ -26,6 +24,13 @@ const RESOURCE_ICONS: Record<string, string> = {
   application: '📱',
   database: '📊',
   url: '🔗',
+};
+
+const COLORS: Record<string, string> = {
+  server: '#3b82f6',
+  application: '#8b5cf6',
+  database: '#ec4899',
+  url: '#f59e0b',
 };
 
 const RELATION_TYPES = [
@@ -41,22 +46,127 @@ export function DependencyTreePage() {
   const serversQuery = useAllServers();
   const urlsQuery = useAllUrls();
   const databasesQuery = useAllDatabases();
+  const graphQuery = useFullGraph({ page: 1, pageSize: 500 });
   const createRelationship = useCreateRelationship();
+  const deleteRelationship = useDeleteRelationship();
 
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedSource, setSelectedSource] = useState<ResourceOption | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<ResourceOption | null>(null);
   const [relationType, setRelationType] = useState('exposes');
-  const [links, setLinks] = useState<Link[]>([]);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [positions, setPositions] = useState<Map<string, Position>>(new Map());
 
-  const allResources: ResourceOption[] = [
+  const allResources: ResourceOption[] = useMemo(() => [
     ...(serversQuery.data?.map(s => ({ id: s.id, label: s.displayName || s.hostname, type: 'server' as const })) || []),
     ...(applicationsQuery.data?.map(a => ({ id: a.id, label: a.displayName || a.code, type: 'application' as const })) || []),
     ...(databasesQuery.data?.map(d => ({ id: d.id, label: d.displayName || d.name, type: 'database' as const })) || []),
     ...(urlsQuery.data?.map(u => ({ id: u.id, label: u.label || u.url, type: 'url' as const })) || []),
-  ];
+  ], [serversQuery.data, applicationsQuery.data, databasesQuery.data, urlsQuery.data]);
 
   const isLoading = applicationsQuery.isLoading || serversQuery.isLoading || urlsQuery.isLoading || databasesQuery.isLoading;
+
+  // Calcular posições do layout (grid)
+  const layoutPositions = useMemo(() => {
+    const map = new Map<string, Position>();
+    const resourcesInGraph = new Set<string>();
+
+    if (graphQuery.data) {
+      for (const edge of graphQuery.data.edges) {
+        resourcesInGraph.add(edge.sourceId);
+        resourcesInGraph.add(edge.targetId);
+      }
+    }
+
+    const resourcesArray = Array.from(resourcesInGraph);
+    const cols = Math.ceil(Math.sqrt(resourcesArray.length)) || 1;
+    const spacing = 150;
+
+    resourcesArray.forEach((id, index) => {
+      const row = Math.floor(index / cols);
+      const col = index % cols;
+      map.set(id, {
+        x: col * spacing + 50,
+        y: row * spacing + 50,
+      });
+    });
+
+    return map;
+  }, [graphQuery.data]);
+
+  // Desenhar grafo no canvas
+  useEffect(() => {
+    if (!canvasRef.current || !graphQuery.data) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, width, height);
+
+    // Desenhar edges (linhas)
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 2;
+    for (const edge of graphQuery.data.edges) {
+      const sourcePos = layoutPositions.get(edge.sourceId);
+      const targetPos = layoutPositions.get(edge.targetId);
+      if (sourcePos && targetPos) {
+        ctx.beginPath();
+        ctx.moveTo(sourcePos.x, sourcePos.y);
+        ctx.lineTo(targetPos.x, targetPos.y);
+        ctx.stroke();
+
+        // Desenhar seta
+        const angle = Math.atan2(targetPos.y - sourcePos.y, targetPos.x - sourcePos.x);
+        const arrowSize = 10;
+        ctx.fillStyle = '#475569';
+        ctx.beginPath();
+        ctx.moveTo(targetPos.x, targetPos.y);
+        ctx.lineTo(targetPos.x - arrowSize * Math.cos(angle - Math.PI / 6), targetPos.y - arrowSize * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(targetPos.x - arrowSize * Math.cos(angle + Math.PI / 6), targetPos.y - arrowSize * Math.sin(angle + Math.PI / 6));
+        ctx.fill();
+      }
+    }
+
+    // Desenhar nós (caixas)
+    const nodeMap = new Map(graphQuery.data.nodes.map(n => [n.id, n]));
+    for (const [nodeId, pos] of layoutPositions) {
+      const node = nodeMap.get(nodeId);
+      if (!node) continue;
+
+      const color = COLORS[node.resourceType] || '#6b7280';
+      const boxWidth = 100;
+      const boxHeight = 60;
+
+      // Desenhar retângulo
+      ctx.fillStyle = color;
+      ctx.fillRect(pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight);
+
+      // Desenhar ícone e texto
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 14px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const icon = RESOURCE_ICONS[node.resourceType] || '📦';
+      const lines = node.label.split(' ');
+
+      ctx.font = '12px Arial';
+      ctx.fillText(icon, pos.x, pos.y - 15);
+
+      ctx.font = 'bold 11px Arial';
+      lines.slice(0, 2).forEach((line, i) => {
+        ctx.fillText(line.substring(0, 10), pos.x, pos.y + 5 + (i * 12));
+      });
+    }
+  }, [graphQuery.data, layoutPositions]);
 
   const handleAddLink = async () => {
     if (!selectedSource || !selectedTarget) {
@@ -78,38 +188,23 @@ export function DependencyTreePage() {
         relationType,
       });
 
-      const newLink: Link = {
-        id: `${selectedSource.id}-${selectedTarget.id}`,
-        source: selectedSource,
-        target: selectedTarget,
-        relationType,
-      };
-
-      setLinks([...links, newLink]);
       setSelectedSource(null);
       setSelectedTarget(null);
-      setMessage({ type: 'success', text: 'Relacionamento criado com sucesso!' });
-      setTimeout(() => setMessage(null), 3000);
+      setMessage({ type: 'success', text: '✅ Relacionamento criado!' });
+      await graphQuery.refetch();
+      setTimeout(() => setMessage(null), 2000);
     } catch (error) {
-      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Erro ao criar relacionamento' });
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Erro ao criar' });
     }
   };
 
-  const handleClearAll = () => {
-    setLinks([]);
-    setSelectedSource(null);
-    setSelectedTarget(null);
-    setMessage({ type: 'success', text: 'Tudo limpado!' });
-    setTimeout(() => setMessage(null), 2000);
-  };
-
-  if (isLoading) return <Spinner />;
+  if (isLoading || graphQuery.isLoading) return <Spinner />;
 
   return (
-    <div style={{ padding: '16px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ padding: '16px' }}>
       <PageHeader
         title="Construtor de Dependências"
-        description="Crie relacionamentos entre recursos selecionando e linkando"
+        description="Construa sua árvore de dependências visualmente"
       />
 
       {message && (
@@ -127,53 +222,51 @@ export function DependencyTreePage() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-        {/* Painel de Origem */}
-        <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px', padding: '16px' }}>
-          <h3 style={{ color: '#e5e7eb', marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>Origem</h3>
-          <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-            {allResources.map(resource => (
-              <button
-                key={resource.id}
-                onClick={() => setSelectedSource(resource)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  marginBottom: '8px',
-                  border: selectedSource?.id === resource.id ? '2px solid #3b82f6' : '1px solid #374151',
-                  borderRadius: '4px',
-                  backgroundColor: selectedSource?.id === resource.id ? '#1e40af' : '#1f2937',
-                  color: '#e5e7eb',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <span style={{ fontSize: '16px' }}>{RESOURCE_ICONS[resource.type]}</span>
-                <span style={{ fontSize: '13px' }}>{resource.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '16px' }}>
+        {/* Painel de Controle */}
+        <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px', padding: '16px', height: 'fit-content' }}>
+          <h3 style={{ color: '#e5e7eb', marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>Novo Link</h3>
 
-        {/* Painel Central - Configuração */}
-        <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <h3 style={{ color: '#e5e7eb', marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>Tipo de Relacionamento</h3>
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ color: '#9ca3af', fontSize: '12px', display: 'block', marginBottom: '4px' }}>De:</label>
+            <select
+              value={selectedSource?.id || ''}
+              onChange={e => {
+                const res = allResources.find(r => r.id === e.target.value);
+                setSelectedSource(res || null);
+              }}
+              style={{
+                width: '100%',
+                padding: '8px',
+                backgroundColor: '#1f2937',
+                color: '#e5e7eb',
+                border: '1px solid #374151',
+                borderRadius: '4px',
+                fontSize: '12px',
+              }}
+            >
+              <option value="">Selecione...</option>
+              {allResources.map(r => (
+                <option key={r.id} value={r.id}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ color: '#9ca3af', fontSize: '12px', display: 'block', marginBottom: '4px' }}>Tipo:</label>
             <select
               value={relationType}
               onChange={e => setRelationType(e.target.value)}
               style={{
                 width: '100%',
                 padding: '8px',
-                marginBottom: '16px',
                 backgroundColor: '#1f2937',
                 color: '#e5e7eb',
                 border: '1px solid #374151',
                 borderRadius: '4px',
+                fontSize: '12px',
               }}
             >
               {RELATION_TYPES.map(rt => (
@@ -182,114 +275,99 @@ export function DependencyTreePage() {
                 </option>
               ))}
             </select>
-
-            <div style={{ marginBottom: '16px' }}>
-              <p style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '8px' }}>Origem selecionada:</p>
-              {selectedSource ? (
-                <div style={{ padding: '8px', backgroundColor: '#1e40af', borderRadius: '4px', color: '#e5e7eb', fontSize: '13px' }}>
-                  {RESOURCE_ICONS[selectedSource.type]} {selectedSource.label}
-                </div>
-              ) : (
-                <div style={{ padding: '8px', backgroundColor: '#374151', borderRadius: '4px', color: '#9ca3af', fontSize: '13px' }}>
-                  Nenhuma
-                </div>
-              )}
-            </div>
-
-            <div>
-              <p style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '8px' }}>Destino selecionado:</p>
-              {selectedTarget ? (
-                <div style={{ padding: '8px', backgroundColor: '#065f46', borderRadius: '4px', color: '#e5e7eb', fontSize: '13px' }}>
-                  {RESOURCE_ICONS[selectedTarget.type]} {selectedTarget.label}
-                </div>
-              ) : (
-                <div style={{ padding: '8px', backgroundColor: '#374151', borderRadius: '4px', color: '#9ca3af', fontSize: '13px' }}>
-                  Nenhum
-                </div>
-              )}
-            </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
-            <Button
-              onClick={handleAddLink}
-              style={{ width: '100%', padding: '10px' }}
-              disabled={!selectedSource || !selectedTarget}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ color: '#9ca3af', fontSize: '12px', display: 'block', marginBottom: '4px' }}>Para:</label>
+            <select
+              value={selectedTarget?.id || ''}
+              onChange={e => {
+                const res = allResources.find(r => r.id === e.target.value);
+                setSelectedTarget(res || null);
+              }}
+              style={{
+                width: '100%',
+                padding: '8px',
+                backgroundColor: '#1f2937',
+                color: '#e5e7eb',
+                border: '1px solid #374151',
+                borderRadius: '4px',
+                fontSize: '12px',
+              }}
             >
-              + Adicionar Link
-            </Button>
-            <Button
-              onClick={handleClearAll}
-              variant="secondary"
-              style={{ width: '100%', padding: '10px' }}
-            >
-              Limpar Tudo
-            </Button>
+              <option value="">Selecione...</option>
+              {allResources.map(r => (
+                <option key={r.id} value={r.id}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
           </div>
+
+          <Button
+            onClick={handleAddLink}
+            style={{ width: '100%', padding: '10px', marginBottom: '8px' }}
+            disabled={!selectedSource || !selectedTarget}
+          >
+            ➕ Adicionar
+          </Button>
+
+          {graphQuery.data && graphQuery.data.edges.length > 0 && (
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #374151' }}>
+              <h4 style={{ color: '#e5e7eb', fontSize: '12px', marginBottom: '8px' }}>Links ({graphQuery.data.edges.length})</h4>
+              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                {graphQuery.data.edges.map(edge => (
+                  <div
+                    key={edge.id}
+                    style={{
+                      padding: '8px',
+                      backgroundColor: '#1f2937',
+                      border: '1px solid #374151',
+                      borderRadius: '4px',
+                      marginBottom: '4px',
+                      fontSize: '11px',
+                      color: '#9ca3af',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span>{edge.relationType}</span>
+                    <button
+                      onClick={() => deleteRelationship.mutate(edge.id, { onSuccess: () => graphQuery.refetch() })}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Painel de Destino */}
-        <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px', padding: '16px' }}>
-          <h3 style={{ color: '#e5e7eb', marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>Destino</h3>
-          <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-            {allResources.map(resource => (
-              <button
-                key={resource.id}
-                onClick={() => setSelectedTarget(resource)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  marginBottom: '8px',
-                  border: selectedTarget?.id === resource.id ? '2px solid #10b981' : '1px solid #374151',
-                  borderRadius: '4px',
-                  backgroundColor: selectedTarget?.id === resource.id ? '#065f46' : '#1f2937',
-                  color: '#e5e7eb',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <span style={{ fontSize: '16px' }}>{RESOURCE_ICONS[resource.type]}</span>
-                <span style={{ fontSize: '13px' }}>{resource.label}</span>
-              </button>
-            ))}
-          </div>
+        {/* Canvas de Visualização */}
+        <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px', overflow: 'hidden' }}>
+          {graphQuery.data && graphQuery.data.edges.length > 0 ? (
+            <canvas
+              ref={canvasRef}
+              width={1000}
+              height={600}
+              style={{ display: 'block', width: '100%', height: '600px' }}
+            />
+          ) : (
+            <div style={{ height: '600px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
+              📭 Nenhuma dependência mapeada. Comece adicionando links!
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Lista de Links Criados */}
-      {links.length > 0 && (
-        <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px', padding: '16px' }}>
-          <h3 style={{ color: '#e5e7eb', marginBottom: '16px', fontSize: '14px', fontWeight: 600 }}>
-            Links Criados ({links.length})
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '12px' }}>
-            {links.map(link => (
-              <div
-                key={link.id}
-                style={{
-                  padding: '12px',
-                  backgroundColor: '#1f2937',
-                  border: '1px solid #374151',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                <span style={{ fontSize: '16px' }}>{RESOURCE_ICONS[link.source.type]}</span>
-                <span style={{ flex: 1, color: '#e5e7eb', fontSize: '12px' }}>{link.source.label}</span>
-                <span style={{ color: '#6b7280', fontSize: '11px' }}>→</span>
-                <span style={{ flex: 1, color: '#e5e7eb', fontSize: '12px', textAlign: 'right' }}>{link.target.label}</span>
-                <span style={{ fontSize: '16px' }}>{RESOURCE_ICONS[link.target.type]}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
