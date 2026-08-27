@@ -19,18 +19,18 @@ interface Position {
   y: number;
 }
 
-const RESOURCE_ICONS: Record<string, string> = {
-  server: '🖥️',
-  application: '📱',
-  database: '📊',
-  url: '🔗',
-};
+interface Node {
+  id: string;
+  label: string;
+  type: 'server' | 'application' | 'database' | 'url';
+  children?: string[];
+}
 
 const COLORS: Record<string, string> = {
-  server: '#6366f1',      // indigo
-  application: '#06b6d4', // cyan
-  database: '#f43f5e',    // rose
-  url: '#84cc16',         // lime
+  server: '#6366f1',
+  application: '#8b5cf6',
+  database: '#f43f5e',
+  url: '#f59e0b',
 };
 
 const RELATION_TYPES = [
@@ -48,7 +48,6 @@ export function DependencyTreePage() {
   const databasesQuery = useAllDatabases();
   const graphQuery = useFullGraph({ page: 1, pageSize: 500 });
   const createRelationship = useCreateRelationship();
-  const deleteRelationship = useDeleteRelationship();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedSource, setSelectedSource] = useState<ResourceOption | null>(null);
@@ -58,9 +57,6 @@ export function DependencyTreePage() {
   const [positions, setPositions] = useState<Map<string, Position>>(new Map());
   const [draggingNode, setDraggingNode] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [sizes, setSizes] = useState<Map<string, { width: number; height: number }>>(new Map());
-  const [resizingNode, setResizingNode] = useState<string | null>(null);
-  const [resizeStartSize, setResizeStartSize] = useState<{ width: number; height: number }>({ width: 160, height: 120 });
 
   const allResources: ResourceOption[] = useMemo(() => [
     ...(serversQuery.data?.map(s => ({ id: s.id, label: s.displayName || s.hostname, type: 'server' as const })) || []),
@@ -71,313 +67,218 @@ export function DependencyTreePage() {
 
   const isLoading = applicationsQuery.isLoading || serversQuery.isLoading || urlsQuery.isLoading || databasesQuery.isLoading;
 
-  // Calcular posições do layout (grid)
-  const layoutPositions = useMemo(() => {
-    const map = new Map<string, Position>();
-    const resourcesInGraph = new Set<string>();
+  // Organizar dados hierarquicamente
+  const hierarchyData = useMemo(() => {
+    if (!graphQuery.data) return { nodes: [], edges: [] };
 
-    if (graphQuery.data) {
-      for (const edge of graphQuery.data.edges) {
-        resourcesInGraph.add(edge.sourceId);
-        resourcesInGraph.add(edge.targetId);
+    const nodeMap = new Map(graphQuery.data.nodes.map(n => [n.id, n]));
+    const serversWithApps = new Map<string, string[]>();
+
+    // Agrupar aplicações por servidor (relação hosts)
+    for (const edge of graphQuery.data.edges) {
+      if (edge.relationType === 'hosts' && edge.sourceType === 'server') {
+        if (!serversWithApps.has(edge.sourceId)) {
+          serversWithApps.set(edge.sourceId, []);
+        }
+        serversWithApps.get(edge.sourceId)!.push(edge.targetId);
       }
     }
 
-    const resourcesArray = Array.from(resourcesInGraph);
-    const cols = Math.ceil(Math.sqrt(resourcesArray.length)) || 1;
-    const spacing = 200;
+    return { nodes: graphQuery.data.nodes, edges: graphQuery.data.edges, serversWithApps };
+  }, [graphQuery.data]);
 
-    resourcesArray.forEach((id, index) => {
-      // Se já tem posição arrastada, usar
-      if (positions.has(id)) {
-        map.set(id, positions.get(id)!);
+  // Calcular posições em grid
+  const layoutPositions = useMemo(() => {
+    const map = new Map<string, Position>();
+    if (!hierarchyData.nodes || hierarchyData.nodes.length === 0) return map;
+
+    // Separar por tipo
+    const servers = hierarchyData.nodes.filter(n => n.resourceType === 'server');
+    const urls = hierarchyData.nodes.filter(n => n.resourceType === 'url');
+    const databases = hierarchyData.nodes.filter(n => n.resourceType === 'database');
+    const apps = hierarchyData.nodes.filter(n => n.resourceType === 'application');
+
+    let y = 60;
+    const spacing = 200;
+    const colWidth = 200;
+
+    // URLs no topo
+    urls.forEach((node, i) => {
+      const x = i * colWidth + 100;
+      if (positions.has(node.id)) {
+        map.set(node.id, positions.get(node.id)!);
       } else {
-        // Senão, usar grid
-        const row = Math.floor(index / cols);
-        const col = index % cols;
-        map.set(id, {
-          x: col * spacing + 100,
-          y: row * spacing + 100,
-        });
+        map.set(node.id, { x, y });
+      }
+    });
+
+    // Servidores abaixo
+    y += spacing * 1.5;
+    servers.forEach((node, i) => {
+      const x = i * colWidth + 100;
+      if (positions.has(node.id)) {
+        map.set(node.id, positions.get(node.id)!);
+      } else {
+        map.set(node.id, { x, y });
+      }
+    });
+
+    // Bancos de dados em outra seção
+    y += spacing * 2;
+    databases.forEach((node, i) => {
+      const x = i * colWidth + 100;
+      if (positions.has(node.id)) {
+        map.set(node.id, positions.get(node.id)!);
+      } else {
+        map.set(node.id, { x, y });
       }
     });
 
     return map;
-  }, [graphQuery.data, positions]);
+  }, [hierarchyData.nodes, positions]);
 
-  // Handlers de mouse para drag and drop
+  // Handlers de mouse
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current || !graphQuery.data) return;
-
-    const rect = canvasRef.current.getBoundingClientRect();
-    const mouseX = (e.clientX - rect.left) * (canvasRef.current.width / rect.width);
-    const mouseY = (e.clientY - rect.top) * (canvasRef.current.height / rect.height);
-
-    // Detectar qual nó foi clicado
-    for (const [nodeId, pos] of layoutPositions) {
-      const nodeSize = sizes.get(nodeId) || { width: 160, height: 120 };
-      const boxWidth = nodeSize.width;
-      const boxHeight = nodeSize.height;
-
-      // Detectar se clicou no canto (resize handle)
-      const handleSize = 20;
-      const dx = mouseX - (pos.x + boxWidth / 2);
-      const dy = mouseY - (pos.y + boxHeight / 2);
-
-      if (dx > -handleSize && dx < handleSize && dy > -handleSize && dy < handleSize) {
-        setResizingNode(nodeId);
-        setResizeStartSize(nodeSize);
-        console.log('📐 Redimensionando:', nodeId);
-        return;
-      }
-
-      // Detectar se clicou dentro da caixa (mover)
-      const dx2 = Math.abs(mouseX - pos.x);
-      const dy2 = Math.abs(mouseY - pos.y);
-
-      if (dx2 < boxWidth / 2 && dy2 < boxHeight / 2) {
-        setDraggingNode(nodeId);
-        setDragOffset({ x: mouseX - pos.x, y: mouseY - pos.y });
-        console.log('🖱️ Arrastrando:', nodeId);
-        return;
-      }
-    }
-  };
-
-  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current) return;
 
     const rect = canvasRef.current.getBoundingClientRect();
     const mouseX = (e.clientX - rect.left) * (canvasRef.current.width / rect.width);
     const mouseY = (e.clientY - rect.top) * (canvasRef.current.height / rect.height);
 
-    // Resizing
-    if (resizingNode) {
-      const pos = layoutPositions.get(resizingNode);
-      if (!pos) return;
+    for (const [nodeId, pos] of layoutPositions) {
+      const dx = Math.abs(mouseX - pos.x);
+      const dy = Math.abs(mouseY - pos.y);
 
-      const newWidth = Math.max(100, resizeStartSize.width + (mouseX - pos.x) * 2);
-      const newHeight = Math.max(80, resizeStartSize.height + (mouseY - pos.y) * 2);
-
-      const newSizes = new Map(sizes);
-      newSizes.set(resizingNode, { width: newWidth, height: newHeight });
-      setSizes(newSizes);
-      return;
-    }
-
-    // Dragging
-    if (draggingNode) {
-      const newPositions = new Map(positions);
-      newPositions.set(draggingNode, {
-        x: mouseX - dragOffset.x,
-        y: mouseY - dragOffset.y,
-      });
-
-      setPositions(newPositions);
-    }
-
-    // Mudar cursor baseado no que está sob o mouse
-    if (!draggingNode && !resizingNode && canvasRef.current) {
-      let onHandle = false;
-      for (const [nodeId, pos] of layoutPositions) {
-        const nodeSize = sizes.get(nodeId) || { width: 160, height: 120 };
-        const dx = mouseX - (pos.x + nodeSize.width / 2);
-        const dy = mouseY - (pos.y + nodeSize.height / 2);
-        if (dx > -20 && dx < 20 && dy > -20 && dy < 20) {
-          onHandle = true;
-          break;
-        }
+      if (dx < 90 && dy < 40) {
+        setDraggingNode(nodeId);
+        setDragOffset({ x: mouseX - pos.x, y: mouseY - pos.y });
+        return;
       }
-      canvasRef.current.style.cursor = onHandle ? 'nwse-resize' : 'grab';
     }
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!draggingNode || !canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const mouseX = (e.clientX - rect.left) * (canvasRef.current.width / rect.width);
+    const mouseY = (e.clientY - rect.top) * (canvasRef.current.height / rect.height);
+
+    const newPositions = new Map(positions);
+    newPositions.set(draggingNode, {
+      x: mouseX - dragOffset.x,
+      y: mouseY - dragOffset.y,
+    });
+
+    setPositions(newPositions);
   };
 
   const handleCanvasMouseUp = () => {
-    if (draggingNode) {
-      console.log('✋ Soltou:', draggingNode);
-    }
-    if (resizingNode) {
-      console.log('✋ Resize finalizado:', resizingNode);
-    }
     setDraggingNode(null);
-    setResizingNode(null);
   };
 
-  // Desenhar grafo no canvas
+  // Desenhar canvas
   useEffect(() => {
-    if (!canvasRef.current || !graphQuery.data) return;
+    if (!canvasRef.current || !hierarchyData.nodes) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const width = canvas.width;
-    const height = canvas.height;
-
     ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Grid de fundo (opcional)
+    // Grid
     ctx.strokeStyle = '#1e293b';
     ctx.lineWidth = 0.5;
-    for (let i = 0; i < width; i += 50) {
+    for (let i = 0; i < canvas.width; i += 50) {
       ctx.beginPath();
       ctx.moveTo(i, 0);
-      ctx.lineTo(i, height);
-      ctx.stroke();
-    }
-    for (let i = 0; i < height; i += 50) {
-      ctx.beginPath();
-      ctx.moveTo(0, i);
-      ctx.lineTo(width, i);
+      ctx.lineTo(i, canvas.height);
       ctx.stroke();
     }
 
     // Desenhar edges (linhas)
-    ctx.strokeStyle = '#64748b';
+    ctx.strokeStyle = '#475569';
     ctx.lineWidth = 2;
-    for (const edge of graphQuery.data.edges) {
+    for (const edge of hierarchyData.edges) {
       const sourcePos = layoutPositions.get(edge.sourceId);
       const targetPos = layoutPositions.get(edge.targetId);
       if (sourcePos && targetPos) {
         ctx.beginPath();
-        ctx.moveTo(sourcePos.x, sourcePos.y);
-        ctx.lineTo(targetPos.x, targetPos.y);
+        ctx.moveTo(sourcePos.x, sourcePos.y + 30);
+        ctx.lineTo(targetPos.x, targetPos.y - 30);
         ctx.stroke();
 
-        // Desenhar seta
-        const angle = Math.atan2(targetPos.y - sourcePos.y, targetPos.x - sourcePos.x);
-        const arrowSize = 12;
-        ctx.fillStyle = '#64748b';
-        ctx.beginPath();
-        ctx.moveTo(targetPos.x, targetPos.y);
-        ctx.lineTo(targetPos.x - arrowSize * Math.cos(angle - Math.PI / 6), targetPos.y - arrowSize * Math.sin(angle - Math.PI / 6));
-        ctx.lineTo(targetPos.x - arrowSize * Math.cos(angle + Math.PI / 6), targetPos.y - arrowSize * Math.sin(angle + Math.PI / 6));
-        ctx.fill();
+        // Label
+        const midX = (sourcePos.x + targetPos.x) / 2;
+        const midY = (sourcePos.y + targetPos.y) / 2;
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '11px Arial';
+        ctx.textAlign = 'center';
+        const label = edge.relationType.replace('_', ' ');
+        ctx.fillText(label, midX, midY - 5);
       }
     }
 
-    // Desenhar nós (caixas)
-    const nodeMap = new Map(graphQuery.data.nodes.map(n => [n.id, n]));
+    // Desenhar nodes
+    const nodeMap = new Map(hierarchyData.nodes.map(n => [n.id, n]));
     for (const [nodeId, pos] of layoutPositions) {
       const node = nodeMap.get(nodeId);
       if (!node) continue;
 
-      const color = COLORS[node.resourceType] || '#6b7280';
-      const nodeSize = sizes.get(nodeId) || { width: 160, height: 120 };
-      const boxWidth = nodeSize.width;
-      const boxHeight = nodeSize.height;
+      const color = COLORS[node.resourceType];
       const isDragging = nodeId === draggingNode;
-      const isResizing = nodeId === resizingNode;
+      const width = 180;
+      const height = 70;
 
-      // Desenhar sombra
-      ctx.shadowColor = isDragging ? adjustColor(color, 30) + 'aa' : 'rgba(0, 0, 0, 0.4)';
-      ctx.shadowBlur = isDragging ? 25 : 12;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = isDragging ? 10 : 5;
-
-      // Desenhar retângulo arredondado com gradiente
-      const gradient = ctx.createLinearGradient(pos.x - boxWidth / 2, pos.y - boxHeight / 2, pos.x - boxWidth / 2, pos.y + boxHeight / 2);
-      gradient.addColorStop(0, adjustColor(color, 15));
-      gradient.addColorStop(1, adjustColor(color, -10));
-
-      ctx.fillStyle = gradient;
-      ctx.globalAlpha = 1;
-      roundRect(ctx, pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight, 12);
-      ctx.fill();
-
-      // Borda
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = isDragging ? 3 : 2;
-      ctx.globalAlpha = isDragging ? 1 : 0.8;
-      roundRect(ctx, pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight, 12);
-      ctx.stroke();
-
-      ctx.globalAlpha = 1;
-      ctx.shadowColor = 'rgba(0, 0, 0, 0)';
-
-      // Desenhar ícone e texto
-      const icon = RESOURCE_ICONS[node.resourceType] || '📦';
-
-      // Ícone grande no topo
-      ctx.font = 'bold 36px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(icon, pos.x, pos.y - 35);
-
-      // Texto do label - quebrar em múltiplas linhas se necessário
-      const maxWidth = boxWidth - 20;
-      const words = node.label.split(' ');
-      const lines: string[] = [];
-      let currentLine = '';
-
-      ctx.font = '10px Arial';
-      for (const word of words) {
-        const testLine = currentLine ? currentLine + ' ' + word : word;
-        const metrics = ctx.measureText(testLine);
-        if (metrics.width > maxWidth - 10) {
-          if (currentLine) lines.push(currentLine);
-          currentLine = word;
-        } else {
-          currentLine = testLine;
-        }
+      // Sombra
+      if (isDragging) {
+        ctx.shadowColor = color + '99';
+        ctx.shadowBlur = 20;
+        ctx.shadowOffsetY = 8;
       }
-      if (currentLine) lines.push(currentLine);
 
-      // Limitar a 3 linhas máximo
-      const displayLines = lines.slice(0, 3);
-
-      ctx.font = 'bold 11px Arial';
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'center';
-      displayLines.forEach((line, i) => {
-        const startY = pos.y - 8 + (i - (displayLines.length - 1) / 2) * 15;
-        ctx.fillText(line, pos.x, startY);
-      });
-
-      // Desenhar handle de resize no canto inferior direito
-      const handleX = pos.x + boxWidth / 2 - 8;
-      const handleY = pos.y + boxHeight / 2 - 8;
-      ctx.fillStyle = isResizing ? '#ffffff' : 'rgba(255, 255, 255, 0.6)';
-      ctx.fillRect(handleX, handleY, 16, 16);
+      // Borda tracejada
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
-      ctx.strokeRect(handleX, handleY, 16, 16);
+      ctx.setLineDash([5, 5]);
+      ctx.strokeRect(pos.x - width / 2, pos.y - height / 2, width, height);
+      ctx.setLineDash([]);
+      ctx.shadowColor = 'rgba(0, 0, 0, 0)';
 
-      // Desenhar linhas diagonais no handle
-      ctx.strokeStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(handleX + 4, handleY + 12);
-      ctx.lineTo(handleX + 12, handleY + 4);
-      ctx.stroke();
+      // Ícone e texto
+      ctx.fillStyle = color;
+      ctx.font = 'bold 10px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText(`● ${node.resourceType.toUpperCase()}`, pos.x - width / 2 + 10, pos.y - height / 2 + 15);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 13px Arial';
+      ctx.textAlign = 'left';
+      const lines = node.label.split(' ');
+      lines.slice(0, 2).forEach((line, i) => {
+        ctx.fillText(line.substring(0, 20), pos.x - width / 2 + 10, pos.y + 5 + (i * 15));
+      });
+
+      // Aplicações hospedadas (se servidor)
+      if (node.resourceType === 'server' && hierarchyData.serversWithApps?.has(nodeId)) {
+        const apps = hierarchyData.serversWithApps.get(nodeId) || [];
+        apps.slice(0, 2).forEach((appId, i) => {
+          const app = nodeMap.get(appId);
+          if (app) {
+            ctx.fillStyle = 'rgba(139, 92, 246, 0.8)';
+            ctx.fillRect(pos.x - width / 2 + 5, pos.y + 15 + (i * 18), width - 10, 16);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 10px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(app.label.substring(0, 18), pos.x, pos.y + 26 + (i * 18));
+          }
+        });
+      }
     }
-  }, [graphQuery.data, layoutPositions, draggingNode]);
-
-  // Helper para desenhar retângulo arredondado
-  const roundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) => {
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + width - radius, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-    ctx.lineTo(x + width, y + height - radius);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-    ctx.lineTo(x + radius, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
-  };
-
-  // Helper para ajustar cor (escurecer para gradiente)
-  const adjustColor = (color: string, percent: number): string => {
-    const num = parseInt(color.replace('#', ''), 16);
-    const amt = Math.round(2.55 * percent);
-    const R = Math.max(0, Math.min(255, (num >> 16) + amt));
-    const G = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amt));
-    const B = Math.max(0, Math.min(255, (num & 0x0000FF) + amt));
-    return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
-  };
+  }, [hierarchyData, layoutPositions, draggingNode]);
 
   const handleAddLink = async () => {
     if (!selectedSource || !selectedTarget) {
@@ -414,8 +315,8 @@ export function DependencyTreePage() {
   return (
     <div style={{ padding: '16px' }}>
       <PageHeader
-        title="Construtor de Dependências"
-        description="Construa sua árvore de dependências visualmente"
+        title="Mapa de Dependências"
+        description="Visualize e organize sua infraestrutura"
       />
 
       {message && (
@@ -517,59 +418,20 @@ export function DependencyTreePage() {
 
           <Button
             onClick={handleAddLink}
-            style={{ width: '100%', padding: '10px', marginBottom: '8px' }}
+            style={{ width: '100%', padding: '10px' }}
             disabled={!selectedSource || !selectedTarget}
           >
             ➕ Adicionar
           </Button>
-
-          {graphQuery.data && graphQuery.data.edges.length > 0 && (
-            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #374151' }}>
-              <h4 style={{ color: '#e5e7eb', fontSize: '12px', marginBottom: '8px' }}>Links ({graphQuery.data.edges.length})</h4>
-              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                {graphQuery.data.edges.map(edge => (
-                  <div
-                    key={edge.id}
-                    style={{
-                      padding: '8px',
-                      backgroundColor: '#1f2937',
-                      border: '1px solid #374151',
-                      borderRadius: '4px',
-                      marginBottom: '4px',
-                      fontSize: '11px',
-                      color: '#9ca3af',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <span>{edge.relationType}</span>
-                    <button
-                      onClick={() => deleteRelationship.mutate(edge.id, { onSuccess: () => graphQuery.refetch() })}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#ef4444',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                      }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Canvas de Visualização */}
+        {/* Canvas */}
         <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px', overflow: 'hidden' }}>
-          {graphQuery.data && graphQuery.data.edges.length > 0 ? (
+          {hierarchyData.edges && hierarchyData.edges.length > 0 ? (
             <canvas
               ref={canvasRef}
-              width={1000}
-              height={600}
+              width={1200}
+              height={700}
               onMouseDown={handleCanvasMouseDown}
               onMouseMove={handleCanvasMouseMove}
               onMouseUp={handleCanvasMouseUp}
@@ -577,13 +439,13 @@ export function DependencyTreePage() {
               style={{
                 display: 'block',
                 width: '100%',
-                height: '600px',
+                height: '700px',
                 cursor: draggingNode ? 'grabbing' : 'grab',
               }}
             />
           ) : (
-            <div style={{ height: '600px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
-              📭 Nenhuma dependência mapeada. Comece adicionando links!
+            <div style={{ height: '700px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
+              📭 Nenhuma dependência. Adicione links para começar!
             </div>
           )}
         </div>
