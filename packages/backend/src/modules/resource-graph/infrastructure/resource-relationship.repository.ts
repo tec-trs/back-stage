@@ -351,6 +351,20 @@ export class ResourceRelationshipRepository {
         : `(rr.source_type = t.target_type AND rr.source_id = t.target_id) OR (rr.target_type = t.source_type AND rr.target_id = t.source_id)`;
 
     const orgId = orgContext.getOrThrow();
+
+    // Build parameter array based on direction
+    const params: any[] = [orgId, orgId, orgId, orgId];
+    if (direction === 'downstream') {
+      params.push(rootType, rootId);
+    } else if (direction === 'upstream') {
+      params.push(rootType, rootId);
+    } else {
+      params.push(rootType, rootId, rootType, rootId);
+    }
+    params.push(maxDepth);
+    if (relationType) params.push(relationType);
+    if (relationType) params.push(relationType);
+
     const { rows } = await this.db.raw<{ rows: TraversalRow[] }>(`
       WITH RECURSIVE
       all_edges(source_type, source_id, target_type, target_id, relation_type) AS (
@@ -384,7 +398,7 @@ export class ResourceRelationshipRepository {
           AND NOT ((ae.source_type || ':' || ae.source_id) = ANY(t.path))
       )
       SELECT DISTINCT source_type, source_id, target_type, target_id, relation_type, depth FROM traversal
-    `, [orgId, orgId, orgId, orgId, maxDepth, rootType, rootId, ...(relationType ? [relationType] : [])]);
+    `, params);
 
     console.log(`[getSubgraph] query returned ${rows.length} rows`);
     if (rows.length > 0) {
