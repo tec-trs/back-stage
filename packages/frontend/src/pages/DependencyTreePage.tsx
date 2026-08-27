@@ -423,6 +423,66 @@ export function DependencyTreePage() {
           >
             ➕ Adicionar
           </Button>
+
+          {/* Lista de relacionamentos */}
+          {graphQuery.data && graphQuery.data.edges.length > 0 && (
+            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #374151' }}>
+              <h4 style={{ color: '#e5e7eb', fontSize: '12px', marginBottom: '10px', fontWeight: 600 }}>
+                Links ({graphQuery.data.edges.length})
+              </h4>
+              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                {graphQuery.data.edges.map(edge => {
+                  const source = hierarchyData.nodes?.find(n => n.id === edge.sourceId);
+                  const target = hierarchyData.nodes?.find(n => n.id === edge.targetId);
+                  return (
+                    <div
+                      key={edge.id}
+                      style={{
+                        padding: '8px',
+                        backgroundColor: '#1f2937',
+                        border: '1px solid #374151',
+                        borderRadius: '4px',
+                        marginBottom: '6px',
+                        fontSize: '10px',
+                        color: '#9ca3af',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {source?.label} → {target?.label}
+                      </span>
+                      <button
+                        onClick={() => {
+                          deleteRelationship.mutate(edge.id, {
+                            onSuccess: () => {
+                              graphQuery.refetch();
+                              setMessage({ type: 'success', text: '✅ Removido!' });
+                              setTimeout(() => setMessage(null), 2000);
+                            },
+                          });
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          padding: '2px 4px',
+                          flexShrink: 0,
+                        }}
+                        title="Deletar relacionamento"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Canvas */}
