@@ -334,7 +334,7 @@ export class ResourceRelationshipRepository {
     const { depth = 2, direction = 'both', relationType } = options;
     const maxDepth = Math.min(depth, MAX_DEPTH_DEFAULT);
 
-    const relationFilter = relationType ? `AND relation_type = :relationType` : '';
+    const relationFilter = relationType ? `AND relation_type = $8` : '';
 
     const baseWhere = direction === 'downstream'
       ? `source_type = $5 AND source_id = $7`
@@ -349,21 +349,26 @@ export class ResourceRelationshipRepository {
         : `(rr.source_type = t.target_type AND rr.source_id = t.target_id) OR (rr.target_type = t.source_type AND rr.target_id = t.source_id)`;
 
     const orgId = orgContext.getOrThrow();
+    const queryParams = [orgId, orgId, orgId, orgId, rootType, maxDepth, rootId];
+    if (relationType) {
+      queryParams.push(relationType);
+    }
+
     const { rows } = await this.db.raw<{ rows: TraversalRow[] }>(`
       WITH RECURSIVE
       all_edges(source_type, source_id, target_type, target_id, relation_type) AS (
         SELECT source_type::text, source_id::text, target_type::text, target_id::text, relation_type
         FROM ${TABLE_NAME}
-        WHERE deleted_at IS NULL AND organization_id = :orgId
+        WHERE deleted_at IS NULL AND organization_id = $1
         UNION ALL
         SELECT 'server', ad.server_id::text, 'application', ad.application_id::text, 'hosts'
         FROM application_deployments ad
-        JOIN applications a ON a.id = ad.application_id AND a.deleted_at IS NULL AND a.organization_id = :orgId
-        WHERE ad.deleted_at IS NULL AND ad.organization_id = :orgId
+        JOIN applications a ON a.id = ad.application_id AND a.deleted_at IS NULL AND a.organization_id = $2
+        WHERE ad.deleted_at IS NULL AND ad.organization_id = $3
         UNION ALL
         SELECT u.owner_resource_type::text, u.owner_resource_id::text, 'url', u.id::text, 'exposes'
         FROM urls u
-        WHERE u.deleted_at IS NULL AND u.organization_id = :orgId
+        WHERE u.deleted_at IS NULL AND u.organization_id = $4
           AND u.owner_resource_type IS NOT NULL AND u.owner_resource_id IS NOT NULL
       ),
       traversal(source_type, source_id, target_type, target_id, relation_type, depth, path) AS (
@@ -377,12 +382,12 @@ export class ResourceRelationshipRepository {
                t.path || (ae.source_type || ':' || ae.source_id)
         FROM all_edges ae
         JOIN traversal t ON ${recursiveJoin.replace(/rr\./g, 'ae.')}
-        WHERE t.depth < :maxDepth
+        WHERE t.depth < $6
           ${relationFilter}
           AND NOT ((ae.source_type || ':' || ae.source_id) = ANY(t.path))
       )
       SELECT DISTINCT source_type, source_id, target_type, target_id, relation_type, depth FROM traversal
-    `, { orgId, orgId, orgId, orgId, rootType, maxDepth, rootId, ...(relationType ? { relationType } : {}) });
+    `, queryParams);
 
     const uniqueResourceIds = new Set<string>();
     uniqueResourceIds.add(`${rootType}:${rootId}`);
@@ -448,16 +453,16 @@ export class ResourceRelationshipRepository {
       all_edges(source_type, source_id, target_type, target_id, relation_type) AS (
         SELECT source_type::text, source_id::text, target_type::text, target_id::text, relation_type
         FROM ${TABLE_NAME}
-        WHERE deleted_at IS NULL AND organization_id = :orgId
+        WHERE deleted_at IS NULL AND organization_id = $4
         UNION ALL
         SELECT 'server', ad.server_id::text, 'application', ad.application_id::text, 'hosts'
         FROM application_deployments ad
-        JOIN applications a ON a.id = ad.application_id AND a.deleted_at IS NULL AND a.organization_id = :orgId
-        WHERE ad.deleted_at IS NULL AND ad.organization_id = :orgId
+        JOIN applications a ON a.id = ad.application_id AND a.deleted_at IS NULL AND a.organization_id = $5
+        WHERE ad.deleted_at IS NULL AND ad.organization_id = $6
         UNION ALL
         SELECT u.owner_resource_type::text, u.owner_resource_id::text, 'url', u.id::text, 'exposes'
         FROM urls u
-        WHERE u.deleted_at IS NULL AND u.organization_id = :orgId
+        WHERE u.deleted_at IS NULL AND u.organization_id = $7
           AND u.owner_resource_type IS NOT NULL AND u.owner_resource_id IS NOT NULL
       ),
       impact(resource_type, resource_id, depth, path) AS (
@@ -467,10 +472,10 @@ export class ResourceRelationshipRepository {
           CASE WHEN relation_type IN ('depends_on','connects_to','consumes')
                THEN source_id ELSE target_id END,
           1,
-          ARRAY[:rootType || ':' || :rootIdText]
+          ARRAY[$1 || ':' || $2]
         FROM all_edges
-        WHERE (target_type = :rootType AND target_id = :rootIdText AND relation_type IN ('depends_on','connects_to','consumes'))
-           OR (source_type = :rootType AND source_id = :rootIdText AND relation_type IN ('hosts','exposes'))
+        WHERE (target_type = $1 AND target_id = $2 AND relation_type IN ('depends_on','connects_to','consumes'))
+           OR (source_type = $1 AND source_id = $2 AND relation_type IN ('hosts','exposes'))
 
         UNION ALL
 
@@ -489,13 +494,13 @@ export class ResourceRelationshipRepository {
           (ae.relation_type IN ('hosts','exposes')
             AND ae.source_type = i.resource_type AND ae.source_id = i.resource_id)
         )
-        WHERE i.depth < :maxDepth
+        WHERE i.depth < $3
           AND NOT ((i.resource_type || ':' || i.resource_id) = ANY(i.path))
       )
       SELECT resource_type, resource_id, MIN(depth) AS min_depth
       FROM impact
       GROUP BY resource_type, resource_id
-    `, { rootType, rootIdText, maxDepth: effectiveMaxDepth, orgId });
+    `, [rootType, rootIdText, effectiveMaxDepth, orgId, orgId, orgId, orgId]);
 
     const impactedResources: ImpactNode[] = [];
     const byType: Record<ResourceType, number> = {
