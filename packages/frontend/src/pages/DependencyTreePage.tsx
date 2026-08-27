@@ -27,10 +27,10 @@ const RESOURCE_ICONS: Record<string, string> = {
 };
 
 const COLORS: Record<string, string> = {
-  server: '#06b6d4',      // cyan
-  application: '#8b5cf6', // purple
-  database: '#ec4899',    // pink
-  url: '#10b981',         // green
+  server: '#3b82f6',      // blue
+  application: '#f59e0b', // amber
+  database: '#ef4444',    // red
+  url: '#10b981',         // emerald
 };
 
 const RELATION_TYPES = [
@@ -104,22 +104,23 @@ export function DependencyTreePage() {
 
   // Handlers de mouse para drag and drop
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !graphQuery.data) return;
 
     const rect = canvasRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    const boxSize = 110;
+    const mouseX = (e.clientX - rect.left) * (canvasRef.current.width / rect.width);
+    const mouseY = (e.clientY - rect.top) * (canvasRef.current.height / rect.height);
+    const boxWidth = 110;
+    const boxHeight = 80;
 
     // Detectar qual nó foi clicado
     for (const [nodeId, pos] of layoutPositions) {
-      const dx = mouseX - pos.x;
-      const dy = mouseY - pos.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+      const dx = Math.abs(mouseX - pos.x);
+      const dy = Math.abs(mouseY - pos.y);
 
-      if (distance < boxSize / 2) {
+      if (dx < boxWidth / 2 && dy < boxHeight / 2) {
         setDraggingNode(nodeId);
-        setDragOffset({ x: dx, y: dy });
+        setDragOffset({ x: mouseX - pos.x, y: mouseY - pos.y });
+        console.log('🖱️ Arrastrando:', nodeId);
         return;
       }
     }
@@ -129,8 +130,8 @@ export function DependencyTreePage() {
     if (!draggingNode || !canvasRef.current) return;
 
     const rect = canvasRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    const mouseX = (e.clientX - rect.left) * (canvasRef.current.width / rect.width);
+    const mouseY = (e.clientY - rect.top) * (canvasRef.current.height / rect.height);
 
     const newPositions = new Map(positions);
     newPositions.set(draggingNode, {
@@ -142,6 +143,9 @@ export function DependencyTreePage() {
   };
 
   const handleCanvasMouseUp = () => {
+    if (draggingNode) {
+      console.log('✋ Soltou:', draggingNode);
+    }
     setDraggingNode(null);
   };
 
@@ -206,48 +210,51 @@ export function DependencyTreePage() {
       if (!node) continue;
 
       const color = COLORS[node.resourceType] || '#6b7280';
-      const boxWidth = 110;
-      const boxHeight = 80;
+      const boxWidth = 130;
+      const boxHeight = 100;
       const isDragging = nodeId === draggingNode;
 
-      // Desenhar sombra (se arrastar)
-      if (isDragging) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-        ctx.shadowBlur = 15;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-      }
+      // Desenhar sombra
+      ctx.shadowColor = isDragging ? 'rgba(59, 130, 246, 0.6)' : 'rgba(0, 0, 0, 0.3)';
+      ctx.shadowBlur = isDragging ? 20 : 10;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = isDragging ? 8 : 4;
 
-      // Desenhar retângulo arredondado
-      ctx.fillStyle = color;
-      ctx.globalAlpha = isDragging ? 0.95 : 0.85;
-      roundRect(ctx, pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight, 8);
+      // Desenhar retângulo arredondado com gradiente
+      const gradient = ctx.createLinearGradient(pos.x - boxWidth / 2, pos.y - boxHeight / 2, pos.x - boxWidth / 2, pos.y + boxHeight / 2);
+      gradient.addColorStop(0, color);
+      gradient.addColorStop(1, adjustColor(color, -20));
+
+      ctx.fillStyle = gradient;
+      ctx.globalAlpha = 1;
+      roundRect(ctx, pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight, 10);
       ctx.fill();
+
+      // Borda mais espessa se arrastando
+      ctx.strokeStyle = isDragging ? '#ffffff' : '#ffffff';
+      ctx.lineWidth = isDragging ? 3 : 2;
+      ctx.globalAlpha = isDragging ? 1 : 0.7;
+      roundRect(ctx, pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight, 10);
+      ctx.stroke();
 
       ctx.globalAlpha = 1;
       ctx.shadowColor = 'rgba(0, 0, 0, 0)';
-
-      // Borda
-      ctx.strokeStyle = isDragging ? '#ffffff' : '#e2e8f0';
-      ctx.lineWidth = isDragging ? 3 : 2;
-      roundRect(ctx, pos.x - boxWidth / 2, pos.y - boxHeight / 2, boxWidth, boxHeight, 8);
-      ctx.stroke();
 
       // Desenhar ícone e texto
       ctx.fillStyle = '#ffffff';
       const icon = RESOURCE_ICONS[node.resourceType] || '📦';
       const lines = node.label.split(' ');
 
-      ctx.font = 'bold 28px Arial';
+      ctx.font = 'bold 32px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(icon, pos.x, pos.y - 20);
+      ctx.fillText(icon, pos.x, pos.y - 25);
 
-      ctx.font = 'bold 11px Arial';
+      ctx.font = 'bold 12px Arial';
       ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
       lines.slice(0, 2).forEach((line, i) => {
-        ctx.fillText(line.substring(0, 12), pos.x, pos.y + 15 + (i * 13));
+        ctx.fillText(line.substring(0, 13), pos.x, pos.y + 8 + (i * 14));
       });
     }
   }, [graphQuery.data, layoutPositions, draggingNode]);
@@ -265,6 +272,16 @@ export function DependencyTreePage() {
     ctx.lineTo(x, y + radius);
     ctx.quadraticCurveTo(x, y, x + radius, y);
     ctx.closePath();
+  };
+
+  // Helper para ajustar cor (escurecer para gradiente)
+  const adjustColor = (color: string, percent: number): string => {
+    const num = parseInt(color.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = Math.max(0, Math.min(255, (num >> 16) + amt));
+    const G = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amt));
+    const B = Math.max(0, Math.min(255, (num & 0x0000FF) + amt));
+    return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
   };
 
   const handleAddLink = async () => {
