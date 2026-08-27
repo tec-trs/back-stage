@@ -646,7 +646,7 @@ export class ResourceRelationshipRepository {
         createdAt: row.created_at,
       };
     } catch (error: unknown) {
-      if (error instanceof Error && error.message.includes('violates unique constraint')) {
+      if (error instanceof Error && (error.message.includes('violates unique constraint') || error.message.includes('viola a restrição de unicidade'))) {
         throw new ConflictError('Este relacionamento já existe');
       }
       throw error;
