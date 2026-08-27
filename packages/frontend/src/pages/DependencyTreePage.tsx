@@ -27,10 +27,10 @@ const RESOURCE_ICONS: Record<string, string> = {
 };
 
 const COLORS: Record<string, string> = {
-  server: '#0ea5e9',      // sky blue vibrante
-  application: '#a855f7', // purple vibrante
-  database: '#ec4899',    // pink vibrante
-  url: '#14b8a6',         // teal vibrante
+  server: '#6366f1',      // indigo
+  application: '#06b6d4', // cyan
+  database: '#f43f5e',    // rose
+  url: '#84cc16',         // lime
 };
 
 const RELATION_TYPES = [
