@@ -94,7 +94,7 @@ export function useSubgraph(
   const getDirectionAndDepth = (type: string | null, requestedDepth: number): { direction: 'upstream' | 'downstream' | 'both'; depth: number } => {
     switch (type) {
       case 'url':
-        return { direction: 'downstream', depth: 1 };
+        return { direction: 'upstream', depth: 1 };
       case 'application':
         return { direction: 'downstream', depth: requestedDepth };
       case 'server':
