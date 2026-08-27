@@ -333,6 +333,7 @@ export class ResourceRelationshipRepository {
   ): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }> {
     const { depth = 2, direction = 'both', relationType } = options;
     const maxDepth = Math.min(depth, MAX_DEPTH_DEFAULT);
+    console.log(`[getSubgraph] rootType=${rootType}, rootId=${rootId}, direction=${direction}, depth=${maxDepth}`);
 
     const relationFilter = relationType ? `AND relation_type = $8` : '';
 
@@ -383,6 +384,11 @@ export class ResourceRelationshipRepository {
       )
       SELECT DISTINCT source_type, source_id, target_type, target_id, relation_type, depth FROM traversal
     `, [orgId, orgId, orgId, orgId, maxDepth, rootType, rootId, ...(relationType ? [relationType] : [])]);
+
+    console.log(`[getSubgraph] query returned ${rows.length} rows`);
+    if (rows.length > 0) {
+      console.log(`[getSubgraph] first row:`, rows[0]);
+    }
 
     const uniqueResourceIds = new Set<string>();
     uniqueResourceIds.add(`${rootType}:${rootId}`);
