@@ -27,10 +27,17 @@ interface Position {
 }
 
 const COLORS: Record<string, string> = {
-  server: '#6366f1',
-  application: '#8b5cf6',
-  database: '#f43f5e',
-  url: '#f59e0b',
+  server: '#0ea5e9',
+  application: '#06b6d4',
+  database: '#ec4899',
+  url: '#84cc16',
+};
+
+const ICONS: Record<string, string> = {
+  server: '🖥️',
+  application: '📱',
+  database: '🗄️',
+  url: '🌐',
 };
 
 const RELATION_TYPES = [
@@ -60,6 +67,7 @@ export function DependencyTreePage() {
   const [positions, setPositions] = useState<Map<string, Position>>(new Map());
   const [draggingNode, setDraggingNode] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [nodePositions, setNodePositions] = useState<Map<string, Position>>(new Map());
 
   const allResources: ResourceOption[] = useMemo(() => [
     ...(serversQuery.data?.map(s => ({ id: s.id, label: s.displayName || s.hostname, type: 'server' as const })) || []),
@@ -128,7 +136,6 @@ export function DependencyTreePage() {
     setTimeout(() => setMessage(null), 1500);
   };
 
-  // Renderizar canvas do gráfico
   useEffect(() => {
     if (!showGraph || !canvasRef.current || !graphQuery.data) return;
 
@@ -148,6 +155,12 @@ export function DependencyTreePage() {
       ctx.lineTo(i, canvas.height);
       ctx.stroke();
     }
+    for (let i = 0; i < canvas.height; i += 50) {
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(canvas.width, i);
+      ctx.stroke();
+    }
 
     // Calcular posições
     const nodeMap = new Map(graphQuery.data.nodes.map(n => [n.id, n]));
@@ -160,83 +173,109 @@ export function DependencyTreePage() {
 
     const nodesArray = Array.from(uniqueNodes);
     const cols = Math.ceil(Math.sqrt(nodesArray.length));
-    const spacing = 200;
+    const spacing = 240;
 
-    const nodePositions = new Map<string, Position>();
+    const newNodePositions = new Map<string, Position>();
     nodesArray.forEach((nodeId, i) => {
-      if (positions.has(nodeId)) {
-        nodePositions.set(nodeId, positions.get(nodeId)!);
+      if (nodePositions.has(nodeId)) {
+        newNodePositions.set(nodeId, nodePositions.get(nodeId)!);
       } else {
         const row = Math.floor(i / cols);
         const col = i % cols;
-        nodePositions.set(nodeId, {
-          x: col * spacing + 100,
-          y: row * spacing + 80,
+        newNodePositions.set(nodeId, {
+          x: col * spacing + 140,
+          y: row * spacing + 100,
         });
       }
     });
 
-    // Desenhar edges
-    ctx.strokeStyle = '#475569';
-    ctx.lineWidth = 2;
+    setNodePositions(newNodePositions);
+
+    // Desenhar edges com gradiente
     for (const edge of graphQuery.data.edges) {
-      const source = nodePositions.get(edge.sourceId);
-      const target = nodePositions.get(edge.targetId);
+      const source = newNodePositions.get(edge.sourceId);
+      const target = newNodePositions.get(edge.targetId);
       if (source && target) {
+        const gradient = ctx.createLinearGradient(source.x, source.y, target.x, target.y);
+        gradient.addColorStop(0, '#475569');
+        gradient.addColorStop(1, '#1e293b');
+
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(source.x, source.y + 30);
-        ctx.lineTo(target.x, target.y - 30);
+        ctx.moveTo(source.x, source.y + 40);
+        ctx.lineTo(target.x, target.y - 40);
         ctx.stroke();
 
-        // Label
+        // Label de tipo de relação
         const midX = (source.x + target.x) / 2;
         const midY = (source.y + target.y) / 2;
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(midX - 35, midY - 10, 70, 18);
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(midX - 35, midY - 10, 70, 18);
         ctx.fillStyle = '#94a3b8';
-        ctx.font = '10px Arial';
+        ctx.font = '11px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(edge.relationType.replace('_', ' '), midX, midY - 5);
+        ctx.fillText(edge.relationType.replace('_', ' '), midX, midY + 4);
       }
     }
 
-    // Desenhar nodes
-    for (const [nodeId, pos] of nodePositions) {
+    // Desenhar nodes com melhor visual
+    for (const [nodeId, pos] of newNodePositions) {
       const node = nodeMap.get(nodeId);
       if (!node) continue;
 
       const color = COLORS[node.resourceType];
       const isDragging = nodeId === draggingNode;
-      const width = 160;
-      const height = 70;
+      const width = 180;
+      const height = 90;
 
+      // Shadow ao arrastar
       if (isDragging) {
-        ctx.shadowColor = color + '99';
-        ctx.shadowBlur = 20;
+        ctx.shadowColor = color + '66';
+        ctx.shadowBlur = 25;
+        ctx.shadowOffsetX = 5;
         ctx.shadowOffsetY = 8;
       }
 
+      // Background
+      ctx.fillStyle = '#1f2937';
+      ctx.fillRect(pos.x - width / 2, pos.y - height / 2, width, height);
+
+      // Border com cor
       ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
+      ctx.lineWidth = 3;
       ctx.strokeRect(pos.x - width / 2, pos.y - height / 2, width, height);
-      ctx.setLineDash([]);
+
       ctx.shadowColor = 'rgba(0, 0, 0, 0)';
 
+      // Ícone
+      ctx.font = '28px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(ICONS[node.resourceType], pos.x - width / 2 + 30, pos.y - 5);
+
+      // Tipo de recurso
       ctx.fillStyle = color;
-      ctx.font = 'bold 10px Arial';
+      ctx.font = 'bold 9px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText(`● ${node.resourceType.toUpperCase()}`, pos.x - width / 2 + 10, pos.y - height / 2 + 15);
+      ctx.fillText(node.resourceType.toUpperCase(), pos.x - width / 2 + 65, pos.y - height / 2 + 18);
 
+      // Nome do recurso
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 12px Arial';
-      ctx.textAlign = 'left';
-      const lines = node.label.split(' ');
-      lines.slice(0, 2).forEach((line, i) => {
-        ctx.fillText(line.substring(0, 18), pos.x - width / 2 + 10, pos.y + 5 + (i * 14));
-      });
-    }
-  }, [showGraph, graphQuery.data, draggingNode, positions]);
+      ctx.font = 'bold 13px Arial';
+      const maxLen = 16;
+      const displayName = node.label.length > maxLen ? node.label.substring(0, maxLen) + '...' : node.label;
+      ctx.fillText(displayName, pos.x - width / 2 + 65, pos.y + 10);
 
-  // Handlers de mouse para mover nodes
+      // ID curto
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '9px Arial';
+      ctx.fillText(nodeId.substring(0, 8), pos.x - width / 2 + 65, pos.y + 28);
+    }
+  }, [showGraph, graphQuery.data, draggingNode, nodePositions]);
+
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current) return;
 
@@ -244,8 +283,38 @@ export function DependencyTreePage() {
     const mouseX = (e.clientX - rect.left) * (canvasRef.current.width / rect.width);
     const mouseY = (e.clientY - rect.top) * (canvasRef.current.height / rect.height);
 
-    // Aqui você poderia implementar drag dos nodes
-    setDraggingNode('example');
+    // Encontrar node sob o cursor
+    for (const [nodeId, pos] of nodePositions) {
+      const width = 180;
+      const height = 90;
+      if (
+        mouseX >= pos.x - width / 2 &&
+        mouseX <= pos.x + width / 2 &&
+        mouseY >= pos.y - height / 2 &&
+        mouseY <= pos.y + height / 2
+      ) {
+        setDraggingNode(nodeId);
+        setDragOffset({ x: mouseX - pos.x, y: mouseY - pos.y });
+        break;
+      }
+    }
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!draggingNode || !canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const mouseX = (e.clientX - rect.left) * (canvasRef.current.width / rect.width);
+    const mouseY = (e.clientY - rect.top) * (canvasRef.current.height / rect.height);
+
+    const newPos = { x: mouseX - dragOffset.x, y: mouseY - dragOffset.y };
+    const newPositions = new Map(nodePositions);
+    newPositions.set(draggingNode, newPos);
+    setNodePositions(newPositions);
+  };
+
+  const handleCanvasMouseUp = () => {
+    setDraggingNode(null);
   };
 
   if (isLoading) return <Spinner />;
@@ -434,7 +503,12 @@ export function DependencyTreePage() {
                   display: 'block',
                   width: '100%',
                   height: '700px',
+                  cursor: draggingNode ? 'grabbing' : 'grab',
                 }}
+                onMouseDown={handleCanvasMouseDown}
+                onMouseMove={handleCanvasMouseMove}
+                onMouseUp={handleCanvasMouseUp}
+                onMouseLeave={handleCanvasMouseUp}
               />
             ) : (
               <div style={{ height: '700px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
