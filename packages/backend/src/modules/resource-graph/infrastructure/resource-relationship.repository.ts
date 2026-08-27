@@ -337,10 +337,10 @@ export class ResourceRelationshipRepository {
     const relationFilter = relationType ? `AND relation_type = $8` : '';
 
     const baseWhere = direction === 'downstream'
-      ? `source_type = $5 AND source_id = $7`
+      ? `source_type = $6 AND source_id = $7`
       : direction === 'upstream'
-        ? `target_type = $5 AND target_id = $7`
-        : `(source_type = $5 AND source_id = $7) OR (target_type = $5 AND target_id = $7)`;
+        ? `target_type = $6 AND target_id = $7`
+        : `(source_type = $6 AND source_id = $7) OR (target_type = $6 AND target_id = $7)`;
 
     const recursiveJoin = direction === 'downstream'
       ? `rr.source_type = t.target_type AND rr.source_id = t.target_id`
@@ -349,11 +349,6 @@ export class ResourceRelationshipRepository {
         : `(rr.source_type = t.target_type AND rr.source_id = t.target_id) OR (rr.target_type = t.source_type AND rr.target_id = t.source_id)`;
 
     const orgId = orgContext.getOrThrow();
-    const queryParams = [orgId, orgId, orgId, orgId, rootType, maxDepth, rootId];
-    if (relationType) {
-      queryParams.push(relationType);
-    }
-
     const { rows } = await this.db.raw<{ rows: TraversalRow[] }>(`
       WITH RECURSIVE
       all_edges(source_type, source_id, target_type, target_id, relation_type) AS (
@@ -382,12 +377,12 @@ export class ResourceRelationshipRepository {
                t.path || (ae.source_type || ':' || ae.source_id)
         FROM all_edges ae
         JOIN traversal t ON ${recursiveJoin.replace(/rr\./g, 'ae.')}
-        WHERE t.depth < $6
+        WHERE t.depth < $5
           ${relationFilter}
           AND NOT ((ae.source_type || ':' || ae.source_id) = ANY(t.path))
       )
       SELECT DISTINCT source_type, source_id, target_type, target_id, relation_type, depth FROM traversal
-    `, queryParams);
+    `, [orgId, orgId, orgId, orgId, maxDepth, rootType, rootId, ...(relationType ? [relationType] : [])]);
 
     const uniqueResourceIds = new Set<string>();
     uniqueResourceIds.add(`${rootType}:${rootId}`);
