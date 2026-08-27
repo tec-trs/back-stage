@@ -335,37 +335,6 @@ export class ResourceRelationshipRepository {
     const maxDepth = Math.min(depth, MAX_DEPTH_DEFAULT);
     console.log(`[getSubgraph] rootType=${rootType}, rootId=${rootId}, direction=${direction}, depth=${maxDepth}`);
 
-    // Dados de teste para URL específica
-    if (rootType === 'url' && rootId === 'c4aab143-c123-44bc-884c-af9620e069e8') {
-      console.log('[getSubgraph] Retornando dados de teste');
-      return {
-        nodes: [
-          {
-            id: rootId,
-            resourceType: 'url',
-            label: 'LSTOVS',
-            status: 'active',
-          },
-          {
-            id: '68a02e0a',
-            resourceType: 'application',
-            label: 'Platform Engineering',
-            status: 'active',
-          },
-        ],
-        edges: [
-          {
-            id: '68a02e0a→url-c4aab143',
-            sourceType: 'application',
-            sourceId: '68a02e0a',
-            targetType: 'url',
-            targetId: rootId,
-            relationType: 'exposes',
-          },
-        ],
-      };
-    }
-
     const relationFilter = relationType ? `AND relation_type = $8` : '';
 
     const baseWhere = direction === 'downstream'
