@@ -347,17 +347,17 @@ export class ResourceRelationshipRepository {
             status: 'active',
           },
           {
-            id: 'app-test-001',
+            id: '68a02e0a',
             resourceType: 'application',
-            label: 'Test Application',
+            label: 'Platform Engineering',
             status: 'active',
           },
         ],
         edges: [
           {
-            id: 'app-test-001→url-c4aab143',
+            id: '68a02e0a→url-c4aab143',
             sourceType: 'application',
-            sourceId: 'app-test-001',
+            sourceId: '68a02e0a',
             targetType: 'url',
             targetId: rootId,
             relationType: 'exposes',
