@@ -7,6 +7,7 @@ import { validateMiddleware } from '../../../../shared/http/validate.middleware.
 
 import type { DatabaseController } from './database.controller.js';
 import {
+  bulkDeleteDatabasesBodySchema,
   createDatabaseBodySchema,
   databaseIdParamsSchema,
   listDatabasesQuerySchema,
@@ -48,6 +49,23 @@ export function createDatabaseRouter(controller: DatabaseController): Router {
     authorizeMiddleware(...WRITE_ROLES),
     validateMiddleware({ body: createDatabaseBodySchema }),
     asyncHandler(controller.create),
+  );
+
+  /**
+   * @openapi
+   * /databases/bulk-delete:
+   *   post:
+   *     summary: Remove (soft delete) multiplos bancos de dados
+   *     tags: [Databases]
+   *     security: [{ bearerAuth: [] }]
+   *     responses:
+   *       200: { description: Bancos de dados removidos }
+   */
+  router.post(
+    '/bulk-delete',
+    authorizeMiddleware(...DELETE_ROLES),
+    validateMiddleware({ body: bulkDeleteDatabasesBodySchema }),
+    asyncHandler(controller.bulkDelete),
   );
 
   /**

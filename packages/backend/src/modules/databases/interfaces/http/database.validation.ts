@@ -90,3 +90,7 @@ export const listDatabasesQuerySchema = z.object({
   tags: z.string().transform((str) => str.split(',')).optional(),
   search: z.string().optional(),
 });
+
+export const bulkDeleteDatabasesBodySchema = z.object({
+  ids: z.array(z.string().uuid()).min(1),
+});

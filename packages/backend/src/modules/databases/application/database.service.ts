@@ -136,4 +136,19 @@ export class DatabaseService {
       userAgent: audit.userAgent,
     });
   }
+
+  public async bulkDelete(ids: string[], audit: AuditContext): Promise<number> {
+    const count = await this.databaseRepository.bulkSoftDelete(ids);
+
+    await auditLogger.record({
+      actorUserId: audit.actorUserId,
+      action: 'database.bulk_deleted',
+      resourceType: 'database',
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+      metadata: { deletedCount: count, ids },
+    });
+
+    return count;
+  }
 }

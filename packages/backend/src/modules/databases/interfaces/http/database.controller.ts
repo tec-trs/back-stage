@@ -4,6 +4,7 @@ import type { z } from 'zod';
 import type { DatabaseService } from '../../application/database.service.js';
 
 import type {
+  bulkDeleteDatabasesBodySchema,
   createDatabaseBodySchema,
   listDatabasesQuerySchema,
   setDatabaseStatusBodySchema,
@@ -14,6 +15,7 @@ type CreateDatabaseBody = z.infer<typeof createDatabaseBodySchema>;
 type UpdateDatabaseBody = z.infer<typeof updateDatabaseBodySchema>;
 type SetDatabaseStatusBody = z.infer<typeof setDatabaseStatusBodySchema>;
 type ListDatabasesQuery = z.infer<typeof listDatabasesQuerySchema>;
+type BulkDeleteDatabasesBody = z.infer<typeof bulkDeleteDatabasesBodySchema>;
 
 export class DatabaseController {
   public constructor(private readonly databaseService: DatabaseService) {}
@@ -74,5 +76,15 @@ export class DatabaseController {
       userAgent: request.header('user-agent'),
     });
     response.status(204).send();
+  };
+
+  public bulkDelete = async (request: Request, response: Response): Promise<void> => {
+    const body = request.body as BulkDeleteDatabasesBody;
+    const count = await this.databaseService.bulkDelete(body.ids, {
+      actorUserId: request.user?.id,
+      ipAddress: request.ip,
+      userAgent: request.header('user-agent'),
+    });
+    response.status(200).json({ deleted: count });
   };
 }
