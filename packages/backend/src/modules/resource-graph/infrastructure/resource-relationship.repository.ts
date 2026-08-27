@@ -337,10 +337,10 @@ export class ResourceRelationshipRepository {
     const relationFilter = relationType ? `AND relation_type = :relationType` : '';
 
     const baseWhere = direction === 'downstream'
-      ? `source_type = :rootType AND source_id = :rootIdText`
+      ? `source_type = $5 AND source_id = $7`
       : direction === 'upstream'
-        ? `target_type = :rootType AND target_id = :rootIdText`
-        : `(source_type = :rootType AND source_id = :rootIdText) OR (target_type = :rootType AND target_id = :rootIdText)`;
+        ? `target_type = $5 AND target_id = $7`
+        : `(source_type = $5 AND source_id = $7) OR (target_type = $5 AND target_id = $7)`;
 
     const recursiveJoin = direction === 'downstream'
       ? `rr.source_type = t.target_type AND rr.source_id = t.target_id`
@@ -382,7 +382,7 @@ export class ResourceRelationshipRepository {
           AND NOT ((ae.source_type || ':' || ae.source_id) = ANY(t.path))
       )
       SELECT DISTINCT source_type, source_id, target_type, target_id, relation_type, depth FROM traversal
-    `, { rootType, rootId, maxDepth, orgId, ...(relationType ? { relationType } : {}) });
+    `, { orgId, orgId, orgId, orgId, rootType, maxDepth, rootId, ...(relationType ? { relationType } : {}) });
 
     const uniqueResourceIds = new Set<string>();
     uniqueResourceIds.add(`${rootType}:${rootId}`);
