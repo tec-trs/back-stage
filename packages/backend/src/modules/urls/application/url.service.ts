@@ -23,7 +23,8 @@ export interface AuditContext {
 
 function isValidUrl(url: string): boolean {
   try {
-    new URL(url);
+    const urlToValidate = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
+    new URL(urlToValidate);
     return true;
   } catch {
     return false;
