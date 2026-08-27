@@ -91,28 +91,28 @@ export function useSubgraph(
   resourceId: string | null,
   depth: number = 2,
 ) {
-  const getDirection = (type: string | null): 'upstream' | 'downstream' | 'both' => {
+  const getDirectionAndDepth = (type: string | null, requestedDepth: number): { direction: 'upstream' | 'downstream' | 'both'; depth: number } => {
     switch (type) {
       case 'url':
-        return 'downstream';
+        return { direction: 'downstream', depth: 1 };
       case 'application':
-        return 'downstream';
+        return { direction: 'downstream', depth: requestedDepth };
       case 'server':
-        return 'upstream';
+        return { direction: 'upstream', depth: requestedDepth };
       case 'database':
-        return 'upstream';
+        return { direction: 'upstream', depth: requestedDepth };
       default:
-        return 'both';
+        return { direction: 'both', depth: requestedDepth };
     }
   };
 
-  const direction = getDirection(resourceType);
+  const { direction, depth: finalDepth } = getDirectionAndDepth(resourceType, depth);
 
   return useQuery({
-    queryKey: ['resource-graph-subgraph', resourceType, resourceId, depth, direction],
+    queryKey: ['resource-graph-subgraph', resourceType, resourceId, finalDepth, direction],
     queryFn: () =>
       apiRequest<SubgraphResponse>(
-        `/api/resource-graph/${resourceType}/${resourceId}/subgraph?depth=${depth}&direction=${direction}`,
+        `/api/resource-graph/${resourceType}/${resourceId}/subgraph?depth=${finalDepth}&direction=${direction}`,
         { method: 'GET' },
       ),
     enabled: !!resourceType && !!resourceId,
