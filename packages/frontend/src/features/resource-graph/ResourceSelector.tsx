@@ -24,9 +24,9 @@ function getResourceLabel(resource: any, type: ResourceType): string {
     case 'server':
       return resource.displayName || resource.hostname;
     case 'application':
-      return resource.name || resource.id.substring(0, 8);
+      return resource.displayName || resource.code || resource.id.substring(0, 8);
     case 'database':
-      return resource.name || resource.id.substring(0, 8);
+      return resource.displayName || resource.name || resource.id.substring(0, 8);
     case 'url':
       return resource.label || resource.url || resource.id.substring(0, 8);
     default:
