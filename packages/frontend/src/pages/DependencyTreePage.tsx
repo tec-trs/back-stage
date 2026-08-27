@@ -1,17 +1,24 @@
-import { useState, useMemo } from 'react';
-import { useFullGraph } from '../features/resource-graph/use-resource-graph';
-import { useSimulateImpact } from '../features/resource-graph/use-resource-graph';
+import { useState } from 'react';
+import { useAllApplications } from '../features/applications/use-applications';
+import { useAllServers } from '../features/servers/use-servers';
+import { useAllUrls } from '../features/urls/use-urls';
+import { useAllDatabases } from '../features/databases/use-databases';
+import { useCreateRelationship } from '../features/resource-graph/use-resource-graph';
 import { PageHeader } from '../shared/components/PageHeader';
-import { Spinner } from '../shared/components/Spinner';
-import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { Button } from '../shared/components/Button';
+import { Spinner } from '../shared/components/Spinner';
 
-interface TreeNode {
+interface ResourceOption {
   id: string;
   label: string;
-  resourceType: string;
-  children: TreeNode[];
-  dependsOn?: string[];
+  type: 'server' | 'application' | 'database' | 'url';
+}
+
+interface Link {
+  id: string;
+  source: ResourceOption;
+  target: ResourceOption;
+  relationType: string;
 }
 
 const RESOURCE_ICONS: Record<string, string> = {
@@ -19,316 +26,270 @@ const RESOURCE_ICONS: Record<string, string> = {
   application: '📱',
   database: '📊',
   url: '🔗',
-  group: '📦',
 };
 
+const RELATION_TYPES = [
+  { value: 'exposes', label: 'Expõe' },
+  { value: 'hosts', label: 'Hospeda' },
+  { value: 'depends_on', label: 'Depende de' },
+  { value: 'connects_to', label: 'Conecta a' },
+  { value: 'consumes', label: 'Consome' },
+];
+
 export function DependencyTreePage() {
-  const { data, isLoading, isError, error } = useFullGraph({ page: 1, pageSize: 500 });
-  const simulateImpact = useSimulateImpact();
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  const [impactedResources, setImpactedResources] = useState<Set<string>>(new Set());
-  const [simulationSourceId, setSimulationSourceId] = useState<string | null>(null);
+  const applicationsQuery = useAllApplications();
+  const serversQuery = useAllServers();
+  const urlsQuery = useAllUrls();
+  const databasesQuery = useAllDatabases();
+  const createRelationship = useCreateRelationship();
 
-  const tree = useMemo(() => {
-    if (!data) return null;
+  const [selectedSource, setSelectedSource] = useState<ResourceOption | null>(null);
+  const [selectedTarget, setSelectedTarget] = useState<ResourceOption | null>(null);
+  const [relationType, setRelationType] = useState('exposes');
+  const [links, setLinks] = useState<Link[]>([]);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-    const nodeMap = new Map(data.nodes.map(n => [n.id, n]));
-    const edgesBySource = new Map<string, { targetId: string; type: string }[]>();
-    const edgesByTarget = new Map<string, { sourceId: string; type: string }[]>();
-    const hostedApps = new Map<string, string[]>(); // server -> apps
+  const allResources: ResourceOption[] = [
+    ...(serversQuery.data?.map(s => ({ id: s.id, label: s.displayName || s.hostname, type: 'server' as const })) || []),
+    ...(applicationsQuery.data?.map(a => ({ id: a.id, label: a.displayName || a.code, type: 'application' as const })) || []),
+    ...(databasesQuery.data?.map(d => ({ id: d.id, label: d.displayName || d.name, type: 'database' as const })) || []),
+    ...(urlsQuery.data?.map(u => ({ id: u.id, label: u.label || u.url, type: 'url' as const })) || []),
+  ];
 
-    for (const edge of data.edges) {
-      if (!edgesBySource.has(edge.sourceId)) edgesBySource.set(edge.sourceId, []);
-      if (!edgesByTarget.has(edge.targetId)) edgesByTarget.set(edge.targetId, []);
-      edgesBySource.get(edge.sourceId)!.push({ targetId: edge.targetId, type: edge.relationType });
-      edgesByTarget.get(edge.targetId)!.push({ sourceId: edge.sourceId, type: edge.relationType });
+  const isLoading = applicationsQuery.isLoading || serversQuery.isLoading || urlsQuery.isLoading || databasesQuery.isLoading;
 
-      // Track hosted applications
-      if (edge.relationType === 'hosts') {
-        if (!hostedApps.has(edge.sourceId)) hostedApps.set(edge.sourceId, []);
-        hostedApps.get(edge.sourceId)!.push(edge.targetId);
-      }
+  const handleAddLink = async () => {
+    if (!selectedSource || !selectedTarget) {
+      setMessage({ type: 'error', text: 'Selecione origem e destino' });
+      return;
     }
 
-    const buildTree = (nodeId: string, visited = new Set<string>()): TreeNode | null => {
-      if (visited.has(nodeId)) return null;
-      visited.add(nodeId);
-
-      const node = nodeMap.get(nodeId);
-      if (!node) return null;
-
-      // Para URLs e outros nós, mostra quem depende deles (dependentes)
-      // Para outros nós, mostra o que eles dependem (dependências)
-      const children: TreeNode[] = [];
-      let deps: string[] = [];
-
-      if (node.resourceType === 'url') {
-        // URLs mostram seus dependentes (quem depends_on, connects_to, consumes desta URL)
-        const incoming = edgesByTarget.get(nodeId) || [];
-        let dependents = incoming
-          .filter(e => ['depends_on', 'connects_to', 'consumes'].includes(e.type))
-          .map(e => e.sourceId);
-
-        // Se a URL depende de apps, encontrar os servidores que hospedam essas apps
-        const appDependencies = dependents.filter(id => nodeMap.get(id)?.resourceType === 'application');
-        const serverHostingApps = new Set<string>();
-
-        for (const appId of appDependencies) {
-          // Encontrar todos os servidores que hospedam essa app
-          const hosting = edgesBySource.get(appId) || [];
-          const serversHosting = hosting
-            .filter(e => e.type === 'hosts')
-            .map(e => e.targetId)
-            .filter(id => nodeMap.get(id)?.resourceType === 'server');
-
-          serversHosting.forEach(id => serverHostingApps.add(id));
-        }
-
-        // Usar servidores se encontrou, senão usar os dependentes originais
-        if (serverHostingApps.size > 0) {
-          dependents = Array.from(serverHostingApps);
-
-          // Agrupar servidores por grupo (se vindo de um grupo explícito) ou display_group (fallback)
-          const serversByGroup = new Map<string, string[]>();
-
-          for (const serverId of dependents) {
-            const server = nodeMap.get(serverId);
-            if (server) {
-              const group = server.displayGroup || 'Sem grupo';
-              if (!serversByGroup.has(group)) {
-                serversByGroup.set(group, []);
-              }
-              serversByGroup.get(group)!.push(serverId);
-            }
-          }
-
-          // Criar nós de grupo virtuais
-          for (const [groupName, serverIds] of serversByGroup) {
-            const groupNode: TreeNode = {
-              id: `group:${groupName}`,
-              label: groupName,
-              resourceType: 'group',
-              children: serverIds
-                .map(serverId => buildTree(serverId, new Set(visited)))
-                .filter((n): n is TreeNode => n !== null),
-            };
-            children.push(groupNode);
-          }
-        } else {
-          const dependentTrees = dependents
-            .map(depId => buildTree(depId, new Set(visited)))
-            .filter((n): n is TreeNode => n !== null);
-          children.push(...dependentTrees);
-        }
-
-        deps = dependents;
-      } else {
-        // Outros nós mostram o que eles dependem
-        const outgoing = edgesBySource.get(nodeId) || [];
-        deps = outgoing
-          .filter(e => !['hosts'].includes(e.type))
-          .map(e => e.targetId);
-
-        const depTrees = deps
-          .map(depId => buildTree(depId, new Set(visited)))
-          .filter((n): n is TreeNode => n !== null);
-        children.push(...depTrees);
-      }
-
-      // Add hosted apps as children for servers
-      const apps = hostedApps.get(nodeId) || [];
-      for (const appId of apps) {
-        const app = nodeMap.get(appId);
-        if (app && !visited.has(appId)) {
-          // Build tree for hosted app (so it can have its own dependencies)
-          const appTree = buildTree(appId, new Set(visited));
-          if (appTree) {
-            children.push(appTree);
-          }
-        }
-      }
-
-      return {
-        id: nodeId,
-        label: node.label,
-        resourceType: node.resourceType,
-        children,
-        dependsOn: deps,
-      };
-    };
-
-    // Build trees from root resources: URLs first (entry points), then orphans
-    const urlRoots = data.nodes.filter(n => n.resourceType === 'url');
-    const orphans = data.nodes.filter(n => n.resourceType !== 'url' && !edgesByTarget.has(n.id));
-    const roots = [...urlRoots, ...orphans];
-
-    return roots
-      .map(root => buildTree(root.id))
-      .filter((n): n is TreeNode => n !== null);
-  }, [data]);
-
-  const toggleNode = (nodeId: string) => {
-    const newExpanded = new Set(expandedNodes);
-    if (newExpanded.has(nodeId)) {
-      newExpanded.delete(nodeId);
-    } else {
-      newExpanded.add(nodeId);
+    if (selectedSource.id === selectedTarget.id) {
+      setMessage({ type: 'error', text: 'Não pode linkar um recurso a si mesmo' });
+      return;
     }
-    setExpandedNodes(newExpanded);
-  };
-
-  const handleSimulate = async (nodeId: string, resourceType: string) => {
-    setSimulationSourceId(nodeId);
-    setImpactedResources(new Set());
 
     try {
-      const result = await simulateImpact.mutateAsync({
-        resourceType: resourceType as any,
-        resourceId: nodeId,
+      await createRelationship.mutateAsync({
+        sourceType: selectedSource.type,
+        sourceId: selectedSource.id,
+        targetType: selectedTarget.type,
+        targetId: selectedTarget.id,
+        relationType,
       });
 
-      const affected = new Set(result.impactedResources.map(r => r.resourceId));
-      affected.add(nodeId);
-      setImpactedResources(affected);
-    } catch (err) {
-      console.error('Simulation error:', err);
+      const newLink: Link = {
+        id: `${selectedSource.id}-${selectedTarget.id}`,
+        source: selectedSource,
+        target: selectedTarget,
+        relationType,
+      };
+
+      setLinks([...links, newLink]);
+      setSelectedSource(null);
+      setSelectedTarget(null);
+      setMessage({ type: 'success', text: 'Relacionamento criado com sucesso!' });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error) {
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Erro ao criar relacionamento' });
     }
   };
 
-  const renderTreeNode = (node: TreeNode, depth: number = 0) => {
-    const isExpanded = expandedNodes.has(node.id);
-    const isAffected = impactedResources.has(node.id);
-    const icon = RESOURCE_ICONS[node.resourceType] || '📦';
-
-    return (
-      <div key={node.id} style={{ marginLeft: `${depth * 20}px` }}>
-        <div
-          style={{
-            padding: '8px',
-            marginBottom: '4px',
-            borderRadius: '4px',
-            backgroundColor: isAffected ? '#7f1d1d' : 'transparent',
-            border: isAffected ? '1px solid #dc2626' : '1px solid #374151',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <button
-            onClick={() => toggleNode(node.id)}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '12px',
-              color: '#9ca3af',
-              padding: 0,
-              width: '20px',
-            }}
-          >
-            {node.children.length > 0 ? (isExpanded ? '▼' : '▶') : '·'}
-          </button>
-          <span style={{ fontSize: '16px' }}>{icon}</span>
-          <span style={{ flex: 1, color: isAffected ? '#fca5a5' : '#e5e7eb' }}>
-            {node.label}
-          </span>
-          {simulationSourceId !== node.id && (
-            <Button
-              size="sm"
-              variant={isAffected ? 'secondary' : 'secondary'}
-              onClick={() => handleSimulate(node.id, node.resourceType)}
-              style={{ fontSize: '12px', padding: '4px 8px' }}
-            >
-              Simular
-            </Button>
-          )}
-          {isAffected && (
-            <span style={{ fontSize: '12px', color: '#fca5a5', fontWeight: 'bold' }}>
-              AFETADO ⚠️
-            </span>
-          )}
-        </div>
-        {isExpanded && node.children.length > 0 && (
-          <div>
-            {node.children.map(child => renderTreeNode(child, depth + 1))}
-          </div>
-        )}
-      </div>
-    );
+  const handleClearAll = () => {
+    setLinks([]);
+    setSelectedSource(null);
+    setSelectedTarget(null);
+    setMessage({ type: 'success', text: 'Tudo limpado!' });
+    setTimeout(() => setMessage(null), 2000);
   };
-
-  if (isError) {
-    return (
-      <div>
-        <PageHeader
-          title="Árvore de Dependências"
-          description="Visualize a hierarquia de dependências entre recursos"
-        />
-        <ErrorMessage message={error instanceof Error ? error.message : 'Erro ao carregar'} />
-      </div>
-    );
-  }
 
   if (isLoading) return <Spinner />;
 
-  if (!tree || tree.length === 0) {
-    return (
-      <div>
-        <PageHeader
-          title="Árvore de Dependências"
-          description="Visualize a hierarquia de dependências entre recursos"
-        />
-        <ErrorMessage message="Nenhum recurso encontrado" />
-      </div>
-    );
-  }
-
   return (
-    <div style={{ padding: '16px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '16px', maxWidth: '1400px', margin: '0 auto' }}>
       <PageHeader
-        title="Árvore de Dependências"
-        description="Visualize a hierarquia de dependências e simule o impacto de paradas"
+        title="Construtor de Dependências"
+        description="Crie relacionamentos entre recursos selecionando e linkando"
       />
 
-      {simulationSourceId && (
+      {message && (
         <div
           style={{
             marginBottom: '16px',
-            padding: '12px',
+            padding: '12px 16px',
             borderRadius: '4px',
-            backgroundColor: '#1f2937',
-            border: '1px solid #dc2626',
-            color: '#fca5a5',
+            backgroundColor: message.type === 'success' ? '#064e3b' : '#7f1d1d',
+            border: `1px solid ${message.type === 'success' ? '#10b981' : '#dc2626'}`,
+            color: message.type === 'success' ? '#10b981' : '#fca5a5',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>
-              Simulação ativa: {impactedResources.size} recurso(s) seria(m) afetado(s)
-            </span>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setSimulationSourceId(null);
-                setImpactedResources(new Set());
-              }}
-            >
-              Limpar simulação
-            </Button>
-          </div>
+          {message.text}
         </div>
       )}
 
-      <div
-        style={{
-          backgroundColor: '#111827',
-          border: '1px solid #374151',
-          borderRadius: '8px',
-          padding: '16px',
-        }}
-      >
-        {tree.map(node => renderTreeNode(node))}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+        {/* Painel de Origem */}
+        <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px', padding: '16px' }}>
+          <h3 style={{ color: '#e5e7eb', marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>Origem</h3>
+          <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            {allResources.map(resource => (
+              <button
+                key={resource.id}
+                onClick={() => setSelectedSource(resource)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  marginBottom: '8px',
+                  border: selectedSource?.id === resource.id ? '2px solid #3b82f6' : '1px solid #374151',
+                  borderRadius: '4px',
+                  backgroundColor: selectedSource?.id === resource.id ? '#1e40af' : '#1f2937',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>{RESOURCE_ICONS[resource.type]}</span>
+                <span style={{ fontSize: '13px' }}>{resource.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Painel Central - Configuração */}
+        <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <h3 style={{ color: '#e5e7eb', marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>Tipo de Relacionamento</h3>
+            <select
+              value={relationType}
+              onChange={e => setRelationType(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                marginBottom: '16px',
+                backgroundColor: '#1f2937',
+                color: '#e5e7eb',
+                border: '1px solid #374151',
+                borderRadius: '4px',
+              }}
+            >
+              {RELATION_TYPES.map(rt => (
+                <option key={rt.value} value={rt.value}>
+                  {rt.label}
+                </option>
+              ))}
+            </select>
+
+            <div style={{ marginBottom: '16px' }}>
+              <p style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '8px' }}>Origem selecionada:</p>
+              {selectedSource ? (
+                <div style={{ padding: '8px', backgroundColor: '#1e40af', borderRadius: '4px', color: '#e5e7eb', fontSize: '13px' }}>
+                  {RESOURCE_ICONS[selectedSource.type]} {selectedSource.label}
+                </div>
+              ) : (
+                <div style={{ padding: '8px', backgroundColor: '#374151', borderRadius: '4px', color: '#9ca3af', fontSize: '13px' }}>
+                  Nenhuma
+                </div>
+              )}
+            </div>
+
+            <div>
+              <p style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '8px' }}>Destino selecionado:</p>
+              {selectedTarget ? (
+                <div style={{ padding: '8px', backgroundColor: '#065f46', borderRadius: '4px', color: '#e5e7eb', fontSize: '13px' }}>
+                  {RESOURCE_ICONS[selectedTarget.type]} {selectedTarget.label}
+                </div>
+              ) : (
+                <div style={{ padding: '8px', backgroundColor: '#374151', borderRadius: '4px', color: '#9ca3af', fontSize: '13px' }}>
+                  Nenhum
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+            <Button
+              onClick={handleAddLink}
+              style={{ width: '100%', padding: '10px' }}
+              disabled={!selectedSource || !selectedTarget}
+            >
+              + Adicionar Link
+            </Button>
+            <Button
+              onClick={handleClearAll}
+              variant="secondary"
+              style={{ width: '100%', padding: '10px' }}
+            >
+              Limpar Tudo
+            </Button>
+          </div>
+        </div>
+
+        {/* Painel de Destino */}
+        <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px', padding: '16px' }}>
+          <h3 style={{ color: '#e5e7eb', marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>Destino</h3>
+          <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            {allResources.map(resource => (
+              <button
+                key={resource.id}
+                onClick={() => setSelectedTarget(resource)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  marginBottom: '8px',
+                  border: selectedTarget?.id === resource.id ? '2px solid #10b981' : '1px solid #374151',
+                  borderRadius: '4px',
+                  backgroundColor: selectedTarget?.id === resource.id ? '#065f46' : '#1f2937',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>{RESOURCE_ICONS[resource.type]}</span>
+                <span style={{ fontSize: '13px' }}>{resource.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
+
+      {/* Lista de Links Criados */}
+      {links.length > 0 && (
+        <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px', padding: '16px' }}>
+          <h3 style={{ color: '#e5e7eb', marginBottom: '16px', fontSize: '14px', fontWeight: 600 }}>
+            Links Criados ({links.length})
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '12px' }}>
+            {links.map(link => (
+              <div
+                key={link.id}
+                style={{
+                  padding: '12px',
+                  backgroundColor: '#1f2937',
+                  border: '1px solid #374151',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>{RESOURCE_ICONS[link.source.type]}</span>
+                <span style={{ flex: 1, color: '#e5e7eb', fontSize: '12px' }}>{link.source.label}</span>
+                <span style={{ color: '#6b7280', fontSize: '11px' }}>→</span>
+                <span style={{ flex: 1, color: '#e5e7eb', fontSize: '12px', textAlign: 'right' }}>{link.target.label}</span>
+                <span style={{ fontSize: '16px' }}>{RESOURCE_ICONS[link.target.type]}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
