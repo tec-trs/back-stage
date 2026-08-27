@@ -91,11 +91,28 @@ export function useSubgraph(
   resourceId: string | null,
   depth: number = 2,
 ) {
+  const getDirection = (type: string | null): 'upstream' | 'downstream' | 'both' => {
+    switch (type) {
+      case 'url':
+        return 'downstream';
+      case 'application':
+        return 'downstream';
+      case 'server':
+        return 'upstream';
+      case 'database':
+        return 'upstream';
+      default:
+        return 'both';
+    }
+  };
+
+  const direction = getDirection(resourceType);
+
   return useQuery({
-    queryKey: ['resource-graph-subgraph', resourceType, resourceId, depth],
+    queryKey: ['resource-graph-subgraph', resourceType, resourceId, depth, direction],
     queryFn: () =>
       apiRequest<SubgraphResponse>(
-        `/api/resource-graph/${resourceType}/${resourceId}/subgraph?depth=${depth}`,
+        `/api/resource-graph/${resourceType}/${resourceId}/subgraph?depth=${depth}&direction=${direction}`,
         { method: 'GET' },
       ),
     enabled: !!resourceType && !!resourceId,
