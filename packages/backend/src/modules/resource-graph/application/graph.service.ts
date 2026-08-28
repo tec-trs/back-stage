@@ -146,14 +146,14 @@ export class GraphService {
     return this.repository.getCriticalResources();
   }
 
-  public async saveNodePosition(nodeId: string, x: number, y: number) {
+  public async saveNodePosition(nodeId: string, x: number, y: number): Promise<{ id: string; node_id: string; x: number; y: number }> {
     if (!this.positionRepository) {
       throw new Error('Position repository not available');
     }
     return this.positionRepository.savePosition(nodeId, x, y);
   }
 
-  public async getNodePositions() {
+  public async getNodePositions(): Promise<Array<{ id: string; node_id: string; x: number; y: number }>> {
     if (!this.positionRepository) {
       return [];
     }

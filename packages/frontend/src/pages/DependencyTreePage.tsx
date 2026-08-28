@@ -3,7 +3,7 @@ import { useAllApplications } from '../features/applications/use-applications';
 import { useAllServers } from '../features/servers/use-servers';
 import { useAllUrls } from '../features/urls/use-urls';
 import { useAllDatabases } from '../features/databases/use-databases';
-import { useCreateRelationship, useFullGraph, useDeleteRelationship, useSaveNodePositions, useGetNodePositions, useClearNodePositions } from '../features/resource-graph/use-resource-graph';
+import { useCreateRelationship, useFullGraph, useSaveNodePositions, useGetNodePositions, useClearNodePositions } from '../features/resource-graph/use-resource-graph';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Button } from '../shared/components/Button';
 import { Spinner } from '../shared/components/Spinner';
@@ -55,7 +55,6 @@ export function DependencyTreePage() {
   const databasesQuery = useAllDatabases();
   const graphQuery = useFullGraph({ page: 1, pageSize: 500 });
   const createRelationship = useCreateRelationship();
-  const deleteRelationship = useDeleteRelationship();
   const savePositions = useSaveNodePositions();
   const getPositions = useGetNodePositions();
   const clearPositions = useClearNodePositions();
@@ -67,7 +66,6 @@ export function DependencyTreePage() {
   const [pendingLinks, setPendingLinks] = useState<PendingLink[]>([]);
   const [showGraph, setShowGraph] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [positions, setPositions] = useState<Map<string, Position>>(new Map());
   const [draggingNode, setDraggingNode] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [nodePositions, setNodePositions] = useState<Map<string, Position>>(new Map());

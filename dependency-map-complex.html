@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa de Dependências Complexo - Cytoscape.js</title>
+
+  <!-- Cytoscape.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+
+  <!-- Cytoscape Dagre Layout -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape-dagre/2.5.0/cytoscape-dagre.min.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+      background: #0f1419;
+      color: #e0e0e0;
+      overflow: hidden;
+    }
+
+    #container {
+      display: flex;
+      height: 100vh;
+      width: 100%;
+    }
+
+    #cytoscape {
+      flex: 1;
+      background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+    }
+
+    #sidebar {
+      width: 320px;
+      background: #1a1f2e;
+      border-left: 1px solid #2a3a4a;
+      padding: 20px;
+      overflow-y: auto;
+      box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .sidebar-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #60a5fa;
+      border-bottom: 2px solid #2a3a4a;
+      padding-bottom: 10px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: rgba(96, 165, 250, 0.1);
+      border-radius: 6px;
+      border-left: 3px solid #60a5fa;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 20px;
+      font-weight: bold;
+      color: #60a5fa;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: #a0aec0;
+      margin-top: 4px;
+    }
+
+    .legend {
+      margin-bottom: 20px;
+    }
+
+    .legend-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #a0aec0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      padding: 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.02);
+      font-size: 12px;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      margin-right: 10px;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .filters {
+      margin-bottom: 20px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+    }
+
+    .filter-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      color: #a0aec0;
+    }
+
+    .filter-btn {
+      display: inline-block;
+      padding: 4px 8px;
+      margin-right: 6px;
+      margin-bottom: 6px;
+      background: #2a3a4a;
+      border: 1px solid #3a4a5a;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #a0aec0;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover {
+      background: #3a4a5a;
+      border-color: #60a5fa;
+      color: #60a5fa;
+    }
+
+    .filter-btn.active {
+      background: #60a5fa;
+      border-color: #60a5fa;
+      color: #fff;
+    }
+
+    .controls {
+      margin-top: 15px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+    }
+
+    .controls-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      color: #a0aec0;
+    }
+
+    button {
+      width: 100%;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    button:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .info {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(96, 165, 250, 0.1);
+      border-left: 3px solid #60a5fa;
+      border-radius: 4px;
+      font-size: 11px;
+      line-height: 1.5;
+      color: #a0aec0;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #2a3a4a;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3a4a5a;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="cytoscape"></div>
+    <div id="sidebar">
+      <div class="sidebar-title">🗺️ Infra Complexa</div>
+
+      <div class="stats">
+        <div class="stat-item">
+          <div class="stat-number" id="nodeCount">0</div>
+          <div class="stat-label">Nós</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number" id="edgeCount">0</div>
+          <div class="stat-label">Relacionamentos</div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="legend-title">Legenda</div>
+
+        <div class="legend-item">
+          <div class="legend-color" style="background: #fbbf24;"></div>
+          <span>URLs / Domínios</span>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-color" style="background: #a78bfa;"></div>
+          <span>Aplicações</span>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-color" style="background: #60a5fa;"></div>
+          <span>Serviços</span>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-color" style="background: #f472b6;"></div>
+          <span>Bancos de Dados</span>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-color" style="background: #34d399;"></div>
+          <span>Servidores</span>
+        </div>
+      </div>
+
+      <div class="filters">
+        <div class="filter-title">Filtros por Ambiente</div>
+        <button class="filter-btn" onclick="filterByEnv('prod')">PROD</button>
+        <button class="filter-btn" onclick="filterByEnv('staging')">STAGING</button>
+        <button class="filter-btn" onclick="filterByEnv('dev')">DEV</button>
+        <button class="filter-btn" onclick="showAll()">TODOS</button>
+      </div>
+
+      <div class="controls">
+        <div class="controls-title">Controles</div>
+        <button onclick="cy.layout({ name: 'dagre', directed: true, rankDir: 'TB' }).run();">⚡ Relayouter</button>
+        <button onclick="cy.fit();">🎯 Centralizar</button>
+        <button onclick="cy.zoom(cy.zoom() + 0.15);">🔍+</button>
+        <button onclick="cy.zoom(Math.max(cy.zoom() - 0.15, 0.3));">🔍-</button>
+        <button onclick="resetZoom();">↺ Reset Zoom</button>
+      </div>
+
+      <div class="info">
+        <strong>💡 Dica:</strong> Arraste para mover, scroll para zoom, clique em nós para selecionar. Use os filtros para analisar ambientes específicos.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    cytoscape.use(dagreLayout);
+
+    // ========== GERAÇÃO DE DADOS COMPLEXOS ==========
+    const nodes = [];
+    const edges = [];
+    let nodeId = 0;
+    let edgeId = 0;
+
+    const environments = ['prod', 'staging', 'dev'];
+    const regions = ['us-east-1', 'us-west-2', 'eu-west-1'];
+
+    function createNode(label, type, env = 'prod', region = 'us-east-1') {
+      nodes.push({
+        data: {
+          id: `node_${nodeId}`,
+          label,
+          type,
+          env,
+          region
+        }
+      });
+      return `node_${nodeId++}`;
+    }
+
+    function createEdge(source, target) {
+      edges.push({
+        data: {
+          id: `edge_${edgeId}`,
+          source,
+          target
+        }
+      });
+      edgeId++;
+    }
+
+    // ========== URLS / DOMÍNIOS ==========
+    const urls = {
+      prod: {
+        'api.example.com': createNode('api.example.com', 'url', 'prod'),
+        'www.example.com': createNode('www.example.com', 'url', 'prod'),
+        'admin.example.com': createNode('admin.example.com', 'url', 'prod'),
+        'dashboard.example.com': createNode('dashboard.example.com', 'url', 'prod'),
+        'webhooks.example.com': createNode('webhooks.example.com', 'url', 'prod'),
+      },
+      staging: {
+        'api-staging.example.com': createNode('api-staging.example.com', 'url', 'staging'),
+        'www-staging.example.com': createNode('www-staging.example.com', 'url', 'staging'),
+      },
+      dev: {
+        'api-dev.local': createNode('api-dev.local', 'url', 'dev'),
+        'localhost:3000': createNode('localhost:3000', 'url', 'dev'),
+      }
+    };
+
+    // ========== APLICAÇÕES ==========
+    const apps = {
+      prod: {
+        'API Gateway': createNode('API Gateway', 'application', 'prod', 'us-east-1'),
+        'Web Frontend': createNode('Web Frontend', 'application', 'prod', 'us-east-1'),
+        'Admin Portal': createNode('Admin Portal', 'application', 'prod', 'us-east-1'),
+        'Mobile API': createNode('Mobile API', 'application', 'prod', 'us-west-2'),
+        'Webhook Handler': createNode('Webhook Handler', 'application', 'prod', 'eu-west-1'),
+      },
+      staging: {
+        'API Gateway STG': createNode('API Gateway STG', 'application', 'staging'),
+        'Web Frontend STG': createNode('Web Frontend STG', 'application', 'staging'),
+      },
+      dev: {
+        'Dev API': createNode('Dev API', 'application', 'dev'),
+        'Dev Frontend': createNode('Dev Frontend', 'application', 'dev'),
+      }
+    };
+
+    // ========== SERVIÇOS ==========
+    const services = {
+      prod: {
+        'User Service': createNode('User Service', 'service', 'prod'),
+        'Auth Service': createNode('Auth Service', 'service', 'prod'),
+        'Product Service': createNode('Product Service', 'service', 'prod'),
+        'Order Service': createNode('Order Service', 'service', 'prod'),
+        'Payment Service': createNode('Payment Service', 'service', 'prod'),
+        'Inventory Service': createNode('Inventory Service', 'service', 'prod'),
+        'Notification Service': createNode('Notification Service', 'service', 'prod'),
+        'Analytics Service': createNode('Analytics Service', 'service', 'prod'),
+        'Search Service': createNode('Search Service', 'service', 'prod'),
+        'Recommendation Engine': createNode('Recommendation Engine', 'service', 'prod'),
+      },
+      staging: {
+        'User Service STG': createNode('User Service STG', 'service', 'staging'),
+        'Auth Service STG': createNode('Auth Service STG', 'service', 'staging'),
+        'Product Service STG': createNode('Product Service STG', 'service', 'staging'),
+      },
+      dev: {
+        'User Service DEV': createNode('User Service DEV', 'service', 'dev'),
+        'Auth Service DEV': createNode('Auth Service DEV', 'service', 'dev'),
+      }
+    };
+
+    // ========== BANCOS DE DADOS ==========
+    const databases = {
+      prod: {
+        'PostgreSQL - Users': createNode('PostgreSQL - Users', 'database', 'prod'),
+        'PostgreSQL - Orders': createNode('PostgreSQL - Orders', 'database', 'prod'),
+        'PostgreSQL - Products': createNode('PostgreSQL - Products', 'database', 'prod'),
+        'PostgreSQL - Analytics': createNode('PostgreSQL - Analytics', 'database', 'prod'),
+        'MongoDB - Logs': createNode('MongoDB - Logs', 'database', 'prod'),
+        'Redis - Cache': createNode('Redis - Cache', 'database', 'prod'),
+        'Elasticsearch': createNode('Elasticsearch', 'database', 'prod'),
+        'RabbitMQ': createNode('RabbitMQ', 'database', 'prod'),
+        'DynamoDB - Sessions': createNode('DynamoDB - Sessions', 'database', 'prod'),
+        'MySQL - Billing': createNode('MySQL - Billing', 'database', 'prod'),
+      },
+      staging: {
+        'PostgreSQL - Users STG': createNode('PostgreSQL - Users STG', 'database', 'staging'),
+        'MongoDB - Logs STG': createNode('MongoDB - Logs STG', 'database', 'staging'),
+        'Redis - Cache STG': createNode('Redis - Cache STG', 'database', 'staging'),
+      },
+      dev: {
+        'SQLite - Dev': createNode('SQLite - Dev', 'database', 'dev'),
+        'Redis - Dev': createNode('Redis - Dev', 'database', 'dev'),
+      }
+    };
+
+    // ========== SERVIDORES ==========
+    const servers = {
+      prod: {
+        'prod-server-1': createNode('prod-server-1 (us-east-1)', 'server', 'prod'),
+        'prod-server-2': createNode('prod-server-2 (us-east-1)', 'server', 'prod'),
+        'prod-server-3': createNode('prod-server-3 (us-west-2)', 'server', 'prod'),
+        'prod-db-server-1': createNode('prod-db-server-1 (us-east-1)', 'server', 'prod'),
+        'prod-db-server-2': createNode('prod-db-server-2 (us-east-1)', 'server', 'prod'),
+        'prod-cache-1': createNode('prod-cache-1 (us-east-1)', 'server', 'prod'),
+        'prod-search-1': createNode('prod-search-1 (eu-west-1)', 'server', 'prod'),
+      },
+      staging: {
+        'staging-server-1': createNode('staging-server-1', 'server', 'staging'),
+        'staging-db-1': createNode('staging-db-1', 'server', 'staging'),
+      },
+      dev: {
+        'dev-server-1': createNode('dev-server-1', 'server', 'dev'),
+      }
+    };
+
+    // ========== CRIAR RELACIONAMENTOS ==========
+
+    // URLs -> Apps (PROD)
+    createEdge(urls.prod['api.example.com'], apps.prod['API Gateway']);
+    createEdge(urls.prod['www.example.com'], apps.prod['Web Frontend']);
+    createEdge(urls.prod['admin.example.com'], apps.prod['Admin Portal']);
+    createEdge(urls.prod['dashboard.example.com'], apps.prod['Admin Portal']);
+    createEdge(urls.prod['webhooks.example.com'], apps.prod['Webhook Handler']);
+
+    // URLs -> Apps (STAGING)
+    createEdge(urls.staging['api-staging.example.com'], apps.staging['API Gateway STG']);
+    createEdge(urls.staging['www-staging.example.com'], apps.staging['Web Frontend STG']);
+
+    // URLs -> Apps (DEV)
+    createEdge(urls.dev['api-dev.local'], apps.dev['Dev API']);
+    createEdge(urls.dev['localhost:3000'], apps.dev['Dev Frontend']);
+
+    // Apps -> Services (PROD)
+    createEdge(apps.prod['API Gateway'], services.prod['User Service']);
+    createEdge(apps.prod['API Gateway'], services.prod['Auth Service']);
+    createEdge(apps.prod['API Gateway'], services.prod['Product Service']);
+    createEdge(apps.prod['API Gateway'], services.prod['Order Service']);
+    createEdge(apps.prod['API Gateway'], services.prod['Payment Service']);
+
+    createEdge(apps.prod['Web Frontend'], services.prod['User Service']);
+    createEdge(apps.prod['Web Frontend'], services.prod['Product Service']);
+    createEdge(apps.prod['Web Frontend'], services.prod['Analytics Service']);
+
+    createEdge(apps.prod['Admin Portal'], services.prod['User Service']);
+    createEdge(apps.prod['Admin Portal'], services.prod['Inventory Service']);
+
+    createEdge(apps.prod['Mobile API'], services.prod['Product Service']);
+    createEdge(apps.prod['Mobile API'], services.prod['Order Service']);
+    createEdge(apps.prod['Mobile API'], services.prod['Recommendation Engine']);
+
+    createEdge(apps.prod['Webhook Handler'], services.prod['Order Service']);
+    createEdge(apps.prod['Webhook Handler'], services.prod['Payment Service']);
+
+    // Services -> Services (interdependências)
+    createEdge(services.prod['Order Service'], services.prod['Inventory Service']);
+    createEdge(services.prod['Order Service'], services.prod['Payment Service']);
+    createEdge(services.prod['Order Service'], services.prod['Notification Service']);
+    createEdge(services.prod['Product Service'], services.prod['Search Service']);
+    createEdge(services.prod['Product Service'], services.prod['Recommendation Engine']);
+    createEdge(services.prod['Auth Service'], services.prod['User Service']);
+    createEdge(services.prod['Recommendation Engine'], services.prod['Analytics Service']);
+
+    // Services -> Databases (PROD)
+    createEdge(services.prod['User Service'], databases.prod['PostgreSQL - Users']);
+    createEdge(services.prod['Auth Service'], databases.prod['PostgreSQL - Users']);
+    createEdge(services.prod['Order Service'], databases.prod['PostgreSQL - Orders']);
+    createEdge(services.prod['Product Service'], databases.prod['PostgreSQL - Products']);
+    createEdge(services.prod['Payment Service'], databases.prod['MySQL - Billing']);
+    createEdge(services.prod['Inventory Service'], databases.prod['PostgreSQL - Products']);
+    createEdge(services.prod['Notification Service'], databases.prod['RabbitMQ']);
+    createEdge(services.prod['Analytics Service'], databases.prod['PostgreSQL - Analytics']);
+    createEdge(services.prod['Search Service'], databases.prod['Elasticsearch']);
+    createEdge(services.prod['Recommendation Engine'], databases.prod['Elasticsearch']);
+
+    // Cache
+    createEdge(services.prod['User Service'], databases.prod['Redis - Cache']);
+    createEdge(services.prod['Product Service'], databases.prod['Redis - Cache']);
+    createEdge(services.prod['Search Service'], databases.prod['Redis - Cache']);
+
+    // Sessions
+    createEdge(services.prod['Auth Service'], databases.prod['DynamoDB - Sessions']);
+
+    // Logs
+    createEdge(services.prod['Order Service'], databases.prod['MongoDB - Logs']);
+    createEdge(services.prod['Payment Service'], databases.prod['MongoDB - Logs']);
+    createEdge(services.prod['Notification Service'], databases.prod['MongoDB - Logs']);
+
+    // Apps -> Services (STAGING)
+    createEdge(apps.staging['API Gateway STG'], services.staging['User Service STG']);
+    createEdge(apps.staging['API Gateway STG'], services.staging['Auth Service STG']);
+    createEdge(apps.staging['API Gateway STG'], services.staging['Product Service STG']);
+    createEdge(apps.staging['Web Frontend STG'], services.staging['Product Service STG']);
+
+    // Services -> Databases (STAGING)
+    createEdge(services.staging['User Service STG'], databases.staging['PostgreSQL - Users STG']);
+    createEdge(services.staging['Product Service STG'], databases.staging['PostgreSQL - Users STG']);
+    createEdge(services.staging['Product Service STG'], databases.staging['Redis - Cache STG']);
+
+    // Apps -> Services (DEV)
+    createEdge(apps.dev['Dev API'], services.dev['User Service DEV']);
+    createEdge(apps.dev['Dev API'], services.dev['Auth Service DEV']);
+    createEdge(apps.dev['Dev Frontend'], services.dev['User Service DEV']);
+
+    // Services -> Databases (DEV)
+    createEdge(services.dev['User Service DEV'], databases.dev['SQLite - Dev']);
+    createEdge(services.dev['Auth Service DEV'], databases.dev['SQLite - Dev']);
+    createEdge(services.dev['Auth Service DEV'], databases.dev['Redis - Dev']);
+
+    // Databases -> Servers (PROD)
+    createEdge(databases.prod['PostgreSQL - Users'], servers.prod['prod-db-server-1']);
+    createEdge(databases.prod['PostgreSQL - Orders'], servers.prod['prod-db-server-1']);
+    createEdge(databases.prod['PostgreSQL - Products'], servers.prod['prod-db-server-1']);
+    createEdge(databases.prod['PostgreSQL - Analytics'], servers.prod['prod-db-server-2']);
+    createEdge(databases.prod['MySQL - Billing'], servers.prod['prod-db-server-2']);
+    createEdge(databases.prod['MongoDB - Logs'], servers.prod['prod-db-server-2']);
+    createEdge(databases.prod['Redis - Cache'], servers.prod['prod-cache-1']);
+    createEdge(databases.prod['DynamoDB - Sessions'], servers.prod['prod-cache-1']);
+    createEdge(databases.prod['Elasticsearch'], servers.prod['prod-search-1']);
+    createEdge(databases.prod['RabbitMQ'], servers.prod['prod-db-server-1']);
+
+    // Databases -> Servers (STAGING)
+    createEdge(databases.staging['PostgreSQL - Users STG'], servers.staging['staging-db-1']);
+    createEdge(databases.staging['MongoDB - Logs STG'], servers.staging['staging-db-1']);
+    createEdge(databases.staging['Redis - Cache STG'], servers.staging['staging-server-1']);
+
+    // Databases -> Servers (DEV)
+    createEdge(databases.dev['SQLite - Dev'], servers.dev['dev-server-1']);
+    createEdge(databases.dev['Redis - Dev'], servers.dev['dev-server-1']);
+
+    // ========== CONFIGURAR ESTILOS ==========
+    const styles = [
+      {
+        selector: 'node[type="url"]',
+        style: {
+          'background-color': '#fbbf24',
+          'label': 'data(label)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '11px',
+          'font-weight': 'bold',
+          'color': '#000',
+          'width': '90px',
+          'height': '45px',
+          'shape': 'ellipse',
+          'border-width': '2px',
+          'border-color': '#f59e0b',
+          'padding': '5px',
+          'text-wrap': 'wrap',
+        }
+      },
+      {
+        selector: 'node[type="application"]',
+        style: {
+          'background-color': '#a78bfa',
+          'label': 'data(label)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '10px',
+          'font-weight': 'bold',
+          'color': '#fff',
+          'width': '100px',
+          'height': '45px',
+          'shape': 'rectangle',
+          'border-width': '2px',
+          'border-color': '#8b5cf6',
+          'padding': '5px',
+          'text-wrap': 'wrap',
+        }
+      },
+      {
+        selector: 'node[type="service"]',
+        style: {
+          'background-color': '#60a5fa',
+          'label': 'data(label)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '10px',
+          'font-weight': 'bold',
+          'color': '#fff',
+          'width': '95px',
+          'height': '45px',
+          'shape': 'round-rectangle',
+          'border-width': '2px',
+          'border-color': '#3b82f6',
+          'padding': '5px',
+          'text-wrap': 'wrap',
+        }
+      },
+      {
+        selector: 'node[type="database"]',
+        style: {
+          'background-color': '#f472b6',
+          'label': 'data(label)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '9px',
+          'font-weight': 'bold',
+          'color': '#fff',
+          'width': '100px',
+          'height': '45px',
+          'shape': 'round-rectangle',
+          'border-width': '2px',
+          'border-color': '#ec4899',
+          'padding': '5px',
+          'text-wrap': 'wrap',
+        }
+      },
+      {
+        selector: 'node[type="server"]',
+        style: {
+          'background-color': '#34d399',
+          'label': 'data(label)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '9px',
+          'font-weight': 'bold',
+          'color': '#000',
+          'width': '110px',
+          'height': '45px',
+          'shape': 'square',
+          'border-width': '2px',
+          'border-color': '#10b981',
+          'padding': '5px',
+          'text-wrap': 'wrap',
+        }
+      },
+      {
+        selector: 'node:selected',
+        style: {
+          'border-width': '3px',
+          'border-color': '#60a5fa',
+          'box-shadow': '0 0 20px rgba(96, 165, 250, 0.8)',
+        }
+      },
+      {
+        selector: 'edge',
+        style: {
+          'width': '1.5px',
+          'line-color': '#2a3a4a',
+          'target-arrow-color': '#2a3a4a',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+          'arrow-scale': '1.2',
+          'opacity': 0.6,
+        }
+      },
+      {
+        selector: 'edge:selected',
+        style: {
+          'line-color': '#60a5fa',
+          'target-arrow-color': '#60a5fa',
+          'width': '2.5px',
+          'opacity': 1,
+        }
+      },
+    ];
+
+    // ========== INICIALIZAR CYTOSCAPE ==========
+    const cy = cytoscape({
+      container: document.getElementById('cytoscape'),
+      elements: [...nodes, ...edges],
+      style: styles,
+      layout: {
+        name: 'dagre',
+        directed: true,
+        rankDir: 'TB',
+        ranker: 'network-simplex',
+        nodeSep: 40,
+        rankSep: 80,
+      },
+      wheelSensitivity: 0.1,
+      minZoom: 0.2,
+      maxZoom: 3,
+    });
+
+    // ========== FUNÇÕES DE FILTRO ==========
+    function filterByEnv(env) {
+      const nodesToShow = cy.nodes().filter(n => n.data('env') === env || n.data('type') === 'url');
+      const nodesToHide = cy.nodes().difference(nodesToShow);
+
+      nodesToHide.hide();
+      nodesToShow.show();
+
+      // Mostrar edges que conectam nós visíveis
+      cy.edges().hide();
+      cy.edges().forEach(edge => {
+        if (edge.source().visible() && edge.target().visible()) {
+          edge.show();
+        }
+      });
+
+      cy.fit(nodesToShow);
+    }
+
+    function showAll() {
+      cy.nodes().show();
+      cy.edges().show();
+      cy.fit();
+    }
+
+    // ========== ATUALIZAÇÕES DO UI ==========
+    document.getElementById('nodeCount').textContent = nodes.length;
+    document.getElementById('edgeCount').textContent = edges.length;
+
+    // ========== INTERAÇÕES ==========
+    cy.on('tap', 'node', (evt) => {
+      const node = evt.target;
+      console.log('Nó:', node.data());
+    });
+
+    cy.on('tap', 'edge', (evt) => {
+      const edge = evt.target;
+      console.log('Relacionamento:', edge.data());
+    });
+
+    // ========== FUNÇÕES AUXILIARES ==========
+    function resetZoom() {
+      cy.zoom(1);
+      cy.center();
+    }
+
+    // Centralizar ao carregar
+    setTimeout(() => {
+      cy.fit();
+      cy.center();
+    }, 200);
+  </script>
+</body>
+</html>

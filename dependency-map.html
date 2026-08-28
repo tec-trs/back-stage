@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa de Dependências - Cytoscape.js</title>
+
+  <!-- Cytoscape.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+
+  <!-- Cytoscape Dagre Layout -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape-dagre/2.5.0/cytoscape-dagre.min.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+      background: #0f1419;
+      color: #e0e0e0;
+      overflow: hidden;
+    }
+
+    #container {
+      display: flex;
+      height: 100vh;
+      width: 100%;
+    }
+
+    #cytoscape {
+      flex: 1;
+      background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+    }
+
+    #sidebar {
+      width: 300px;
+      background: #1a1f2e;
+      border-left: 1px solid #2a3a4a;
+      padding: 20px;
+      overflow-y: auto;
+      box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .sidebar-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #60a5fa;
+      border-bottom: 2px solid #2a3a4a;
+      padding-bottom: 10px;
+    }
+
+    .legend {
+      margin-bottom: 30px;
+    }
+
+    .legend-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #a0aec0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      margin-right: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .legend-label {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .info-section {
+      margin-top: 30px;
+      padding: 15px;
+      background: rgba(96, 165, 250, 0.1);
+      border-left: 3px solid #60a5fa;
+      border-radius: 4px;
+    }
+
+    .info-section h3 {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #60a5fa;
+    }
+
+    .info-section p {
+      font-size: 12px;
+      line-height: 1.6;
+      color: #a0aec0;
+    }
+
+    .controls {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+    }
+
+    .controls-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      color: #a0aec0;
+    }
+
+    button {
+      width: 100%;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    button:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #2a3a4a;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3a4a5a;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="cytoscape"></div>
+    <div id="sidebar">
+      <div class="sidebar-title">🗺️ Mapa de Dependências</div>
+
+      <div class="legend">
+        <div class="legend-title">Legenda</div>
+
+        <div class="legend-item">
+          <div class="legend-color" style="background: #fbbf24;"></div>
+          <div class="legend-label">🌐 URLs</div>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-color" style="background: #a78bfa;"></div>
+          <div class="legend-label">📱 Aplicações</div>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-color" style="background: #60a5fa;"></div>
+          <div class="legend-label">⚙️ Serviços</div>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-color" style="background: #f472b6;"></div>
+          <div class="legend-label">🗄️ Bancos de Dados</div>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-color" style="background: #34d399;"></div>
+          <div class="legend-label">🖥️ Servidores</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="controls-title">Ações</div>
+        <button onclick="cy.layout({ name: 'dagre', directed: true, rankDir: 'TB' }).run();">
+          🔄 Relayouter
+        </button>
+        <button onclick="cy.fit();">
+          🎯 Centralizar
+        </button>
+        <button onclick="cy.zoom(cy.zoom() + 0.2);">
+          🔍 Zoom +
+        </button>
+        <button onclick="cy.zoom(Math.max(cy.zoom() - 0.2, 0.5));">
+          🔍 Zoom -
+        </button>
+      </div>
+
+      <div class="info-section">
+        <h3>ℹ️ Hierarquia</h3>
+        <p>
+          URL → Aplicação → Serviço → Banco de Dados → Servidor
+        </p>
+        <p style="margin-top: 10px; font-size: 11px;">
+          Arraste os nós para reorganizar, use scroll para zoom, clique para selecionar.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Registrar plugin Dagre
+    cytoscape.use(dagreLayout);
+
+    // Dados mockados: hierarquia completa de dependências
+    const data = {
+      nodes: [
+        // URLs (topo da hierarquia)
+        { data: { id: 'url1', label: 'api.example.com', type: 'url' } },
+        { data: { id: 'url2', label: 'www.example.com', type: 'url' } },
+        { data: { id: 'url3', label: 'admin.example.com', type: 'url' } },
+
+        // Aplicações
+        { data: { id: 'app1', label: 'API Gateway', type: 'application' } },
+        { data: { id: 'app2', label: 'Web Portal', type: 'application' } },
+        { data: { id: 'app3', label: 'Admin Panel', type: 'application' } },
+        { data: { id: 'app4', label: 'Auth Service', type: 'application' } },
+
+        // Serviços
+        { data: { id: 'svc1', label: 'User Service', type: 'service' } },
+        { data: { id: 'svc2', label: 'Product Service', type: 'service' } },
+        { data: { id: 'svc3', label: 'Order Service', type: 'service' } },
+        { data: { id: 'svc4', label: 'Payment Service', type: 'service' } },
+        { data: { id: 'svc5', label: 'Auth Service', type: 'service' } },
+
+        // Bancos de Dados
+        { data: { id: 'db1', label: 'PostgreSQL - Users', type: 'database' } },
+        { data: { id: 'db2', label: 'PostgreSQL - Products', type: 'database' } },
+        { data: { id: 'db3', label: 'PostgreSQL - Orders', type: 'database' } },
+        { data: { id: 'db4', label: 'Redis - Cache', type: 'database' } },
+
+        // Servidores
+        { data: { id: 'srv1', label: 'Prod Server 1', type: 'server' } },
+        { data: { id: 'srv2', label: 'Prod Server 2', type: 'server' } },
+        { data: { id: 'srv3', label: 'DB Server', type: 'server' } },
+      ],
+
+      edges: [
+        // URLs -> Aplicações
+        { data: { id: 'e1', source: 'url1', target: 'app1' } },
+        { data: { id: 'e2', source: 'url2', target: 'app2' } },
+        { data: { id: 'e3', source: 'url3', target: 'app3' } },
+
+        // Aplicações -> Serviços
+        { data: { id: 'e4', source: 'app1', target: 'svc1' } },
+        { data: { id: 'e5', source: 'app1', target: 'svc2' } },
+        { data: { id: 'e6', source: 'app1', target: 'svc5' } },
+        { data: { id: 'e7', source: 'app2', target: 'svc2' } },
+        { data: { id: 'e8', source: 'app2', target: 'svc1' } },
+        { data: { id: 'e9', source: 'app3', target: 'svc1' } },
+        { data: { id: 'e10', source: 'app4', target: 'svc5' } },
+
+        // Serviços -> Bancos de Dados
+        { data: { id: 'e11', source: 'svc1', target: 'db1' } },
+        { data: { id: 'e12', source: 'svc2', target: 'db2' } },
+        { data: { id: 'e13', source: 'svc3', target: 'db3' } },
+        { data: { id: 'e14', source: 'svc1', target: 'db4' } },
+        { data: { id: 'e15', source: 'svc5', target: 'db1' } },
+
+        // Bancos de Dados -> Servidores
+        { data: { id: 'e16', source: 'db1', target: 'srv3' } },
+        { data: { id: 'e17', source: 'db2', target: 'srv3' } },
+        { data: { id: 'e18', source: 'db3', target: 'srv3' } },
+        { data: { id: 'e19', source: 'db4', target: 'srv3' } },
+      ]
+    };
+
+    // Configurar estilos para cada tipo de entidade
+    const styles = [
+      // URL (topo)
+      {
+        selector: 'node[type="url"]',
+        style: {
+          'background-color': '#fbbf24',
+          'label': 'data(label)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '12px',
+          'font-weight': 'bold',
+          'color': '#000',
+          'width': '100px',
+          'height': '50px',
+          'shape': 'ellipse',
+          'border-width': '2px',
+          'border-color': '#f59e0b',
+          'box-shadow': '0 2px 8px rgba(251, 191, 36, 0.3)',
+        }
+      },
+
+      // Aplicação
+      {
+        selector: 'node[type="application"]',
+        style: {
+          'background-color': '#a78bfa',
+          'label': 'data(label)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '12px',
+          'font-weight': 'bold',
+          'color': '#fff',
+          'width': '110px',
+          'height': '50px',
+          'shape': 'rectangle',
+          'border-width': '2px',
+          'border-color': '#8b5cf6',
+          'box-shadow': '0 2px 8px rgba(167, 139, 250, 0.3)',
+        }
+      },
+
+      // Serviço
+      {
+        selector: 'node[type="service"]',
+        style: {
+          'background-color': '#60a5fa',
+          'label': 'data(label)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '11px',
+          'font-weight': 'bold',
+          'color': '#fff',
+          'width': '100px',
+          'height': '50px',
+          'shape': 'round-rectangle',
+          'border-width': '2px',
+          'border-color': '#3b82f6',
+          'box-shadow': '0 2px 8px rgba(96, 165, 250, 0.3)',
+        }
+      },
+
+      // Banco de Dados
+      {
+        selector: 'node[type="database"]',
+        style: {
+          'background-color': '#f472b6',
+          'label': 'data(label)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '11px',
+          'font-weight': 'bold',
+          'color': '#fff',
+          'width': '110px',
+          'height': '50px',
+          'shape': 'cylinder',
+          'border-width': '2px',
+          'border-color': '#ec4899',
+          'box-shadow': '0 2px 8px rgba(244, 114, 182, 0.3)',
+        }
+      },
+
+      // Servidor (base)
+      {
+        selector: 'node[type="server"]',
+        style: {
+          'background-color': '#34d399',
+          'label': 'data(label)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '12px',
+          'font-weight': 'bold',
+          'color': '#000',
+          'width': '120px',
+          'height': '50px',
+          'shape': 'square',
+          'border-width': '2px',
+          'border-color': '#10b981',
+          'box-shadow': '0 2px 8px rgba(52, 211, 153, 0.3)',
+        }
+      },
+
+      // Nó selecionado
+      {
+        selector: 'node:selected',
+        style: {
+          'border-width': '3px',
+          'border-color': '#60a5fa',
+          'box-shadow': '0 0 16px rgba(96, 165, 250, 0.8)',
+        }
+      },
+
+      // Edges
+      {
+        selector: 'edge',
+        style: {
+          'width': '2px',
+          'line-color': '#2a3a4a',
+          'target-arrow-color': '#2a3a4a',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+          'arrow-scale': '1.5',
+        }
+      },
+
+      // Edge selecionada
+      {
+        selector: 'edge:selected',
+        style: {
+          'line-color': '#60a5fa',
+          'target-arrow-color': '#60a5fa',
+          'width': '3px',
+        }
+      },
+    ];
+
+    // Inicializar Cytoscape
+    const cy = cytoscape({
+      container: document.getElementById('cytoscape'),
+      elements: [
+        ...data.nodes,
+        ...data.edges,
+      ],
+      style: styles,
+      layout: {
+        name: 'dagre',
+        directed: true,
+        rankDir: 'TB', // De cima para baixo (Top to Bottom)
+        ranker: 'longest-path',
+        nodeSep: 50,
+        rankSep: 100,
+      },
+      wheelSensitivity: 0.1,
+      minZoom: 0.5,
+      maxZoom: 3,
+    });
+
+    // Interações
+    cy.on('tap', 'node', (evt) => {
+      const node = evt.target;
+      console.log('Nó selecionado:', node.data());
+    });
+
+    cy.on('tap', 'edge', (evt) => {
+      const edge = evt.target;
+      console.log('Edge selecionada:', edge.data());
+    });
+
+    // Centralizar ao carregar
+    setTimeout(() => {
+      cy.fit();
+      cy.center();
+    }, 100);
+
+    // Permitir zoom com mouse wheel
+    cy.userZoomingEnabled(true);
+    cy.panningEnabled(true);
+  </script>
+</body>
+</html>

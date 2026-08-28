@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { authMiddleware } from '../../../../shared/auth/auth.middleware.js';
+import { authenticateMiddleware } from '../../../../shared/http/authenticate.middleware.js';
 
 const router = Router();
 
-router.get('/test-subgraph/:type/:id', authMiddleware, (req, res) => {
+router.get('/test-subgraph/:type/:id', authenticateMiddleware, (req, res) => {
   const { type, id } = req.params;
 
   // Dados hardcoded para teste

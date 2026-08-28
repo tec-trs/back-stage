@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa de Dependências Complexo</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape-dagre/2.5.0/cytoscape-dagre.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #0f1419; color: #e0e0e0; overflow: hidden; }
+    #container { display: flex; height: 100vh; }
+    #cytoscape { flex: 1; background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%); }
+    #sidebar { width: 320px; background: #1a1f2e; border-left: 1px solid #2a3a4a; padding: 20px; overflow-y: auto; }
+    .title { font-size: 18px; font-weight: bold; margin-bottom: 20px; color: #60a5fa; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; padding: 15px; background: rgba(96, 165, 250, 0.1); border-radius: 6px; }
+    .stat { text-align: center; }
+    .stat-num { font-size: 20px; font-weight: bold; color: #60a5fa; }
+    .stat-label { font-size: 11px; color: #a0aec0; margin-top: 4px; }
+    .section { margin-bottom: 20px; }
+    .section-title { font-size: 13px; font-weight: bold; margin-bottom: 10px; color: #a0aec0; text-transform: uppercase; }
+    .legend-item { display: flex; align-items: center; margin-bottom: 8px; padding: 6px; font-size: 12px; }
+    .color-dot { width: 14px; height: 14px; border-radius: 50%; margin-right: 10px; }
+    button { width: 100%; padding: 8px; margin: 4px 0; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    button:hover { background: #2563eb; }
+    .filter-btn { display: inline-block; padding: 6px 12px; margin: 4px 4px 4px 0; background: #2a3a4a; border: 1px solid #3a4a5a; border-radius: 4px; cursor: pointer; font-size: 11px; }
+    .filter-btn.active { background: #60a5fa; color: white; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="cytoscape"></div>
+    <div id="sidebar">
+      <div class="title">🗺️ Infraestrutura Complexa</div>
+      <div class="stats">
+        <div class="stat"><div class="stat-num" id="nodeCount">0</div><div class="stat-label">Nós</div></div>
+        <div class="stat"><div class="stat-num" id="edgeCount">0</div><div class="stat-label">Relacionamentos</div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Legenda</div>
+        <div class="legend-item"><div class="color-dot" style="background: #fbbf24;"></div>URLs</div>
+        <div class="legend-item"><div class="color-dot" style="background: #a78bfa;"></div>Aplicações</div>
+        <div class="legend-item"><div class="color-dot" style="background: #60a5fa;"></div>Serviços</div>
+        <div class="legend-item"><div class="color-dot" style="background: #f472b6;"></div>Bancos de Dados</div>
+        <div class="legend-item"><div class="color-dot" style="background: #34d399;"></div>Servidores</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Filtros</div>
+        <button class="filter-btn" onclick="filterEnv('prod')">PROD</button>
+        <button class="filter-btn" onclick="filterEnv('staging')">STAGING</button>
+        <button class="filter-btn" onclick="filterEnv('dev')">DEV</button>
+        <button class="filter-btn" onclick="showAll()">TODOS</button>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Controles</div>
+        <button onclick="cy.layout({name:'dagre', directed:true, rankDir:'TB'}).run();">⚡ Relayouter</button>
+        <button onclick="cy.fit();">🎯 Centralizar</button>
+        <button onclick="cy.zoom(cy.zoom() + 0.15);">🔍+</button>
+        <button onclick="cy.zoom(Math.max(cy.zoom() - 0.15, 0.3));">🔍-</button>
+        <button onclick="cy.reset();">↺ Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    cytoscape.use(dagreLayout);
+
+    // DADOS COMPLETOS
+    const elements = [
+      // URLs PROD
+      {data:{id:'url-api',label:'api.example.com',type:'url',env:'prod'}},
+      {data:{id:'url-web',label:'www.example.com',type:'url',env:'prod'}},
+      {data:{id:'url-admin',label:'admin.example.com',type:'url',env:'prod'}},
+      {data:{id:'url-dash',label:'dashboard.example.com',type:'url',env:'prod'}},
+      {data:{id:'url-webhook',label:'webhooks.example.com',type:'url',env:'prod'}},
+
+      // URLs STAGING
+      {data:{id:'url-api-stg',label:'api-staging.example.com',type:'url',env:'staging'}},
+      {data:{id:'url-web-stg',label:'www-staging.example.com',type:'url',env:'staging'}},
+
+      // URLs DEV
+      {data:{id:'url-dev',label:'localhost:3000',type:'url',env:'dev'}},
+
+      // APPS PROD
+      {data:{id:'app-gateway',label:'API Gateway',type:'application',env:'prod'}},
+      {data:{id:'app-web',label:'Web Frontend',type:'application',env:'prod'}},
+      {data:{id:'app-admin',label:'Admin Portal',type:'application',env:'prod'}},
+      {data:{id:'app-mobile',label:'Mobile API',type:'application',env:'prod'}},
+      {data:{id:'app-webhook',label:'Webhook Handler',type:'application',env:'prod'}},
+
+      // APPS STAGING
+      {data:{id:'app-gateway-stg',label:'API Gateway STG',type:'application',env:'staging'}},
+      {data:{id:'app-web-stg',label:'Web Frontend STG',type:'application',env:'staging'}},
+
+      // APPS DEV
+      {data:{id:'app-dev',label:'Dev API',type:'application',env:'dev'}},
+
+      // SERVICES PROD
+      {data:{id:'svc-user',label:'User Service',type:'service',env:'prod'}},
+      {data:{id:'svc-auth',label:'Auth Service',type:'service',env:'prod'}},
+      {data:{id:'svc-product',label:'Product Service',type:'service',env:'prod'}},
+      {data:{id:'svc-order',label:'Order Service',type:'service',env:'prod'}},
+      {data:{id:'svc-payment',label:'Payment Service',type:'service',env:'prod'}},
+      {data:{id:'svc-inventory',label:'Inventory Service',type:'service',env:'prod'}},
+      {data:{id:'svc-notification',label:'Notification Service',type:'service',env:'prod'}},
+      {data:{id:'svc-analytics',label:'Analytics Service',type:'service',env:'prod'}},
+      {data:{id:'svc-search',label:'Search Service',type:'service',env:'prod'}},
+      {data:{id:'svc-recommend',label:'Recommendation Engine',type:'service',env:'prod'}},
+
+      // SERVICES STAGING
+      {data:{id:'svc-user-stg',label:'User Service STG',type:'service',env:'staging'}},
+      {data:{id:'svc-product-stg',label:'Product Service STG',type:'service',env:'staging'}},
+
+      // SERVICES DEV
+      {data:{id:'svc-user-dev',label:'User Service DEV',type:'service',env:'dev'}},
+
+      // DATABASES PROD
+      {data:{id:'db-users',label:'PostgreSQL Users',type:'database',env:'prod'}},
+      {data:{id:'db-orders',label:'PostgreSQL Orders',type:'database',env:'prod'}},
+      {data:{id:'db-products',label:'PostgreSQL Products',type:'database',env:'prod'}},
+      {data:{id:'db-analytics',label:'PostgreSQL Analytics',type:'database',env:'prod'}},
+      {data:{id:'db-mongo',label:'MongoDB Logs',type:'database',env:'prod'}},
+      {data:{id:'db-redis',label:'Redis Cache',type:'database',env:'prod'}},
+      {data:{id:'db-elastic',label:'Elasticsearch',type:'database',env:'prod'}},
+      {data:{id:'db-rabbitmq',label:'RabbitMQ',type:'database',env:'prod'}},
+      {data:{id:'db-dynamodb',label:'DynamoDB Sessions',type:'database',env:'prod'}},
+      {data:{id:'db-mysql',label:'MySQL Billing',type:'database',env:'prod'}},
+
+      // DATABASES STAGING
+      {data:{id:'db-users-stg',label:'PostgreSQL Users STG',type:'database',env:'staging'}},
+      {data:{id:'db-redis-stg',label:'Redis Cache STG',type:'database',env:'staging'}},
+
+      // DATABASES DEV
+      {data:{id:'db-dev',label:'SQLite Dev',type:'database',env:'dev'}},
+
+      // SERVERS PROD
+      {data:{id:'srv-1',label:'prod-server-1 (us-east-1)',type:'server',env:'prod'}},
+      {data:{id:'srv-2',label:'prod-server-2 (us-east-1)',type:'server',env:'prod'}},
+      {data:{id:'srv-3',label:'prod-server-3 (us-west-2)',type:'server',env:'prod'}},
+      {data:{id:'db-srv-1',label:'prod-db-server-1',type:'server',env:'prod'}},
+      {data:{id:'db-srv-2',label:'prod-db-server-2',type:'server',env:'prod'}},
+      {data:{id:'cache-srv',label:'prod-cache-1',type:'server',env:'prod'}},
+      {data:{id:'search-srv',label:'prod-search-1 (eu-west-1)',type:'server',env:'prod'}},
+
+      // SERVERS STAGING
+      {data:{id:'srv-stg',label:'staging-server-1',type:'server',env:'staging'}},
+      {data:{id:'db-srv-stg',label:'staging-db-1',type:'server',env:'staging'}},
+
+      // SERVERS DEV
+      {data:{id:'srv-dev',label:'dev-server-1',type:'server',env:'dev'}},
+
+      // EDGES - URLs to Apps
+      {data:{source:'url-api',target:'app-gateway'}},
+      {data:{source:'url-web',target:'app-web'}},
+      {data:{source:'url-admin',target:'app-admin'}},
+      {data:{source:'url-webhook',target:'app-webhook'}},
+      {data:{source:'url-api-stg',target:'app-gateway-stg'}},
+      {data:{source:'url-web-stg',target:'app-web-stg'}},
+      {data:{source:'url-dev',target:'app-dev'}},
+
+      // EDGES - Apps to Services
+      {data:{source:'app-gateway',target:'svc-user'}},
+      {data:{source:'app-gateway',target:'svc-auth'}},
+      {data:{source:'app-gateway',target:'svc-product'}},
+      {data:{source:'app-gateway',target:'svc-order'}},
+      {data:{source:'app-gateway',target:'svc-payment'}},
+      {data:{source:'app-web',target:'svc-user'}},
+      {data:{source:'app-web',target:'svc-product'}},
+      {data:{source:'app-web',target:'svc-analytics'}},
+      {data:{source:'app-admin',target:'svc-inventory'}},
+      {data:{source:'app-mobile',target:'svc-product'}},
+      {data:{source:'app-mobile',target:'svc-order'}},
+      {data:{source:'app-mobile',target:'svc-recommend'}},
+      {data:{source:'app-webhook',target:'svc-order'}},
+      {data:{source:'app-webhook',target:'svc-payment'}},
+      {data:{source:'app-gateway-stg',target:'svc-user-stg'}},
+      {data:{source:'app-gateway-stg',target:'svc-product-stg'}},
+      {data:{source:'app-dev',target:'svc-user-dev'}},
+
+      // EDGES - Service to Service
+      {data:{source:'svc-auth',target:'svc-user'}},
+      {data:{source:'svc-order',target:'svc-inventory'}},
+      {data:{source:'svc-order',target:'svc-payment'}},
+      {data:{source:'svc-product',target:'svc-search'}},
+      {data:{source:'svc-product',target:'svc-recommend'}},
+      {data:{source:'svc-recommend',target:'svc-analytics'}},
+
+      // EDGES - Services to Databases
+      {data:{source:'svc-user',target:'db-users'}},
+      {data:{source:'svc-auth',target:'db-users'}},
+      {data:{source:'svc-order',target:'db-orders'}},
+      {data:{source:'svc-product',target:'db-products'}},
+      {data:{source:'svc-payment',target:'db-mysql'}},
+      {data:{source:'svc-inventory',target:'db-products'}},
+      {data:{source:'svc-notification',target:'db-rabbitmq'}},
+      {data:{source:'svc-analytics',target:'db-analytics'}},
+      {data:{source:'svc-search',target:'db-elastic'}},
+      {data:{source:'svc-user',target:'db-redis'}},
+      {data:{source:'svc-product',target:'db-redis'}},
+      {data:{source:'svc-auth',target:'db-dynamodb'}},
+      {data:{source:'svc-order',target:'db-mongo'}},
+      {data:{source:'svc-payment',target:'db-mongo'}},
+      {data:{source:'svc-notification',target:'db-mongo'}},
+
+      // EDGES - Staging
+      {data:{source:'svc-user-stg',target:'db-users-stg'}},
+      {data:{source:'svc-product-stg',target:'db-users-stg'}},
+      {data:{source:'svc-product-stg',target:'db-redis-stg'}},
+
+      // EDGES - Dev
+      {data:{source:'svc-user-dev',target:'db-dev'}},
+
+      // EDGES - Databases to Servers
+      {data:{source:'db-users',target:'db-srv-1'}},
+      {data:{source:'db-orders',target:'db-srv-1'}},
+      {data:{source:'db-products',target:'db-srv-1'}},
+      {data:{source:'db-analytics',target:'db-srv-2'}},
+      {data:{source:'db-mysql',target:'db-srv-2'}},
+      {data:{source:'db-mongo',target:'db-srv-2'}},
+      {data:{source:'db-redis',target:'cache-srv'}},
+      {data:{source:'db-dynamodb',target:'cache-srv'}},
+      {data:{source:'db-elastic',target:'search-srv'}},
+      {data:{source:'db-rabbitmq',target:'db-srv-1'}},
+      {data:{source:'db-users-stg',target:'db-srv-stg'}},
+      {data:{source:'db-redis-stg',target:'srv-stg'}},
+      {data:{source:'db-dev',target:'srv-dev'}},
+    ];
+
+    const styles = [
+      {selector:'node[type="url"]',style:{'background-color':'#fbbf24','label':'data(label)','text-valign':'center','text-halign':'center','font-size':'10px','font-weight':'bold','color':'#000','width':'90px','height':'45px','shape':'ellipse','border-width':'2px','border-color':'#f59e0b'}},
+      {selector:'node[type="application"]',style:{'background-color':'#a78bfa','label':'data(label)','text-valign':'center','text-halign':'center','font-size':'10px','font-weight':'bold','color':'#fff','width':'100px','height':'45px','shape':'rectangle','border-width':'2px','border-color':'#8b5cf6'}},
+      {selector:'node[type="service"]',style:{'background-color':'#60a5fa','label':'data(label)','text-valign':'center','text-halign':'center','font-size':'9px','font-weight':'bold','color':'#fff','width':'95px','height':'45px','shape':'round-rectangle','border-width':'2px','border-color':'#3b82f6'}},
+      {selector:'node[type="database"]',style:{'background-color':'#f472b6','label':'data(label)','text-valign':'center','text-halign':'center','font-size':'9px','font-weight':'bold','color':'#fff','width':'100px','height':'45px','shape':'round-rectangle','border-width':'2px','border-color':'#ec4899'}},
+      {selector:'node[type="server"]',style:{'background-color':'#34d399','label':'data(label)','text-valign':'center','text-halign':'center','font-size':'9px','font-weight':'bold','color':'#000','width':'110px','height':'45px','shape':'square','border-width':'2px','border-color':'#10b981'}},
+      {selector:'node:selected',style:{'border-width':'3px','border-color':'#60a5fa','box-shadow':'0 0 20px rgba(96, 165, 250, 0.8)'}},
+      {selector:'edge',style:{'width':'1.5px','line-color':'#2a3a4a','target-arrow-color':'#2a3a4a','target-arrow-shape':'triangle','curve-style':'bezier','arrow-scale':'1.2'}},
+      {selector:'edge:selected',style:{'line-color':'#60a5fa','target-arrow-color':'#60a5fa','width':'2.5px'}},
+    ];
+
+    const cy = cytoscape({
+      container:document.getElementById('cytoscape'),
+      elements:elements,
+      style:styles,
+      layout:{name:'dagre',directed:true,rankDir:'TB',ranker:'network-simplex',nodeSep:40,rankSep:80},
+      wheelSensitivity:0.1,
+      minZoom:0.2,
+      maxZoom:3,
+    });
+
+    document.getElementById('nodeCount').textContent = cy.nodes().length;
+    document.getElementById('edgeCount').textContent = cy.edges().length;
+
+    function filterEnv(env){
+      const visible = cy.nodes().filter(n => n.data('env')===env);
+      cy.nodes().hide();
+      visible.show();
+      cy.edges().forEach(e => {
+        if(e.source().visible() && e.target().visible()) e.show();
+        else e.hide();
+      });
+      cy.fit(visible);
+    }
+
+    function showAll(){
+      cy.nodes().show();
+      cy.edges().show();
+      cy.fit();
+    }
+
+    setTimeout(() => {cy.fit(); cy.center();}, 200);
+  </script>
+</body>
+</html>

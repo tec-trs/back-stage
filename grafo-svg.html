@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Mapa de Dependências</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    body { font-family: Arial; background: #1a1a1a; color: white; }
+    #container { display: flex; height: 100vh; }
+    #canvas { flex: 1; background: #0f0f0f; overflow: auto; }
+    #info { width: 300px; background: #2a2a2a; padding: 20px; overflow-y: auto; border-left: 1px solid #444; }
+    h2 { color: #60a5fa; margin-bottom: 15px; font-size: 18px; }
+    .stat { margin: 10px 0; padding: 10px; background: #3a3a3a; border-radius: 4px; }
+    .stat-val { font-size: 24px; font-weight: bold; color: #60a5fa; }
+    button { background: #3b82f6; color: white; border: none; padding: 8px 12px; margin: 5px 0; width: 100%; cursor: pointer; border-radius: 4px; font-size: 13px; }
+    button:hover { background: #2563eb; }
+    .legend { margin-top: 20px; }
+    .legend-item { display: flex; align-items: center; margin: 8px 0; font-size: 13px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; }
+    svg { display: block; }
+    .node { cursor: pointer; }
+    .node circle { stroke-width: 2; }
+    .node text { font-size: 11px; pointer-events: none; text-anchor: middle; dominant-baseline: middle; }
+    .edge line { stroke-width: 1.5; stroke: #444; }
+    .node:hover circle { stroke: #60a5fa !important; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="canvas"></div>
+    <div id="info">
+      <h2>📊 Infraestrutura</h2>
+      <div class="stat">
+        <div>Nós</div>
+        <div class="stat-val" id="nodeCount">0</div>
+      </div>
+      <div class="stat">
+        <div>Relacionamentos</div>
+        <div class="stat-val" id="edgeCount">0</div>
+      </div>
+
+      <h2 style="margin-top: 30px;">Legenda</h2>
+      <div class="legend">
+        <div class="legend-item"><div class="dot" style="background:#fbbf24"></div>URLs</div>
+        <div class="legend-item"><div class="dot" style="background:#a78bfa"></div>Apps</div>
+        <div class="legend-item"><div class="dot" style="background:#60a5fa"></div>Serviços</div>
+        <div class="legend-item"><div class="dot" style="background:#f472b6"></div>BDs</div>
+        <div class="legend-item"><div class="dot" style="background:#34d399"></div>Servidores</div>
+      </div>
+
+      <h2 style="margin-top: 30px;">Filtros</h2>
+      <button onclick="filterEnv('prod')">PROD</button>
+      <button onclick="filterEnv('staging')">STAGING</button>
+      <button onclick="filterEnv('dev')">DEV</button>
+      <button onclick="showAll()">TODOS</button>
+
+      <h2 style="margin-top: 30px;">Controles</h2>
+      <button onclick="zoom(1.2)">Zoom +</button>
+      <button onclick="zoom(0.8)">Zoom -</button>
+      <button onclick="resetView()">Reset</button>
+    </div>
+  </div>
+
+  <script>
+    // Cores por tipo
+    const colors = {
+      url: '#fbbf24',
+      application: '#a78bfa',
+      service: '#60a5fa',
+      database: '#f472b6',
+      server: '#34d399'
+    };
+
+    // Dados
+    const nodes = [
+      {id: 'url1', label: 'api.example.com', type: 'url', env: 'prod', level: 0},
+      {id: 'url2', label: 'www.example.com', type: 'url', env: 'prod', level: 0},
+      {id: 'url3', label: 'admin.example.com', type: 'url', env: 'prod', level: 0},
+      {id: 'url4', label: 'api-staging.example.com', type: 'url', env: 'staging', level: 0},
+      {id: 'url5', label: 'localhost:3000', type: 'url', env: 'dev', level: 0},
+
+      {id: 'app1', label: 'API Gateway', type: 'application', env: 'prod', level: 1},
+      {id: 'app2', label: 'Web Frontend', type: 'application', env: 'prod', level: 1},
+      {id: 'app3', label: 'Admin Portal', type: 'application', env: 'prod', level: 1},
+      {id: 'app4', label: 'Mobile API', type: 'application', env: 'prod', level: 1},
+      {id: 'app5', label: 'API Gateway STG', type: 'application', env: 'staging', level: 1},
+      {id: 'app6', label: 'Dev API', type: 'application', env: 'dev', level: 1},
+
+      {id: 'svc1', label: 'User Service', type: 'service', env: 'prod', level: 2},
+      {id: 'svc2', label: 'Auth Service', type: 'service', env: 'prod', level: 2},
+      {id: 'svc3', label: 'Product Service', type: 'service', env: 'prod', level: 2},
+      {id: 'svc4', label: 'Order Service', type: 'service', env: 'prod', level: 2},
+      {id: 'svc5', label: 'Payment Service', type: 'service', env: 'prod', level: 2},
+      {id: 'svc6', label: 'Inventory Service', type: 'service', env: 'prod', level: 2},
+      {id: 'svc7', label: 'Notification Service', type: 'service', env: 'prod', level: 2},
+      {id: 'svc8', label: 'Analytics Service', type: 'service', env: 'prod', level: 2},
+      {id: 'svc9', label: 'Search Service', type: 'service', env: 'prod', level: 2},
+      {id: 'svc10', label: 'Recommendation Engine', type: 'service', env: 'prod', level: 2},
+      {id: 'svc11', label: 'User Service STG', type: 'service', env: 'staging', level: 2},
+      {id: 'svc12', label: 'User Service DEV', type: 'service', env: 'dev', level: 2},
+
+      {id: 'db1', label: 'PostgreSQL Users', type: 'database', env: 'prod', level: 3},
+      {id: 'db2', label: 'PostgreSQL Orders', type: 'database', env: 'prod', level: 3},
+      {id: 'db3', label: 'PostgreSQL Products', type: 'database', env: 'prod', level: 3},
+      {id: 'db4', label: 'PostgreSQL Analytics', type: 'database', env: 'prod', level: 3},
+      {id: 'db5', label: 'MongoDB Logs', type: 'database', env: 'prod', level: 3},
+      {id: 'db6', label: 'Redis Cache', type: 'database', env: 'prod', level: 3},
+      {id: 'db7', label: 'Elasticsearch', type: 'database', env: 'prod', level: 3},
+      {id: 'db8', label: 'RabbitMQ', type: 'database', env: 'prod', level: 3},
+      {id: 'db9', label: 'DynamoDB Sessions', type: 'database', env: 'prod', level: 3},
+      {id: 'db10', label: 'MySQL Billing', type: 'database', env: 'prod', level: 3},
+      {id: 'db11', label: 'PostgreSQL STG', type: 'database', env: 'staging', level: 3},
+      {id: 'db12', label: 'SQLite DEV', type: 'database', env: 'dev', level: 3},
+
+      {id: 'srv1', label: 'prod-server-1', type: 'server', env: 'prod', level: 4},
+      {id: 'srv2', label: 'prod-server-2', type: 'server', env: 'prod', level: 4},
+      {id: 'srv3', label: 'prod-server-3', type: 'server', env: 'prod', level: 4},
+      {id: 'srv4', label: 'prod-db-server-1', type: 'server', env: 'prod', level: 4},
+      {id: 'srv5', label: 'prod-db-server-2', type: 'server', env: 'prod', level: 4},
+      {id: 'srv6', label: 'prod-cache-1', type: 'server', env: 'prod', level: 4},
+      {id: 'srv7', label: 'prod-search-1', type: 'server', env: 'prod', level: 4},
+      {id: 'srv8', label: 'staging-server-1', type: 'server', env: 'staging', level: 4},
+      {id: 'srv9', label: 'staging-db-1', type: 'server', env: 'staging', level: 4},
+      {id: 'srv10', label: 'dev-server-1', type: 'server', env: 'dev', level: 4},
+    ];
+
+    const edges = [
+      // URLs -> Apps
+      {source: 'url1', target: 'app1'}, {source: 'url2', target: 'app2'},
+      {source: 'url3', target: 'app3'}, {source: 'url4', target: 'app5'},
+      {source: 'url5', target: 'app6'},
+      // Apps -> Services
+      {source: 'app1', target: 'svc1'}, {source: 'app1', target: 'svc2'},
+      {source: 'app1', target: 'svc3'}, {source: 'app1', target: 'svc4'},
+      {source: 'app1', target: 'svc5'}, {source: 'app2', target: 'svc1'},
+      {source: 'app2', target: 'svc3'}, {source: 'app2', target: 'svc8'},
+      {source: 'app3', target: 'svc1'}, {source: 'app3', target: 'svc6'},
+      {source: 'app4', target: 'svc3'}, {source: 'app4', target: 'svc4'},
+      {source: 'app4', target: 'svc10'}, {source: 'app5', target: 'svc11'},
+      {source: 'app6', target: 'svc12'},
+      // Services -> Services
+      {source: 'svc2', target: 'svc1'}, {source: 'svc4', target: 'svc6'},
+      {source: 'svc4', target: 'svc5'}, {source: 'svc3', target: 'svc9'},
+      {source: 'svc3', target: 'svc10'}, {source: 'svc10', target: 'svc8'},
+      // Services -> Databases
+      {source: 'svc1', target: 'db1'}, {source: 'svc2', target: 'db1'},
+      {source: 'svc3', target: 'db3'}, {source: 'svc4', target: 'db2'},
+      {source: 'svc5', target: 'db10'}, {source: 'svc6', target: 'db3'},
+      {source: 'svc7', target: 'db8'}, {source: 'svc8', target: 'db4'},
+      {source: 'svc9', target: 'db7'}, {source: 'svc1', target: 'db6'},
+      {source: 'svc3', target: 'db6'}, {source: 'svc2', target: 'db9'},
+      {source: 'svc4', target: 'db5'}, {source: 'svc5', target: 'db5'},
+      {source: 'svc7', target: 'db5'}, {source: 'svc11', target: 'db11'},
+      {source: 'svc12', target: 'db12'},
+      // Databases -> Servers
+      {source: 'db1', target: 'srv4'}, {source: 'db2', target: 'srv4'},
+      {source: 'db3', target: 'srv4'}, {source: 'db4', target: 'srv5'},
+      {source: 'db5', target: 'srv5'}, {source: 'db10', target: 'srv5'},
+      {source: 'db6', target: 'srv6'}, {source: 'db9', target: 'srv6'},
+      {source: 'db7', target: 'srv7'}, {source: 'db8', target: 'srv4'},
+      {source: 'db11', target: 'srv9'}, {source: 'db12', target: 'srv10'},
+    ];
+
+    // Posições dos nós em grid hierárquico
+    function calculatePositions() {
+      const nodesByLevel = {};
+      nodes.forEach(n => {
+        if(!nodesByLevel[n.level]) nodesByLevel[n.level] = [];
+        nodesByLevel[n.level].push(n);
+      });
+
+      const padding = 80;
+      const levelHeight = 150;
+      const nodeWidth = 120;
+
+      nodes.forEach(n => {
+        const levelNodes = nodesByLevel[n.level];
+        const idx = levelNodes.indexOf(n);
+        const totalWidth = levelNodes.length * nodeWidth;
+        n.x = padding + (idx * nodeWidth) + (nodeWidth / 2);
+        n.y = 50 + (n.level * levelHeight);
+      });
+    }
+
+    calculatePositions();
+
+    // Desenhar grafo
+    function drawGraph(filter = null) {
+      const container = document.getElementById('canvas');
+      const filtered = filter ? nodes.filter(n => n.env === filter) : nodes;
+      const filteredIds = new Set(filtered.map(n => n.id));
+      const filteredEdges = edges.filter(e => filteredIds.has(e.source) && filteredIds.has(e.target));
+
+      const width = Math.max(1200, filtered.reduce((max, n) => Math.max(max, n.x + 100), 0));
+      const height = 1000;
+
+      let svg = `<svg width="${width}" height="${height}" style="background:#0f0f0f; display:block;">`;
+
+      // Draw edges
+      filteredEdges.forEach(e => {
+        const source = nodes.find(n => n.id === e.source);
+        const target = nodes.find(n => n.id === e.target);
+        svg += `<line x1="${source.x}" y1="${source.y}" x2="${target.x}" y2="${target.y}" stroke="#444" stroke-width="1.5" marker-end="url(#arrowhead)"/>`;
+      });
+
+      // Arrow marker
+      svg += `<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#444"/></marker></defs>`;
+
+      // Draw nodes
+      filtered.forEach(n => {
+        const color = colors[n.type];
+        svg += `<g class="node" data-id="${n.id}">`;
+        svg += `<circle cx="${n.x}" cy="${n.y}" r="25" fill="${color}" stroke="${color}" stroke-width="2"/>`;
+        svg += `<text x="${n.x}" y="${n.y}" font-size="9" fill="${n.type === 'url' || n.type === 'server' ? '#000' : '#fff'}" font-weight="bold">${n.label.split(' ')[0]}</text>`;
+        svg += `</g>`;
+      });
+
+      svg += `</svg>`;
+      container.innerHTML = svg;
+
+      document.getElementById('nodeCount').textContent = filtered.length;
+      document.getElementById('edgeCount').textContent = filteredEdges.length;
+    }
+
+    function filterEnv(env) {
+      drawGraph(env);
+    }
+
+    function showAll() {
+      drawGraph();
+    }
+
+    function zoom(factor) {
+      const canvas = document.getElementById('canvas');
+      const svg = canvas.querySelector('svg');
+      const currentScale = parseFloat(svg.style.transform?.match(/scale\(([\d.]+)\)/)?.[1] || 1);
+      const newScale = Math.max(0.3, Math.min(3, currentScale * factor));
+      svg.style.transform = `scale(${newScale})`;
+      svg.style.transformOrigin = 'top left';
+    }
+
+    function resetView() {
+      document.getElementById('canvas').querySelector('svg').style.transform = 'scale(1)';
+      showAll();
+    }
+
+    // Inicial
+    drawGraph();
+  </script>
+</body>
+</html>

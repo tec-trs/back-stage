@@ -9,6 +9,7 @@ import { CRITICALITY_LABELS } from '../../shared/constants/labels';
 import { useEnvironments } from '../environments/use-environments';
 import { useServers } from '../servers/use-servers';
 import { useTeams } from '../teams/use-teams';
+import { useActiveDatabaseEngines } from './use-database-engines';
 
 import type { CreateDatabaseInput } from './use-create-database';
 import { useCreateDatabase } from './use-create-database';
@@ -17,11 +18,6 @@ import { useUpdateDatabase } from './use-update-database';
 
 const inputClass =
   'rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
-
-const DB_ENGINES = [
-  'postgresql', 'mysql', 'mssql', 'mariadb', 'oracle',
-  'sqlite', 'mongodb', 'redis', 'elasticsearch', 'cassandra',
-];
 const CRITICALITIES = Object.keys(CRITICALITY_LABELS) as Array<keyof typeof CRITICALITY_LABELS>;
 const DB_STATUSES: Array<{ value: string; label: string }> = [
   { value: 'active',        label: 'Ativo' },
@@ -125,6 +121,7 @@ export function DatabaseFormDialog({
   const { data: environments }  = useEnvironments();
   const { data: serversData }   = useServers();
   const { data: teams = [] }    = useTeams();
+  const { data: engines = [] }  = useActiveDatabaseEngines();
   const servers = serversData?.items ?? [];
 
   const [activeTab, setActiveTab] = useState<TabKey>('identification');
@@ -234,8 +231,9 @@ export function DatabaseFormDialog({
                     onChange={(e) => setField('engine', e.target.value)}
                     className={inputClass}
                   >
-                    {DB_ENGINES.map((eng) => (
-                      <option key={eng} value={eng}>{eng}</option>
+                    <option value="">— Selecione —</option>
+                    {engines.map((eng) => (
+                      <option key={eng.id} value={eng.slug}>{eng.name}</option>
                     ))}
                   </select>
                 </label>

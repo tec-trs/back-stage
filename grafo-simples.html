@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Mapa de Dependências</title>
+  <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.cjs.js"></script>
+  <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.js"></script>
+  <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.cjs.js"></script>
+  <style>
+    * { margin: 0; padding: 0; }
+    body { font-family: Arial; background: #1a1a1a; color: white; }
+    #container { display: flex; height: 100vh; }
+    #cy { flex: 1; background: #0f0f0f; }
+    #info { width: 300px; background: #2a2a2a; padding: 20px; overflow-y: auto; border-left: 1px solid #444; }
+    h2 { color: #60a5fa; margin-bottom: 15px; }
+    .stat { margin: 10px 0; padding: 10px; background: #3a3a3a; border-radius: 4px; }
+    .stat-val { font-size: 24px; font-weight: bold; color: #60a5fa; }
+    button { background: #3b82f6; color: white; border: none; padding: 8px 12px; margin: 5px 0; width: 100%; cursor: pointer; border-radius: 4px; }
+    button:hover { background: #2563eb; }
+    .legend { margin-top: 20px; }
+    .legend-item { display: flex; align-items: center; margin: 8px 0; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="cy"></div>
+    <div id="info">
+      <h2>📊 Infraestrutura</h2>
+      <div class="stat">
+        <div>Nós</div>
+        <div class="stat-val" id="nodeCount">0</div>
+      </div>
+      <div class="stat">
+        <div>Relacionamentos</div>
+        <div class="stat-val" id="edgeCount">0</div>
+      </div>
+
+      <h2 style="margin-top: 30px;">Legenda</h2>
+      <div class="legend">
+        <div class="legend-item"><div class="dot" style="background:#fbbf24"></div>URLs</div>
+        <div class="legend-item"><div class="dot" style="background:#a78bfa"></div>Apps</div>
+        <div class="legend-item"><div class="dot" style="background:#60a5fa"></div>Serviços</div>
+        <div class="legend-item"><div class="dot" style="background:#f472b6"></div>Bancos de Dados</div>
+        <div class="legend-item"><div class="dot" style="background:#34d399"></div>Servidores</div>
+      </div>
+
+      <button onclick="cy.layout({name:'dagre', directed:true, rankDir:'TB'}).run();">Relayouter</button>
+      <button onclick="cy.fit();">Fit</button>
+      <button onclick="cy.zoom(cy.zoom()+0.2);">Zoom +</button>
+      <button onclick="cy.zoom(cy.zoom()-0.2);">Zoom -</button>
+    </div>
+  </div>
+
+  <script>
+    console.log("Iniciando Cytoscape...");
+
+    // Verificar se Cytoscape foi carregado
+    if (typeof cytoscape === 'undefined') {
+      document.getElementById('info').innerHTML = '<h2>❌ Erro</h2><p>Cytoscape não carregou. Verifique a conexão.</p>';
+      console.error("Cytoscape não está disponível");
+    } else {
+      console.log("Cytoscape carregado:", cytoscape.version);
+
+      // Registrar Dagre
+      try {
+        cytoscape.use(dagreLayout);
+        console.log("Dagre registrado");
+      } catch(e) {
+        console.log("Aviso Dagre:", e.message);
+      }
+
+      // Dados da infraestrutura
+      const nodes = [
+        // URLs
+        {data: {id: 'url1', label: 'api.example.com', type: 'url', env: 'prod'}},
+        {data: {id: 'url2', label: 'www.example.com', type: 'url', env: 'prod'}},
+        {data: {id: 'url3', label: 'admin.example.com', type: 'url', env: 'prod'}},
+        {data: {id: 'url4', label: 'api-staging.example.com', type: 'url', env: 'staging'}},
+        {data: {id: 'url5', label: 'localhost:3000', type: 'url', env: 'dev'}},
+
+        // Aplicações
+        {data: {id: 'app1', label: 'API Gateway', type: 'application', env: 'prod'}},
+        {data: {id: 'app2', label: 'Web Frontend', type: 'application', env: 'prod'}},
+        {data: {id: 'app3', label: 'Admin Portal', type: 'application', env: 'prod'}},
+        {data: {id: 'app4', label: 'Mobile API', type: 'application', env: 'prod'}},
+        {data: {id: 'app5', label: 'API Gateway STG', type: 'application', env: 'staging'}},
+        {data: {id: 'app6', label: 'Dev API', type: 'application', env: 'dev'}},
+
+        // Serviços
+        {data: {id: 'svc1', label: 'User Service', type: 'service', env: 'prod'}},
+        {data: {id: 'svc2', label: 'Auth Service', type: 'service', env: 'prod'}},
+        {data: {id: 'svc3', label: 'Product Service', type: 'service', env: 'prod'}},
+        {data: {id: 'svc4', label: 'Order Service', type: 'service', env: 'prod'}},
+        {data: {id: 'svc5', label: 'Payment Service', type: 'service', env: 'prod'}},
+        {data: {id: 'svc6', label: 'Inventory Service', type: 'service', env: 'prod'}},
+        {data: {id: 'svc7', label: 'Notification Service', type: 'service', env: 'prod'}},
+        {data: {id: 'svc8', label: 'Analytics Service', type: 'service', env: 'prod'}},
+        {data: {id: 'svc9', label: 'Search Service', type: 'service', env: 'prod'}},
+        {data: {id: 'svc10', label: 'Recommendation Engine', type: 'service', env: 'prod'}},
+        {data: {id: 'svc11', label: 'User Service STG', type: 'service', env: 'staging'}},
+        {data: {id: 'svc12', label: 'User Service DEV', type: 'service', env: 'dev'}},
+
+        // Bancos de Dados
+        {data: {id: 'db1', label: 'PostgreSQL Users', type: 'database', env: 'prod'}},
+        {data: {id: 'db2', label: 'PostgreSQL Orders', type: 'database', env: 'prod'}},
+        {data: {id: 'db3', label: 'PostgreSQL Products', type: 'database', env: 'prod'}},
+        {data: {id: 'db4', label: 'PostgreSQL Analytics', type: 'database', env: 'prod'}},
+        {data: {id: 'db5', label: 'MongoDB Logs', type: 'database', env: 'prod'}},
+        {data: {id: 'db6', label: 'Redis Cache', type: 'database', env: 'prod'}},
+        {data: {id: 'db7', label: 'Elasticsearch', type: 'database', env: 'prod'}},
+        {data: {id: 'db8', label: 'RabbitMQ', type: 'database', env: 'prod'}},
+        {data: {id: 'db9', label: 'DynamoDB Sessions', type: 'database', env: 'prod'}},
+        {data: {id: 'db10', label: 'MySQL Billing', type: 'database', env: 'prod'}},
+        {data: {id: 'db11', label: 'PostgreSQL STG', type: 'database', env: 'staging'}},
+        {data: {id: 'db12', label: 'SQLite DEV', type: 'database', env: 'dev'}},
+
+        // Servidores
+        {data: {id: 'srv1', label: 'prod-server-1', type: 'server', env: 'prod'}},
+        {data: {id: 'srv2', label: 'prod-server-2', type: 'server', env: 'prod'}},
+        {data: {id: 'srv3', label: 'prod-server-3', type: 'server', env: 'prod'}},
+        {data: {id: 'srv4', label: 'prod-db-server-1', type: 'server', env: 'prod'}},
+        {data: {id: 'srv5', label: 'prod-db-server-2', type: 'server', env: 'prod'}},
+        {data: {id: 'srv6', label: 'prod-cache-1', type: 'server', env: 'prod'}},
+        {data: {id: 'srv7', label: 'prod-search-1', type: 'server', env: 'prod'}},
+        {data: {id: 'srv8', label: 'staging-server-1', type: 'server', env: 'staging'}},
+        {data: {id: 'srv9', label: 'staging-db-1', type: 'server', env: 'staging'}},
+        {data: {id: 'srv10', label: 'dev-server-1', type: 'server', env: 'dev'}},
+      ];
+
+      const edges = [
+        // URLs -> Apps
+        {data: {source: 'url1', target: 'app1'}},
+        {data: {source: 'url2', target: 'app2'}},
+        {data: {source: 'url3', target: 'app3'}},
+        {data: {source: 'url4', target: 'app5'}},
+        {data: {source: 'url5', target: 'app6'}},
+
+        // Apps -> Services
+        {data: {source: 'app1', target: 'svc1'}},
+        {data: {source: 'app1', target: 'svc2'}},
+        {data: {source: 'app1', target: 'svc3'}},
+        {data: {source: 'app1', target: 'svc4'}},
+        {data: {source: 'app1', target: 'svc5'}},
+        {data: {source: 'app2', target: 'svc1'}},
+        {data: {source: 'app2', target: 'svc3'}},
+        {data: {source: 'app2', target: 'svc8'}},
+        {data: {source: 'app3', target: 'svc1'}},
+        {data: {source: 'app3', target: 'svc6'}},
+        {data: {source: 'app4', target: 'svc3'}},
+        {data: {source: 'app4', target: 'svc4'}},
+        {data: {source: 'app4', target: 'svc10'}},
+        {data: {source: 'app5', target: 'svc11'}},
+        {data: {source: 'app6', target: 'svc12'}},
+
+        // Services -> Services
+        {data: {source: 'svc2', target: 'svc1'}},
+        {data: {source: 'svc4', target: 'svc6'}},
+        {data: {source: 'svc4', target: 'svc5'}},
+        {data: {source: 'svc3', target: 'svc9'}},
+        {data: {source: 'svc3', target: 'svc10'}},
+        {data: {source: 'svc10', target: 'svc8'}},
+
+        // Services -> Databases
+        {data: {source: 'svc1', target: 'db1'}},
+        {data: {source: 'svc2', target: 'db1'}},
+        {data: {source: 'svc3', target: 'db3'}},
+        {data: {source: 'svc4', target: 'db2'}},
+        {data: {source: 'svc5', target: 'db10'}},
+        {data: {source: 'svc6', target: 'db3'}},
+        {data: {source: 'svc7', target: 'db8'}},
+        {data: {source: 'svc8', target: 'db4'}},
+        {data: {source: 'svc9', target: 'db7'}},
+        {data: {source: 'svc1', target: 'db6'}},
+        {data: {source: 'svc3', target: 'db6'}},
+        {data: {source: 'svc2', target: 'db9'}},
+        {data: {source: 'svc4', target: 'db5'}},
+        {data: {source: 'svc5', target: 'db5'}},
+        {data: {source: 'svc7', target: 'db5'}},
+        {data: {source: 'svc11', target: 'db11'}},
+        {data: {source: 'svc12', target: 'db12'}},
+
+        // Databases -> Servers
+        {data: {source: 'db1', target: 'srv4'}},
+        {data: {source: 'db2', target: 'srv4'}},
+        {data: {source: 'db3', target: 'srv4'}},
+        {data: {source: 'db4', target: 'srv5'}},
+        {data: {source: 'db5', target: 'srv5'}},
+        {data: {source: 'db10', target: 'srv5'}},
+        {data: {source: 'db6', target: 'srv6'}},
+        {data: {source: 'db9', target: 'srv6'}},
+        {data: {source: 'db7', target: 'srv7'}},
+        {data: {source: 'db8', target: 'srv4'}},
+        {data: {source: 'db11', target: 'srv9'}},
+        {data: {source: 'db12', target: 'srv10'}},
+      ];
+
+      const styles = [
+        {selector: 'node[type="url"]', style: {'background-color': '#fbbf24', 'label': 'data(label)', 'text-valign': 'center', 'text-halign': 'center', 'font-size': '10px', 'font-weight': 'bold', 'color': '#000', 'width': '90px', 'height': '40px', 'shape': 'ellipse', 'border-width': '2px', 'border-color': '#f59e0b'}},
+        {selector: 'node[type="application"]', style: {'background-color': '#a78bfa', 'label': 'data(label)', 'text-valign': 'center', 'text-halign': 'center', 'font-size': '10px', 'font-weight': 'bold', 'color': '#fff', 'width': '100px', 'height': '40px', 'shape': 'rectangle', 'border-width': '2px', 'border-color': '#8b5cf6'}},
+        {selector: 'node[type="service"]', style: {'background-color': '#60a5fa', 'label': 'data(label)', 'text-valign': 'center', 'text-halign': 'center', 'font-size': '9px', 'font-weight': 'bold', 'color': '#fff', 'width': '95px', 'height': '40px', 'shape': 'round-rectangle', 'border-width': '2px', 'border-color': '#3b82f6'}},
+        {selector: 'node[type="database"]', style: {'background-color': '#f472b6', 'label': 'data(label)', 'text-valign': 'center', 'text-halign': 'center', 'font-size': '9px', 'font-weight': 'bold', 'color': '#fff', 'width': '100px', 'height': '40px', 'shape': 'round-rectangle', 'border-width': '2px', 'border-color': '#ec4899'}},
+        {selector: 'node[type="server"]', style: {'background-color': '#34d399', 'label': 'data(label)', 'text-valign': 'center', 'text-halign': 'center', 'font-size': '9px', 'font-weight': 'bold', 'color': '#000', 'width': '110px', 'height': '40px', 'shape': 'square', 'border-width': '2px', 'border-color': '#10b981'}},
+        {selector: 'edge', style: {'width': '1.5px', 'line-color': '#444', 'target-arrow-color': '#444', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier'}},
+      ];
+
+      try {
+        const cy = cytoscape({
+          container: document.getElementById('cy'),
+          elements: [...nodes, ...edges],
+          style: styles,
+          layout: {name: 'dagre', directed: true, rankDir: 'TB', nodeSep: 30, rankSep: 60},
+          wheelSensitivity: 0.1,
+          minZoom: 0.1,
+          maxZoom: 3,
+        });
+
+        document.getElementById('nodeCount').textContent = nodes.length;
+        document.getElementById('edgeCount').textContent = edges.length;
+
+        setTimeout(() => {cy.fit(); cy.center();}, 300);
+        console.log("Grafo criado com sucesso");
+      } catch(e) {
+        console.error("Erro ao criar Cytoscape:", e);
+        document.getElementById('info').innerHTML = '<h2>❌ Erro</h2><p>Erro: ' + e.message + '</p>';
+      }
+    }
+  </script>
+</body>
+</html>

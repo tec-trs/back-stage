@@ -48,6 +48,7 @@ export const updateDatabaseBodySchema = z.object({
     .max(255)
     .regex(/^[a-z0-9._-]+$/i, 'nome deve conter apenas letras, numeros, ponto, hifen e underscore')
     .optional(),
+  engine: baseFields.engine.optional(),
   displayName: baseFields.displayName,
   description: baseFields.description,
   version: baseFields.version,

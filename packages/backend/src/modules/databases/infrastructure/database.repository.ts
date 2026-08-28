@@ -197,6 +197,7 @@ export class DatabaseRepository implements IDatabaseRepository {
   public async update(id: string, input: UpdateDatabaseInput): Promise<Database | undefined> {
     const updateData: Record<string, unknown> = {};
 
+    if (input.engine !== undefined) updateData.engine = input.engine;
     if (input.displayName !== undefined) updateData.display_name = input.displayName;
     if (input.description !== undefined) updateData.description = input.description;
     if (input.version !== undefined) updateData.version = input.version;

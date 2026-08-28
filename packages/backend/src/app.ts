@@ -11,6 +11,11 @@ import { registerApplicationsModule } from './modules/applications/applications.
 import { registerAuditModule } from './modules/audit/audit.module.js';
 import { registerApplicationTypesModule } from './modules/application-types/application-types.module.js';
 import { registerDatabasesModule } from './modules/databases/databases.module.js';
+import { createDatabaseEngineRouter } from './modules/databases/interfaces/http/database-engine.routes.js';
+import { DatabaseEngineController } from './modules/databases/interfaces/http/database-engine.controller.js';
+import { DatabaseEngineService } from './modules/databases/application/database-engine.service.js';
+import { DatabaseEngineRepository } from './modules/databases/infrastructure/database-engine.repository.js';
+import { db } from './database/connection.js';
 import { registerUrlsModule } from './modules/urls/urls.module.js';
 import { registerResourceGraphModule } from './modules/resource-graph/resource-graph.module.js';
 import { registerEnvironmentsModule } from './modules/environments/environments.module.js';
@@ -28,6 +33,7 @@ import { registerVIPsModule } from './modules/vips/vips.module.js';
 import { registerServerGroupsModule } from './modules/server-groups/server-groups.module.js';
 import { registerServiceCatalogModule } from './modules/service-catalog/service-catalog.module.js';
 import { registerUsersModule } from './modules/users/users.module.js';
+import { registerArchitectureModule } from './modules/architecture/architecture.module.js';
 import { metricsRegistry } from './observability/metrics.js';
 import { authenticateMiddleware } from './shared/http/authenticate.middleware.js';
 import { errorHandlerMiddleware } from './shared/http/error-handler.middleware.js';
@@ -104,9 +110,13 @@ export function createApp(): Express {
   app.use('/api/vips', ...withOrg, registerVIPsModule());
   app.use('/api/server-groups', ...withOrg, registerServerGroupsModule());
   app.use('/api/applications', ...withOrg, registerApplicationsModule());
+  app.use('/api/database-engines', createDatabaseEngineRouter(
+    new DatabaseEngineController(new DatabaseEngineService(new DatabaseEngineRepository(db))),
+  ));
   app.use('/api/databases', ...withOrg, registerDatabasesModule());
   app.use('/api/urls', ...withOrg, registerUrlsModule());
   app.use('/api/resource-graph', ...withOrg, registerResourceGraphModule());
+  app.use('/api/architecture-diagrams', ...withOrg, registerArchitectureModule(db).router);
   app.use(registerDeploymentsModule());
 
   app.use(notFoundMiddleware);
