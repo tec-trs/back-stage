@@ -82,7 +82,7 @@ export function ToolBarSimple({
     if (resource) {
       onAddNode(
         selectedType,
-        resource.label || resource.name || resource.hostname || '',
+        resource.label || resource.name || resource.displayName || resource.hostname || '',
         resource.description || resource.url || resource.hostname || '',
         resource.id
       );
@@ -91,18 +91,6 @@ export function ToolBarSimple({
   };
 
   const resourceList = getResourceList();
-
-  // Debug
-  console.log('ToolBar Debug:', {
-    selectedType,
-    urlsCount: urls.length,
-    appsCount: apps.length,
-    serversCount: servers.length,
-    databasesCount: databases.length,
-    servicesCount: services.length,
-    resourceListCount: resourceList.length,
-    resourceList: resourceList.slice(0, 3),
-  });
 
   return (
     <div className="flex gap-2 p-4 bg-slate-900 border-b border-slate-700 flex-wrap items-center">
@@ -131,7 +119,13 @@ export function ToolBarSimple({
             {selectedResourceId
               ? (() => {
                   const selected = resourceList.find((r: any) => r.id === selectedResourceId) as any;
-                  return (selected?.label || selected?.name) || 'Selecione';
+                  return (
+                    selected?.label ||
+                    selected?.name ||
+                    selected?.displayName ||
+                    selected?.hostname ||
+                    'Selecione'
+                  );
                 })()
               : '-- Selecione Recurso --'}
             <span className="text-xs">▼</span>
@@ -163,7 +157,7 @@ export function ToolBarSimple({
                       setIsResourceDropdownOpen(false);
                     }}
                   >
-                    {resource.label || resource.name}
+                    {resource.label || resource.name || resource.displayName || resource.hostname}
                   </div>
                 ))
               ) : (
