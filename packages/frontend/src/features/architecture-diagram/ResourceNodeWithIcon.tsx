@@ -19,7 +19,7 @@ export function ResourceNodeWithIcon(props: NodeProps) {
 
   return (
     <div
-      className="flex w-24 flex-col items-center gap-1.5"
+      className="flex w-[120px] flex-col items-center gap-1.5"
       title={description ? `${label} — ${description}` : label}
     >
       <Handle type="target" position={Position.Top} className={HANDLE_CLASS} />
@@ -34,8 +34,12 @@ export function ResourceNodeWithIcon(props: NodeProps) {
       </div>
 
       <div className="w-full text-center">
-        <p className="truncate font-mono text-[11px] font-medium text-slate-200">{label}</p>
-        {description && <p className="truncate text-[10px] text-slate-500">{description}</p>}
+        <p className="line-clamp-2 break-words font-mono text-[11px] font-medium leading-[1.15] text-slate-200">
+          {label}
+        </p>
+        {description && (
+          <p className="mt-0.5 truncate text-[10px] text-slate-500">{description}</p>
+        )}
       </div>
 
       <Handle type="source" position={Position.Bottom} className={HANDLE_CLASS} />

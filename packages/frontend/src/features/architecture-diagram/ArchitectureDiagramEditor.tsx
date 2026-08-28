@@ -29,11 +29,11 @@ import { useDiagramState } from './useDiagramState';
 import { RESOURCE_COLORS, type ResourceType } from './types';
 import type { ArchitectureDiagram } from './use-architecture-diagrams';
 
-const GRID_COLS = 6;
-const GRID_GAP_X = 120;
-const GRID_GAP_Y = 100;
-const NODE_W = 96;
-const NODE_H = 64;
+const GRID_COLS = 5;
+const GRID_GAP_X = 140;
+const GRID_GAP_Y = 110;
+const NODE_W = 120;
+const NODE_H = 76;
 
 // Auto-arrange the current graph top-to-bottom with dagre — an explicit,
 // on-demand action (not automatic) so manual placement is never fought.
