@@ -827,7 +827,7 @@ export function ResourceGraph({
       source: e.sourceId,
       target: e.targetId,
       type: 'deletable',
-      markerEnd: { type: MarkerType.ArrowClosed, color: '#334155', width: 14, height: 14 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: '#334155', width: 11, height: 11 },
       style: { stroke: '#334155', strokeWidth: 1.5, opacity: 1 },
       data: {
         editMode: editModeRef.current,
@@ -883,7 +883,7 @@ export function ResourceGraph({
       return {
         ...e,
         animated: touchesSource || touchesImpact,
-        markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 14, height: 14 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 11, height: 11 },
         style: {
           stroke,
           strokeWidth: touchesSource || touchesImpact ? 2 : 1.5,

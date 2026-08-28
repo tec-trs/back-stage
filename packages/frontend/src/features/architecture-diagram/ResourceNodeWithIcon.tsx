@@ -22,7 +22,7 @@ export function ResourceNodeWithIcon(props: NodeProps) {
       className="flex w-[120px] flex-col items-center gap-1.5"
       title={description ? `${label} — ${description}` : label}
     >
-      <Handle type="target" position={Position.Top} className={HANDLE_CLASS} />
+      <Handle type="target" position={Position.Left} className={HANDLE_CLASS} />
 
       <div
         className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border transition-shadow [&_svg]:h-5 [&_svg]:w-5 ${
@@ -33,7 +33,7 @@ export function ResourceNodeWithIcon(props: NodeProps) {
         <IconComponent />
       </div>
 
-      <div className="w-full text-center">
+      <div className="w-full rounded bg-canvas/85 px-1 py-0.5 text-center">
         <p className="line-clamp-2 break-words font-mono text-[11px] font-medium leading-[1.15] text-slate-200">
           {label}
         </p>
@@ -42,7 +42,7 @@ export function ResourceNodeWithIcon(props: NodeProps) {
         )}
       </div>
 
-      <Handle type="source" position={Position.Bottom} className={HANDLE_CLASS} />
+      <Handle type="source" position={Position.Right} className={HANDLE_CLASS} />
     </div>
   );
 }

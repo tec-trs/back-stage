@@ -35,13 +35,16 @@ const GRID_GAP_Y = 110;
 const NODE_W = 120;
 const NODE_H = 76;
 
-// Auto-arrange the current graph top-to-bottom with dagre — an explicit,
+// Auto-arrange the current graph left-to-right with dagre — an explicit,
 // on-demand action (not automatic) so manual placement is never fought.
+// LR (not TB) intentionally mirrors iTop's own impact-analysis graph, which
+// computes its layout the same way (a layered/Sugiyama algorithm — dagre is a
+// JS port of the same family GraphViz's `dot` uses) with rankdir=LR.
 function layoutWithDagre(nodes: any[], edges: any[]): Map<string, { x: number; y: number }> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g = new (dagre as any).graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: 'TB', nodesep: 28, ranksep: 56 });
+  g.setGraph({ rankdir: 'LR', nodesep: 36, ranksep: 80 });
   nodes.forEach((n) => g.setNode(n.id, { width: NODE_W, height: NODE_H }));
   edges.forEach((e) => g.setEdge(e.source, e.target));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -243,9 +246,9 @@ export function ArchitectureDiagramEditor() {
             onNodeClick={(_, node) => handleNodeClick(node)}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={{
-              type: 'smoothstep',
-              style: { stroke: '#475569', strokeWidth: 1.5 },
-              markerEnd: { type: MarkerType.ArrowClosed, color: '#475569', width: 16, height: 16 },
+              type: 'straight',
+              style: { stroke: '#475569', strokeWidth: 1.25 },
+              markerEnd: { type: MarkerType.ArrowClosed, color: '#475569', width: 11, height: 11 },
             }}
             fitView
           >
