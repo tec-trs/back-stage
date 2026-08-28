@@ -1,61 +1,42 @@
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
+
 import { getIconComponent } from './ResourceIcons';
+import { RESOURCE_COLORS, type ResourceType } from './types';
 
-const shapeClasses: Record<string, string> = {
-  url: 'rounded-full',
-  application: 'rounded-lg',
-  service: 'rounded',
-  database: 'rounded-sm',
-  server: 'rounded-md',
-};
-
-const colors: Record<string, { bg: string; text: string }> = {
-  url: { bg: '#fbbf24', text: '#000' },
-  application: { bg: '#a78bfa', text: '#fff' },
-  service: { bg: '#60a5fa', text: '#fff' },
-  database: { bg: '#f472b6', text: '#fff' },
-  server: { bg: '#34d399', text: '#000' },
-};
+const HANDLE_CLASS = '!h-2 !w-2 !border-2 !border-slate-500 !bg-slate-700';
 
 export function ResourceNodeWithIcon(props: NodeProps) {
-  const data = props.data as any;
-  const resourceType = data?.resourceType || 'service';
-  const color = colors[resourceType] || colors.service;
+  const data = props.data as { label?: string; resourceType?: ResourceType; description?: string };
+  const resourceType: ResourceType = data?.resourceType ?? 'service';
+  const color = RESOURCE_COLORS[resourceType] ?? RESOURCE_COLORS.service;
   const IconComponent = getIconComponent(resourceType);
+  const label = data?.label || 'Recurso';
 
   return (
     <div
-      className={`
-        px-3 py-2 shadow-lg border-2 transition-all flex flex-col items-center gap-1
-        ${(shapeClasses as any)[resourceType] || 'rounded'}
-        ${props.selected ? 'border-sky-400 shadow-sky-500/50' : 'border-opacity-50'}
-      `}
-      style={{
-        backgroundColor: color.bg,
-        borderColor: color.bg,
-        minWidth: '100px',
-      }}
+      className="flex w-[104px] flex-col items-center gap-1.5"
+      title={data?.description ? `${label} — ${data.description}` : label}
     >
-      <Handle type="target" position={Position.Top} />
+      <Handle type="target" position={Position.Top} className={HANDLE_CLASS} />
 
-      <div style={{ color: color.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border transition-shadow [&_svg]:h-5 [&_svg]:w-5 ${
+          props.selected ? 'ring-2 ring-signal ring-offset-2 ring-offset-canvas' : ''
+        }`}
+        style={{ backgroundColor: `${color}1a`, borderColor: `${color}66`, color }}
+      >
         <IconComponent />
       </div>
 
-      <div
-        className="text-center font-semibold text-xs"
-        style={{ color: color.text, maxWidth: '90px' }}
-      >
-        <div className="truncate">{data?.label || 'Node'}</div>
+      <div className="w-full text-center">
+        <p className="truncate font-mono text-[11px] font-medium text-slate-200">{label}</p>
         {data?.description && (
-          <div style={{ opacity: 0.7, fontSize: '10px', marginTop: '2px' }} className="truncate">
-            {data.description}
-          </div>
+          <p className="truncate text-[10px] text-slate-500">{data.description}</p>
         )}
       </div>
 
-      <Handle type="source" position={Position.Bottom} />
+      <Handle type="source" position={Position.Bottom} className={HANDLE_CLASS} />
     </div>
   );
 }

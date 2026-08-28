@@ -1,28 +1,42 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '../../shared/components/Button';
+import {
+  ChevronLeftIcon,
+  DownloadIcon,
+  LayersIcon,
+  PlusIcon,
+  TrashIcon,
+  UploadIcon,
+} from '../../shared/components/icons';
 import { useUrls } from '../urls/use-urls';
 import { useApplications } from '../applications/use-applications';
 import { useServers } from '../servers/use-servers';
 import { useDatabases } from '../databases/use-databases';
 import { useServices } from '../services/use-services';
-import type { ResourceType } from './types';
+import { RESOURCE_LABELS, type ResourceType } from './types';
 
 interface ToolBarSimpleProps {
   onAddNode: (type: ResourceType, label: string, description?: string, resourceId?: string) => void;
   onClear: () => void;
   onExport: () => void;
   onImport: () => void;
+  onOrganize: () => void;
   onSaveToDatabase: () => void;
   onLoadFromDatabase: () => void;
   onExportImage: () => void;
 }
+
+const SELECT_CLASS =
+  'rounded-md border border-line bg-surface px-3 py-2 text-sm text-slate-100 cursor-pointer ' +
+  'focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-signal/50';
 
 export function ToolBarSimple({
   onAddNode,
   onClear,
   onExport,
   onImport,
+  onOrganize,
   onSaveToDatabase,
   onLoadFromDatabase,
   onExportImage,
@@ -93,64 +107,67 @@ export function ToolBarSimple({
   const resourceList = getResourceList();
 
   return (
-    <div className="flex gap-2 p-4 bg-slate-900 border-b border-slate-700 flex-wrap items-center">
+    <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface p-3">
       <select
         value={selectedType || ''}
         onChange={(e) => {
           setSelectedType((e.target.value as ResourceType) || null);
           setSelectedResourceId('');
         }}
-        className="px-3 py-2 bg-white text-black text-sm cursor-pointer rounded border border-slate-400"
+        className={SELECT_CLASS}
       >
-        <option value="">-- Selecione Tipo --</option>
-        <option value="url">🌐 URLs</option>
-        <option value="application">📱 Aplicações</option>
-        <option value="service">⚙️ Serviços</option>
-        <option value="database">🗄️ Bancos de Dados</option>
-        <option value="server">🖥️ Servidores</option>
+        <option value="">-- Selecione tipo --</option>
+        {(Object.entries(RESOURCE_LABELS) as Array<[ResourceType, string]>).map(([type, label]) => (
+          <option key={type} value={type}>
+            {label}
+          </option>
+        ))}
       </select>
 
       {selectedType && (
         <div className="relative" ref={dropdownRef}>
           <button
+            type="button"
             onClick={() => setIsResourceDropdownOpen(!isResourceDropdownOpen)}
-            className="px-3 py-2 bg-white text-black text-sm cursor-pointer rounded border border-slate-400 w-48 text-left flex justify-between items-center"
+            className={`${SELECT_CLASS} flex w-52 items-center justify-between gap-2 text-left`}
           >
-            {selectedResourceId
-              ? (() => {
-                  const selected = resourceList.find((r: any) => r.id === selectedResourceId) as any;
-                  return (
-                    selected?.label ||
-                    selected?.name ||
-                    selected?.displayName ||
-                    selected?.hostname ||
-                    'Selecione'
-                  );
-                })()
-              : '-- Selecione Recurso --'}
-            <span className="text-xs">▼</span>
+            <span className="truncate">
+              {selectedResourceId
+                ? (() => {
+                    const selected = resourceList.find((r: any) => r.id === selectedResourceId) as any;
+                    return (
+                      selected?.label ||
+                      selected?.name ||
+                      selected?.displayName ||
+                      selected?.hostname ||
+                      'Selecione'
+                    );
+                  })()
+                : '-- Selecione recurso --'}
+            </span>
+            <span className="shrink-0 text-xs text-slate-500">▾</span>
           </button>
 
           {isResourceDropdownOpen && (
-            <div className="absolute top-full left-0 w-48 mt-1 bg-white border border-slate-400 rounded shadow-lg z-50 max-h-48 overflow-y-auto">
+            <div className="absolute top-full left-0 z-50 mt-1 max-h-48 w-52 overflow-y-auto rounded-md border border-line bg-surface-raised shadow-xl">
               <div
-                className="px-3 py-2 bg-white text-black hover:bg-slate-100 cursor-pointer text-sm"
+                className="cursor-pointer px-3 py-2 text-sm text-slate-400 hover:bg-slate-800"
                 onClick={() => {
                   setSelectedResourceId('');
                   setIsResourceDropdownOpen(false);
                 }}
               >
-                -- Selecione Recurso --
+                -- Selecione recurso --
               </div>
 
               {resourceList.length > 0 ? (
                 resourceList.map((resource: any) => (
                   <div
                     key={resource.id}
-                    className={`px-3 py-2 text-black cursor-pointer text-sm ${
+                    className={`cursor-pointer px-3 py-2 text-sm ${
                       selectedResourceId === resource.id
-                        ? 'bg-sky-500 text-white'
-                        : 'bg-white hover:bg-slate-100'
+                        ? 'bg-signal/20 text-slate-100'
+                        : 'text-slate-200 hover:bg-slate-800'
                     }`}
                     onClick={() => {
                       setSelectedResourceId(resource.id);
@@ -161,9 +178,7 @@ export function ToolBarSimple({
                   </div>
                 ))
               ) : (
-                <div className="px-3 py-2 bg-white text-slate-500 text-sm">
-                  Nenhum recurso encontrado
-                </div>
+                <div className="px-3 py-2 text-sm text-slate-500">Nenhum recurso encontrado</div>
               )}
             </div>
           )}
@@ -171,37 +186,40 @@ export function ToolBarSimple({
       )}
 
       {selectedResourceId && (
-        <Button size="sm" onClick={handleAddNode}>
-          + Adicionar
+        <Button size="sm" icon={<PlusIcon />} onClick={handleAddNode}>
+          Adicionar
         </Button>
       )}
 
       <div className="flex-1" />
 
       <div className="flex gap-2">
+        <Button size="sm" variant="secondary" icon={<LayersIcon />} onClick={onOrganize} title="Organiza o layout automaticamente">
+          Organizar
+        </Button>
         <Button size="sm" variant="secondary" onClick={onSaveToDatabase}>
-          💾 Salvar
+          Salvar
         </Button>
         <Button size="sm" variant="secondary" onClick={onLoadFromDatabase}>
-          📂 Carregar
+          Carregar
         </Button>
         <Button size="sm" variant="secondary" onClick={onExportImage}>
-          📸 Imagem
+          Imagem
         </Button>
-        <Button size="sm" variant="secondary" onClick={onExport}>
-          📥 JSON
+        <Button size="sm" variant="secondary" icon={<DownloadIcon />} onClick={onExport}>
+          JSON
         </Button>
-        <Button size="sm" variant="secondary" onClick={onImport}>
-          📤 Importar
+        <Button size="sm" variant="secondary" icon={<UploadIcon />} onClick={onImport}>
+          Importar
         </Button>
       </div>
 
       <div className="flex gap-2">
-        <Button size="sm" variant="secondary" onClick={onClear}>
-          🗑️ Limpar
+        <Button size="sm" variant="ghost-danger" icon={<TrashIcon />} onClick={onClear}>
+          Limpar
         </Button>
-        <Button size="sm" variant="secondary" onClick={() => navigate('/infrastructure')}>
-          ← Voltar
+        <Button size="sm" variant="ghost" icon={<ChevronLeftIcon />} onClick={() => navigate('/infrastructure')}>
+          Voltar
         </Button>
       </div>
     </div>

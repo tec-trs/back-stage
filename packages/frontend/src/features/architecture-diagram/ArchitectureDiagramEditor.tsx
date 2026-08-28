@@ -2,7 +2,9 @@ import { useCallback, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
+  BackgroundVariant,
   Controls,
+  MarkerType,
   MiniMap,
   useNodesState,
   useEdgesState,
@@ -13,6 +15,9 @@ import {
   type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import dagre from 'dagre';
 import { ResourceNodeWithIcon } from './ResourceNodeWithIcon';
 import { ToolBarSimple } from './ToolBarSimple';
 import { Sidebar } from './Sidebar';
@@ -21,8 +26,33 @@ import { LoadDiagramDialog } from './LoadDiagramDialog';
 import { ExportImageDialog } from './ExportImageDialog';
 import { useNodeClickHandler } from './NodeClickHandler';
 import { useDiagramState } from './useDiagramState';
-import type { ResourceType } from './types';
+import { RESOURCE_COLORS, type ResourceType } from './types';
 import type { ArchitectureDiagram } from './use-architecture-diagrams';
+
+const GRID_COLS = 5;
+const GRID_GAP_X = 150;
+const GRID_GAP_Y = 130;
+const NODE_W = 104;
+const NODE_H = 72;
+
+// Auto-arrange the current graph top-to-bottom with dagre — an explicit,
+// on-demand action (not automatic) so manual placement is never fought.
+function layoutWithDagre(nodes: any[], edges: any[]): Map<string, { x: number; y: number }> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const g = new (dagre as any).graphlib.Graph();
+  g.setDefaultEdgeLabel(() => ({}));
+  g.setGraph({ rankdir: 'TB', nodesep: 40, ranksep: 70 });
+  nodes.forEach((n) => g.setNode(n.id, { width: NODE_W, height: NODE_H }));
+  edges.forEach((e) => g.setEdge(e.source, e.target));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (dagre as any).layout(g);
+  const positions = new Map<string, { x: number; y: number }>();
+  nodes.forEach((n) => {
+    const pos = g.node(n.id);
+    positions.set(n.id, pos ? { x: pos.x - NODE_W / 2, y: pos.y - NODE_H / 2 } : { x: 0, y: 0 });
+  });
+  return positions;
+}
 
 const nodeTypes = {
   url: ResourceNodeWithIcon as any,
@@ -79,20 +109,25 @@ export function ArchitectureDiagramEditor() {
     (type: ResourceType, label: string, description?: string, resourceId?: string) => {
       const nodeId = resourceId || `${type}-${Date.now()}`;
       diagramState.addNode(type, label, description);
-      setNodes((nds) => [
-        ...nds,
-        {
-          id: nodeId,
-          type: type as string,
-          position: { x: Math.random() * 300, y: Math.random() * 300 },
-          data: {
-            label,
-            resourceType: type,
-            description,
-            resourceId,
+      setNodes((nds) => {
+        const index = nds.length;
+        const col = index % GRID_COLS;
+        const row = Math.floor(index / GRID_COLS);
+        return [
+          ...nds,
+          {
+            id: nodeId,
+            type: type as string,
+            position: { x: 60 + col * GRID_GAP_X, y: 60 + row * GRID_GAP_Y },
+            data: {
+              label,
+              resourceType: type,
+              description,
+              resourceId,
+            },
           },
-        },
-      ]);
+        ];
+      });
     },
     [diagramState, setNodes]
   );
@@ -105,6 +140,15 @@ export function ArchitectureDiagramEditor() {
     },
     [diagramState, setNodes, setEdges]
   );
+
+  const handleOrganize = useCallback(() => {
+    setNodes((nds) => {
+      const positions = layoutWithDagre(nds, edges);
+      const arranged = nds.map((n) => ({ ...n, position: positions.get(n.id) ?? n.position }));
+      diagramState.setNodes(arranged as any);
+      return arranged;
+    });
+  }, [edges, setNodes, diagramState]);
 
   const handleClear = useCallback(() => {
     if (!confirm('Tem certeza que deseja limpar todo o diagrama?')) return;
@@ -174,6 +218,7 @@ export function ArchitectureDiagramEditor() {
         onClear={handleClear}
         onExport={handleExport}
         onImport={handleImport}
+        onOrganize={handleOrganize}
         onSaveToDatabase={() => setIsSaveOpen(true)}
         onLoadFromDatabase={() => setIsLoadOpen(true)}
         onExportImage={() => setIsExportOpen(true)}
@@ -197,11 +242,21 @@ export function ArchitectureDiagramEditor() {
             onConnect={handleConnect}
             onNodeClick={(_, node) => handleNodeClick(node)}
             nodeTypes={nodeTypes}
+            defaultEdgeOptions={{
+              type: 'smoothstep',
+              style: { stroke: '#475569', strokeWidth: 1.5 },
+              markerEnd: { type: MarkerType.ArrowClosed, color: '#475569', width: 16, height: 16 },
+            }}
             fitView
           >
-            <Background />
-            <Controls />
-            <MiniMap />
+            <Background color="#1e293b" variant={BackgroundVariant.Dots} gap={20} size={1.5} />
+            <Controls className="!rounded-md !border !border-line !bg-surface !shadow-lg [&>button]:!border-line [&>button]:!bg-surface [&>button]:!text-slate-300 [&>button:hover]:!bg-surface-raised [&_svg]:!fill-slate-300" />
+            <MiniMap
+              className="!rounded-md !border !border-line !bg-surface"
+              maskColor="rgba(11,15,25,0.65)"
+              nodeColor={(n) => RESOURCE_COLORS[(n.data as { resourceType?: ResourceType })?.resourceType ?? 'service']}
+              nodeBorderRadius={4}
+            />
           </ReactFlow>
         </div>
 

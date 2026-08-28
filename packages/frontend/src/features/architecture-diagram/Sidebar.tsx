@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RESOURCE_LABELS } from './types';
+import { RESOURCE_COLORS, RESOURCE_LABELS } from './types';
 
 interface SidebarProps {
   selectedNodeId: string | null;
@@ -71,38 +71,32 @@ export function Sidebar({
       <div className="p-4 border-b border-slate-700">
         <h3 className="text-sm font-semibold text-slate-300 mb-3">Legenda</h3>
         <div className="space-y-2">
-          {(Object.entries(RESOURCE_LABELS) as Array<[string, string]>).map(([type, label]) => (
-            <div key={type} className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{
-                  backgroundColor: {
-                    url: '#fbbf24',
-                    application: '#a78bfa',
-                    service: '#60a5fa',
-                    database: '#f472b6',
-                    server: '#34d399',
-                  }[type],
-                }}
-              />
-              <span className="text-xs text-slate-400">{label}</span>
-            </div>
-          ))}
+          {(Object.entries(RESOURCE_LABELS) as Array<[keyof typeof RESOURCE_COLORS, string]>).map(
+            ([type, label]) => (
+              <div key={type} className="flex items-center gap-2">
+                <div
+                  className="h-2.5 w-2.5 rounded-sm"
+                  style={{ backgroundColor: RESOURCE_COLORS[type] }}
+                />
+                <span className="text-xs text-slate-400">{label}</span>
+              </div>
+            ),
+          )}
         </div>
       </div>
 
       {/* Instruções */}
       <div className="p-4 flex-1 overflow-y-auto">
         <h3 className="text-sm font-semibold text-slate-300 mb-3">Dicas</h3>
-        <ul className="space-y-2 text-xs text-slate-400">
-          <li>✏️ Clique no título para renomear o diagrama</li>
-          <li>➕ Use "Adicionar Nó" para criar recursos</li>
-          <li>🔗 Arraste de um handle para outro para conectar</li>
-          <li>🗑️ Delete com tecla Delete ou clique com botão direito</li>
-          <li>🔄 Arraste nós para reorganizar</li>
-          <li>🔍 Use scroll ou controles para zoom</li>
-          <li>📥 Exporte para salvar como JSON</li>
-          <li>📤 Importe um arquivo JSON anterior</li>
+        <ul className="space-y-2 text-xs text-slate-400 marker:text-slate-600 list-disc list-inside">
+          <li>Clique no título para renomear o diagrama</li>
+          <li>Use "Adicionar" para criar recursos a partir do inventário</li>
+          <li>Arraste de um handle para outro para conectar dois nós</li>
+          <li>Delete com a tecla Delete ou clique com o botão direito</li>
+          <li>Use "Organizar" para arrumar o layout automaticamente</li>
+          <li>Arraste nós livremente para ajustar manualmente</li>
+          <li>Scroll ou os controles no canto arrumam o zoom</li>
+          <li>Exporte para salvar como JSON, importe para retomar depois</li>
         </ul>
       </div>
 
@@ -114,7 +108,7 @@ export function Sidebar({
             onClick={() => onDeleteNode(selectedNodeId)}
             className="w-full px-3 py-2 bg-red-900/20 text-red-400 rounded text-sm hover:bg-red-900/30 transition"
           >
-            🗑️ Deletar Nó
+            Deletar nó
           </button>
         </div>
       )}
