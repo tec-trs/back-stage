@@ -68,6 +68,7 @@ const NAV_ITEMS: NavItem[] = [
       { to: '/environments', label: 'Ambientes', icon: <TagIcon /> },
       { to: '/server-types', label: 'Tipos de Maquina', icon: <CpuIcon /> },
       { to: '/application-types', label: 'Tipos de Aplicacao', icon: <AppWindowIcon /> },
+      { to: '/database-engines', label: 'Database Engines', icon: <BoxIcon /> },
       { to: '/audit', label: 'Auditoria', icon: <ClipboardIcon /> },
     ],
   },
@@ -80,6 +81,7 @@ const NAV_ITEMS: NavItem[] = [
   { kind: 'link', to: '/urls', label: 'URLs', icon: <NetworkIcon /> },
   { kind: 'link', to: '/ecosystem', label: 'Ecossistema', icon: <NetworkIcon /> },
   { kind: 'link', to: '/dependency-tree', label: 'Árvore de Deps', icon: <LayersIcon /> },
+  { kind: 'link', to: '/architecture-diagram', label: 'Diagrama Arquitetura', icon: <LayersIcon /> },
   { kind: 'link', to: '/settings', label: 'Configuracoes', icon: <SettingsIcon /> },
   { kind: 'link', to: '/organizations', label: 'Organizacoes', icon: <GroupIcon />, adminOnly: true },
 ];

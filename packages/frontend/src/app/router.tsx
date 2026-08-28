@@ -60,6 +60,9 @@ const DatabasesPage = lazy(() =>
 const DatabaseDetailPage = lazy(() =>
   import('../pages/DatabaseDetailPage').then((m) => ({ default: m.DatabaseDetailPage })),
 );
+const DatabaseEnginesPage = lazy(() =>
+  import('../pages/DatabaseEnginesPage').then((m) => ({ default: m.DatabaseEnginesPage })),
+);
 const UrlsPage = lazy(() =>
   import('../pages/UrlsPage').then((m) => ({ default: m.UrlsPage })),
 );
@@ -93,6 +96,9 @@ const VIPsPage = lazy(() =>
 const OrganizationsPage = lazy(() =>
   import('../pages/OrganizationsPage').then((m) => ({ default: m.OrganizationsPage })),
 );
+const ArchitectureDiagramPage = lazy(() =>
+  import('../pages/ArchitectureDiagramPage').then((m) => ({ default: m.ArchitectureDiagramPage })),
+);
 
 function withSuspense(element: ReactNode) {
   return <Suspense fallback={<Spinner />}>{element}</Suspense>;
@@ -106,6 +112,7 @@ export const router = createBrowserRouter([
   {
     element: <ProtectedRoute />,
     children: [
+      { path: '/architecture-diagram', element: withSuspense(<ArchitectureDiagramPage />) },
       {
         element: <AppLayout />,
         children: [
@@ -123,6 +130,7 @@ export const router = createBrowserRouter([
           { path: '/applications/:id', element: withSuspense(<ApplicationDetailPage />) },
           { path: '/databases', element: withSuspense(<DatabasesPage />) },
           { path: '/databases/:id', element: withSuspense(<DatabaseDetailPage />) },
+          { path: '/database-engines', element: withSuspense(<DatabaseEnginesPage />) },
           { path: '/urls', element: withSuspense(<UrlsPage />) },
           { path: '/urls/:id', element: withSuspense(<UrlDetailPage />) },
           { path: '/search', element: withSuspense(<SearchResultsPage />) },
