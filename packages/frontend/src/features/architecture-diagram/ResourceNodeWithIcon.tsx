@@ -12,11 +12,15 @@ export function ResourceNodeWithIcon(props: NodeProps) {
   const color = RESOURCE_COLORS[resourceType] ?? RESOURCE_COLORS.service;
   const IconComponent = getIconComponent(resourceType);
   const label = data?.label || 'Recurso';
+  const description =
+    data?.description && data.description.trim().toLowerCase() !== label.trim().toLowerCase()
+      ? data.description
+      : undefined;
 
   return (
     <div
-      className="flex w-[104px] flex-col items-center gap-1.5"
-      title={data?.description ? `${label} — ${data.description}` : label}
+      className="flex w-24 flex-col items-center gap-1.5"
+      title={description ? `${label} — ${description}` : label}
     >
       <Handle type="target" position={Position.Top} className={HANDLE_CLASS} />
 
@@ -31,9 +35,7 @@ export function ResourceNodeWithIcon(props: NodeProps) {
 
       <div className="w-full text-center">
         <p className="truncate font-mono text-[11px] font-medium text-slate-200">{label}</p>
-        {data?.description && (
-          <p className="truncate text-[10px] text-slate-500">{data.description}</p>
-        )}
+        {description && <p className="truncate text-[10px] text-slate-500">{description}</p>}
       </div>
 
       <Handle type="source" position={Position.Bottom} className={HANDLE_CLASS} />

@@ -29,11 +29,11 @@ import { useDiagramState } from './useDiagramState';
 import { RESOURCE_COLORS, type ResourceType } from './types';
 import type { ArchitectureDiagram } from './use-architecture-diagrams';
 
-const GRID_COLS = 5;
-const GRID_GAP_X = 150;
-const GRID_GAP_Y = 130;
-const NODE_W = 104;
-const NODE_H = 72;
+const GRID_COLS = 6;
+const GRID_GAP_X = 120;
+const GRID_GAP_Y = 100;
+const NODE_W = 96;
+const NODE_H = 64;
 
 // Auto-arrange the current graph top-to-bottom with dagre — an explicit,
 // on-demand action (not automatic) so manual placement is never fought.
@@ -41,7 +41,7 @@ function layoutWithDagre(nodes: any[], edges: any[]): Map<string, { x: number; y
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g = new (dagre as any).graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: 'TB', nodesep: 40, ranksep: 70 });
+  g.setGraph({ rankdir: 'TB', nodesep: 28, ranksep: 56 });
   nodes.forEach((n) => g.setNode(n.id, { width: NODE_W, height: NODE_H }));
   edges.forEach((e) => g.setEdge(e.source, e.target));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -118,7 +118,7 @@ export function ArchitectureDiagramEditor() {
           {
             id: nodeId,
             type: type as string,
-            position: { x: 60 + col * GRID_GAP_X, y: 60 + row * GRID_GAP_Y },
+            position: { x: 40 + col * GRID_GAP_X, y: 40 + row * GRID_GAP_Y },
             data: {
               label,
               resourceType: type,

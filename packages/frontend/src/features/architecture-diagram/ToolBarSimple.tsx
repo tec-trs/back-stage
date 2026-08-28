@@ -94,12 +94,15 @@ export function ToolBarSimple({
     const resource = list.find((r: any) => r.id === selectedResourceId) as any;
 
     if (resource) {
-      onAddNode(
-        selectedType,
-        resource.label || resource.name || resource.displayName || resource.hostname || '',
-        resource.description || resource.url || resource.hostname || '',
-        resource.id
-      );
+      const label = resource.label || resource.name || resource.displayName || resource.hostname || '';
+      const rawSubtitle = resource.description || resource.url || resource.hostname || '';
+      // Skip the subtitle entirely when it's just the label repeated (e.g. a
+      // server whose hostname is also its label) — a duplicated line under
+      // the icon reads as a bug, not as extra information.
+      const subtitle = rawSubtitle && rawSubtitle.trim().toLowerCase() !== label.trim().toLowerCase()
+        ? rawSubtitle
+        : undefined;
+      onAddNode(selectedType, label, subtitle, resource.id);
       setSelectedResourceId('');
     }
   };
