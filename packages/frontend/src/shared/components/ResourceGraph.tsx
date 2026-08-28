@@ -26,6 +26,8 @@ import '@xyflow/react/dist/style.css';
 // @ts-ignore
 import dagre from 'dagre';
 
+import { AppWindowIcon, DatabaseIcon, GlobeIcon, NetworkIcon, ServerIcon } from './icons';
+
 /* ── Constants ─────────────────────────────────────────────────────────── */
 
 const NODE_W_COMPACT = 130;
@@ -235,12 +237,15 @@ const EDGE_TYPES = { deletable: DeletableEdge };
 
 /* ── Custom node: resource ──────────────────────────────────────────────── */
 
-const TYPE_ICON: Record<string, string> = {
-  server:      '🖥',
-  application: '⚙',
-  database:    '🗄',
-  url:         '🌐',
-  'db-group':  '📦',
+type IconComponent = (props: { className?: string; style?: React.CSSProperties }) => React.JSX.Element;
+
+const TYPE_ICON: Record<string, IconComponent> = {
+  server:      ServerIcon,
+  application: AppWindowIcon,
+  database:    DatabaseIcon,
+  url:         GlobeIcon,
+  vip:         NetworkIcon,
+  'db-group':  DatabaseIcon,
 };
 
 function ResourceNode({ data, selected, id }: NodeProps) {
@@ -279,9 +284,17 @@ function ResourceNode({ data, selected, id }: NodeProps) {
         transition:   'opacity 0.4s ease, filter 0.4s ease, border-color 0.25s ease, background 0.4s ease, box-shadow 0.25s ease',
         boxShadow:    d.editMode ? '0 0 0 2px rgba(59,130,246,0.15)' : (isHighlighted ? '0 0 0 2px rgba(96,165,250,0.25)' : undefined),
         cursor:       d.editMode ? 'default' : 'pointer',
+        position:     'relative',
       }}
       className="rounded-lg border shadow-lg"
     >
+      {isOffline && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 rounded-lg animate-radar-ping"
+          style={{ border: `2px solid ${IMPACT_STYLE.source.border}` }}
+        />
+      )}
       <Handle
         type="target"
         position={Position.Top}
@@ -300,9 +313,12 @@ function ResourceNode({ data, selected, id }: NodeProps) {
 
       {d.compactMode ? (
         <div className="flex flex-col items-center gap-0.5">
-          <span className="text-lg leading-none">{TYPE_ICON[d.resourceType] ?? '•'}</span>
+          {(() => {
+            const Icon = TYPE_ICON[d.resourceType];
+            return Icon ? <Icon className="h-4 w-4" style={{ color: palette.text }} /> : null;
+          })()}
           <p
-            className="text-[9px] font-bold uppercase tracking-wider text-center"
+            className="font-mono text-[9px] font-bold uppercase tracking-wider text-center"
             style={{ color: palette.text, maxWidth: NODE_W - 12 }}
             title={d.label}
           >
@@ -314,22 +330,22 @@ function ResourceNode({ data, selected, id }: NodeProps) {
           <div className="flex items-center gap-1.5 mb-0.5">
             {d.resourceType === 'db-group' ? (
               <>
-                <span className="text-[11px]">🗄</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: palette.text }}>
+                <DatabaseIcon className="h-3 w-3" style={{ color: palette.text }} />
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider" style={{ color: palette.text }}>
                   Bancos
                 </span>
               </>
             ) : isOffline ? (
               <>
                 <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-red-500" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 animate-pulse">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-red-400 animate-pulse">
                   OFFLINE
                 </span>
               </>
             ) : (
               <>
                 <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: palette.border }} />
-                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: palette.text }}>
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider" style={{ color: palette.text }}>
                   {d.resourceType}
                 </span>
               </>
@@ -355,10 +371,10 @@ function ResourceNode({ data, selected, id }: NodeProps) {
           )}
 
           {isDirect && d.resourceType !== 'db-group' && (
-            <p className="text-[10px] mt-0.5 font-medium text-orange-400">impacto direto</p>
+            <p className="font-mono text-[10px] mt-0.5 font-medium text-orange-400">impacto direto</p>
           )}
           {isIndirect && d.resourceType !== 'db-group' && (
-            <p className="text-[10px] mt-0.5 text-amber-500">{d.impactDepth}° nivel</p>
+            <p className="font-mono text-[10px] mt-0.5 text-amber-500">{d.impactDepth}° nivel</p>
           )}
           {!isOffline && !isImpacted && d.status && d.resourceType !== 'db-group' && (
             <p className="text-[10px] text-slate-500 mt-0.5 capitalize">{d.status}</p>
@@ -465,7 +481,7 @@ function ServerContainerNode({ data }: NodeProps) {
                 boxSizing:      'border-box',
               }}
             >
-              <span style={{ fontSize: 11 }}>⚙</span>
+              <AppWindowIcon className="h-3 w-3" style={{ color: appPalette.text }} />
               <span style={{ fontSize: 11, fontWeight: 600, color: appPalette.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {app.label}
               </span>
@@ -979,7 +995,7 @@ export function ResourceGraph({
       maxZoom={2.5}
       deleteKeyCode={null}
       connectionLineStyle={{ stroke: '#60a5fa', strokeWidth: 2, strokeDasharray: '5 4' }}
-      className="bg-slate-950"
+      className="bg-canvas"
       proOptions={{ hideAttribution: true }}
     >
       <Background color="#1e293b" variant={BackgroundVariant.Dots} gap={20} size={1.5} />

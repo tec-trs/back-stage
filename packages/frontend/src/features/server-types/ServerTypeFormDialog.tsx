@@ -12,7 +12,7 @@ import type { ServerTypeSummary } from './use-server-types';
 const SLUG_RE = /^[a-z0-9_-]*$/;
 
 const inputClass =
-  'rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
+  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 
 interface FormState {
   slug: string;
@@ -149,7 +149,7 @@ export function ServerTypeFormDialog({
             type="checkbox"
             checked={form.isActive}
             onChange={(e) => setField('isActive', e.target.checked)}
-            className="rounded border-slate-700 bg-slate-950"
+            className="rounded border-slate-700 bg-canvas"
           />
           Ativo
         </label>

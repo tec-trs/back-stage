@@ -50,7 +50,7 @@ export function DatabaseEnginesPage() {
         <Button onClick={() => openForm()}>+ Novo Engine</Button>
       </div>
 
-      <div className="rounded-lg border border-slate-700 bg-slate-950 overflow-hidden">
+      <div className="rounded-lg border border-slate-700 bg-canvas overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-slate-700 bg-slate-900">
             <tr>

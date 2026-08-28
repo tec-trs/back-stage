@@ -9,7 +9,7 @@ import type { CreateRelationshipInput } from './use-resource-graph';
 import { useCreateRelationship } from './use-resource-graph';
 
 const inputClass =
-  'rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
+  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 
 export type ResourceType = 'server' | 'application' | 'database' | 'url';
 

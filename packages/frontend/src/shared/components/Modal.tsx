@@ -37,7 +37,7 @@ export function Modal({ title, isOpen, onClose, children, size = 'md' }: ModalPr
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/70 p-4">
       <button
         aria-label="Fechar"
         onClick={onClose}

@@ -100,14 +100,14 @@ export function ResourceSelector({
         type="button"
         disabled={disabled || isLoading}
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-left text-slate-100 outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-between"
+        className="w-full rounded-md border border-slate-700 bg-canvas px-3 py-2 text-left text-slate-100 outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-between"
       >
         <span className="truncate">{isLoading ? 'Carregando...' : selectedLabel || placeholder}</span>
         <span className="text-slate-500">▼</span>
       </button>
 
       {isOpen && !disabled && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-md border border-slate-700 bg-slate-950 shadow-lg">
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-md border border-slate-700 bg-canvas shadow-lg">
           <div className="p-2 border-b border-slate-800">
             <input
               type="text"

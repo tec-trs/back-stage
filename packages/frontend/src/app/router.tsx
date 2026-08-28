@@ -84,9 +84,6 @@ const RelationshipsPage = lazy(() =>
 const RiskAnalysisPage = lazy(() =>
   import('../pages/RiskAnalysisPage').then((m) => ({ default: m.RiskAnalysisPage })),
 );
-const DependencyTreePage = lazy(() =>
-  import('../pages/DependencyTreePage').then((m) => ({ default: m.DependencyTreePage })),
-);
 const GroupsPage = lazy(() =>
   import('../pages/GroupsPage').then((m) => ({ default: m.GroupsPage })),
 );
@@ -143,7 +140,6 @@ export const router = createBrowserRouter([
           { path: '/impact/:resourceType/:resourceId', element: withSuspense(<ImpactPage />) },
           { path: '/relationships', element: withSuspense(<RelationshipsPage />) },
           { path: '/risk-analysis', element: withSuspense(<RiskAnalysisPage />) },
-          { path: '/dependency-tree', element: withSuspense(<DependencyTreePage />) },
           { path: '/groups', element: withSuspense(<GroupsPage />) },
           { path: '/organizations', element: withSuspense(<OrganizationsPage />) },
           { path: '/settings', element: withSuspense(<SettingsPage />) },

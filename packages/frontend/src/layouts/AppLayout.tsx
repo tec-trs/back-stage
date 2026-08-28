@@ -3,8 +3,9 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { OrgPickerDialog } from '../features/auth/OrgPickerDialog';
 import { useAuthStore } from '../features/auth/auth.store';
+import { useHealthStatus } from '../features/health/use-health-status';
 import { Button } from '../shared/components/Button';
-import { APP_VERSION } from '../shared/constants/app';
+import { APP_BUILD_TIME, APP_COMMIT, APP_VERSION } from '../shared/constants/app';
 import { GlobalSearch } from '../shared/components/GlobalSearch';
 import {
   AppWindowIcon,
@@ -80,7 +81,6 @@ const NAV_ITEMS: NavItem[] = [
   { kind: 'link', to: '/databases', label: 'Bancos de Dados', icon: <BoxIcon /> },
   { kind: 'link', to: '/urls', label: 'URLs', icon: <NetworkIcon /> },
   { kind: 'link', to: '/ecosystem', label: 'Ecossistema', icon: <NetworkIcon /> },
-  { kind: 'link', to: '/dependency-tree', label: 'Árvore de Deps', icon: <LayersIcon /> },
   { kind: 'link', to: '/architecture-diagram', label: 'Diagrama Arquitetura', icon: <LayersIcon /> },
   { kind: 'link', to: '/settings', label: 'Configuracoes', icon: <SettingsIcon /> },
   { kind: 'link', to: '/organizations', label: 'Organizacoes', icon: <GroupIcon />, adminOnly: true },
@@ -101,6 +101,7 @@ export function AppLayout() {
   const organizations = useAuthStore((state) => state.organizations);
   const isSidebarOpen = useAppStore((state) => state.isSidebarOpen);
   const toggleSidebar = useAppStore((state) => state.toggleSidebar);
+  const health = useHealthStatus();
   const location = useLocation();
   const isAdmin = user?.roles.includes('admin') ?? false;
   const [showOrgPicker, setShowOrgPicker] = useState(false);
@@ -128,7 +129,7 @@ export function AppLayout() {
   const canSwitchOrg = organizations.length > 1;
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex min-h-screen bg-canvas text-slate-100">
       {isSidebarOpen && (
         <aside className="w-60 shrink-0 border-r border-slate-800 p-4">
           <div className="mb-6">
@@ -208,11 +209,29 @@ export function AppLayout() {
             })}
           </nav>
 
-          {/* Version indicator */}
-          <div className="mt-auto border-t border-slate-800 pt-3">
-            <p className="text-xs text-slate-500">
-              <span className="text-slate-600">Versão:</span>{' '}
-              <span className="font-mono text-slate-400">{APP_VERSION}</span>
+          {/* Build identity — always visible so you always know exactly what you're testing */}
+          <div className="mt-auto flex flex-col gap-1 border-t border-line pt-3 font-mono text-[11px]">
+            <p
+              className="flex items-center justify-between text-slate-500"
+              title={`Build gerado em ${new Date(APP_BUILD_TIME).toLocaleString('pt-BR')}`}
+            >
+              <span className="text-slate-600">frontend</span>
+              <span className="text-slate-400">
+                v{APP_VERSION} <span className="text-signal">{APP_COMMIT}</span>
+              </span>
+            </p>
+            <p className="flex items-center justify-between text-slate-500">
+              <span className="text-slate-600">backend</span>
+              {health.data ? (
+                <span
+                  className={health.data.status === 'ok' ? 'text-emerald-400' : 'text-amber-400'}
+                  title={`Uptime: ${health.data.uptimeSeconds.toFixed(0)}s`}
+                >
+                  v{health.data.version} <span className="text-slate-500">{health.data.status}</span>
+                </span>
+              ) : (
+                <span className="text-slate-600">—</span>
+              )}
             </p>
           </div>
         </aside>

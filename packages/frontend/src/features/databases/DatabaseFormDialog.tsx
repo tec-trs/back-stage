@@ -17,7 +17,7 @@ import type { Database } from './use-databases';
 import { useUpdateDatabase } from './use-update-database';
 
 const inputClass =
-  'rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
+  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 const CRITICALITIES = Object.keys(CRITICALITY_LABELS) as Array<keyof typeof CRITICALITY_LABELS>;
 const DB_STATUSES: Array<{ value: string; label: string }> = [
   { value: 'active',        label: 'Ativo' },
@@ -388,7 +388,7 @@ export function DatabaseFormDialog({
                 {teams.length === 0 ? (
                   <p className="text-sm text-slate-500">Nenhum time cadastrado.</p>
                 ) : (
-                  <div className="flex flex-col gap-1 rounded-md border border-slate-700 bg-slate-950 p-3 max-h-48 overflow-y-auto">
+                  <div className="flex flex-col gap-1 rounded-md border border-slate-700 bg-canvas p-3 max-h-48 overflow-y-auto">
                     {teams.map((team) => (
                       <label key={team.slug} className="flex items-center gap-2 cursor-pointer py-1 hover:text-slate-100">
                         <input

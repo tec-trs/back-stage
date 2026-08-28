@@ -33,7 +33,7 @@ const TABS: TabItem[] = [
 ];
 
 const inputClass =
-  'rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
+  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 
 interface FormState {
   code: string;
@@ -539,7 +539,7 @@ export function ApplicationFormDialog({
                           type="checkbox"
                           checked={dependsOnIds.includes(item.id)}
                           onChange={() => toggleDependency(item.id)}
-                          className="h-4 w-4 rounded border-slate-700 bg-slate-950 accent-sky-500"
+                          className="h-4 w-4 rounded border-slate-700 bg-canvas accent-sky-500"
                         />
                         <span className="font-medium">{item.displayName}</span>
                         <span className="font-mono text-xs text-slate-500">({item.code})</span>

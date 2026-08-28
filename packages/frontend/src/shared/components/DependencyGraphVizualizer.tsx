@@ -118,7 +118,7 @@ export function DependencyGraphVizualizer({ nodes, edges, rootNodeId }: Props) {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-950">
+    <div className="w-full h-full flex flex-col bg-canvas">
       <div className="flex gap-4 items-center p-4 bg-slate-900 border-b border-slate-800">
         <div className="flex items-center gap-2">
           <label className="text-sm text-slate-400">Nós: {nodes.length}</label>
@@ -148,7 +148,7 @@ export function DependencyGraphVizualizer({ nodes, edges, rootNodeId }: Props) {
         </div>
       </div>
 
-      <div ref={containerRef} className="flex-1 bg-slate-950" style={{ minHeight: 0 }} />
+      <div ref={containerRef} className="flex-1 bg-canvas" style={{ minHeight: 0 }} />
     </div>
   );
 }

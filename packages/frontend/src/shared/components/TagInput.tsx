@@ -35,7 +35,7 @@ export function TagInput({
   }
 
   return (
-    <div className="flex flex-wrap gap-1.5 rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 focus-within:border-slate-500">
+    <div className="flex flex-wrap gap-1.5 rounded-md border border-slate-700 bg-canvas px-2 py-1.5 focus-within:border-slate-500">
       {tags.map((tag) => (
         <span
           key={tag}

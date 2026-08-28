@@ -36,7 +36,7 @@ export function OrgPickerDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="w-full max-w-sm rounded-lg border border-slate-800 bg-slate-950 p-6 shadow-xl">
+      <div className="w-full max-w-sm rounded-lg border border-slate-800 bg-canvas p-6 shadow-xl">
         <h2 className="mb-1 text-lg font-semibold text-slate-100">Selecione a organizacao</h2>
         <p className="mb-4 text-sm text-slate-400">
           Sua conta pertence a mais de uma organizacao. Escolha com qual deseja continuar.

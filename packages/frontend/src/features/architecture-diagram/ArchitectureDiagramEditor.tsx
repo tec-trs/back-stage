@@ -168,7 +168,7 @@ export function ArchitectureDiagramEditor() {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950">
+    <div className="flex flex-col h-screen bg-canvas">
       <ToolBarSimple
         onAddNode={handleAddNode}
         onClear={handleClear}

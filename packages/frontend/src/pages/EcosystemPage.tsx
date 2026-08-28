@@ -141,7 +141,7 @@ function ConnectionModal({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Ex: X precisa acessar Y para autenticação"
-            className="rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:border-slate-500 focus:outline-none resize-none"
+            className="rounded-md border border-slate-600 bg-canvas px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:border-slate-500 focus:outline-none resize-none"
             rows={2}
           />
         </div>
@@ -702,35 +702,38 @@ export function EcosystemPage() {
           </select>
         </div>
 
-        {/* Legenda impacto — só aparece em modo simulação */}
+        {/* Impact console — só aparece durante a simulação de parada */}
         {simulationSourceId && (
           <>
-            <div className="mx-2 h-6 w-px bg-slate-700" />
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <div className="mx-2 h-6 w-px bg-line" />
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] uppercase tracking-wide">
               <div className="flex items-center gap-1.5">
-                <div className="h-2.5 w-2.5 rounded-sm bg-red-500" />
-                <span className="text-xs text-red-400">Offline</span>
+                <div className="h-2.5 w-2.5 rounded-sm bg-impact-source" />
+                <span className="text-red-400">offline</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="h-2.5 w-2.5 rounded-sm bg-orange-500" />
-                <span className="text-xs text-orange-400">Impacto direto</span>
+                <div className="h-2.5 w-2.5 rounded-sm bg-impact-direct" />
+                <span className="text-orange-400">impacto direto</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="h-2.5 w-2.5 rounded-sm bg-amber-500" />
-                <span className="text-xs text-amber-400">Impacto indireto</span>
+                <div className="h-2.5 w-2.5 rounded-sm bg-impact-indirect" />
+                <span className="text-amber-400">impacto indireto</span>
               </div>
             </div>
-            <div className="ml-auto flex items-center gap-3 rounded-md border border-red-900/50 bg-red-950/30 px-3 py-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-xs text-red-300 font-medium">
-                Simulacao ativa — {impactedNodeIds.size} afetado{impactedNodeIds.size !== 1 ? 's' : ''}
+            <div className="ml-auto flex animate-console-in items-center gap-3 rounded-md border border-red-900/50 bg-red-950/40 px-3 py-1.5 font-mono">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+              </span>
+              <span className="text-[11px] text-red-300">
+                <span className="text-red-500">{'>'}</span> simulando parada — {impactedNodeIds.size} recurso{impactedNodeIds.size !== 1 ? 's' : ''} afetado{impactedNodeIds.size !== 1 ? 's' : ''}
               </span>
               <button
                 type="button"
                 onClick={handleImpactReset}
-                className="text-xs text-slate-300 hover:text-slate-200 underline"
+                className="text-[11px] text-slate-300 hover:text-slate-100 underline underline-offset-2"
               >
-                Encerrar
+                encerrar
               </button>
             </div>
           </>
@@ -740,7 +743,7 @@ export function EcosystemPage() {
       {/* ── Área principal: grafo + painel inferior ──────────────────── */}
       <div className="relative flex flex-1 overflow-hidden">
         {/* Grafo — largura total */}
-        <div ref={graphContainerRef} className="flex-1 overflow-hidden bg-slate-950">
+        <div ref={graphContainerRef} className="flex-1 overflow-hidden bg-canvas">
           <Suspense fallback={<div className="flex items-center justify-center h-full"><Spinner /></div>}>
             {visualizationMode === 'flow' && data ? (
               <DependencyGraphVizualizer

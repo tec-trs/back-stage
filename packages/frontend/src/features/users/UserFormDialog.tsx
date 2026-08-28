@@ -162,7 +162,7 @@ export function UserFormDialog({
   const saveError = mutation.error ?? setUserOrgs.error;
 
   const inputClass =
-    'rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:text-slate-500 disabled:opacity-70';
+    'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:text-slate-500 disabled:opacity-70';
 
   return (
     <Modal
@@ -232,7 +232,7 @@ export function UserFormDialog({
                   type="checkbox"
                   checked={roles.includes(role)}
                   onChange={() => toggleRole(role)}
-                  className="rounded border-slate-700 bg-slate-950"
+                  className="rounded border-slate-700 bg-canvas"
                 />
                 {translateRole(role)}
               </label>
@@ -256,7 +256,7 @@ export function UserFormDialog({
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleOrg(org.id)}
-                        className="rounded border-slate-700 bg-slate-950"
+                        className="rounded border-slate-700 bg-canvas"
                       />
                       <span className="font-medium">{org.name}</span>
                       <span className="font-mono text-xs text-slate-500">{org.slug}</span>
