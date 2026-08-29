@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import { apiRequest } from '../../shared/api/http-client';
 
 export interface DatabaseEngine {
@@ -87,6 +87,32 @@ export function useDeleteDatabaseEngine() {
       apiRequest<void>(`/api/database-engines/engines/${id}`, {
         method: 'DELETE',
       }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['database-engines'] });
+      void queryClient.invalidateQueries({ queryKey: ['database-engines-active'] });
+    },
+  });
+}
+
+// There's no bulk-delete route on the backend for this small lookup table (unlike
+// server-types' dedicated /bulk-delete endpoint) — deleting one row at a time is
+// cheap enough here, so this just fires the existing single-delete call per id and
+// invalidates the list once everything settles, giving the same "Eliminar (N)"
+// toolbar experience as the servers/server-types pages without adding a new route.
+export function useBulkDeleteDatabaseEngines(): UseMutationResult<{ deleted: number }, Error, string[]> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(
+        ids.map((id) =>
+          apiRequest<void>(`/api/database-engines/engines/${id}`, {
+            method: 'DELETE',
+          }),
+        ),
+      );
+      return { deleted: ids.length };
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['database-engines'] });
       void queryClient.invalidateQueries({ queryKey: ['database-engines-active'] });

@@ -88,7 +88,7 @@ export function DatabaseEngineFormDialog({
 
   return (
     <Modal
-      title={isEditMode ? 'Editar Engine' : 'Novo Engine'}
+      title={isEditMode ? 'Editar Tipo de Banco' : 'Novo Tipo de Banco'}
       isOpen={isOpen}
       onClose={onClose}
       size="md"
@@ -157,7 +157,7 @@ export function DatabaseEngineFormDialog({
             message={
               mutation.error instanceof Error
                 ? mutation.error.message
-                : 'Erro ao salvar engine'
+                : 'Erro ao salvar tipo de banco'
             }
           />
         )}
@@ -171,7 +171,7 @@ export function DatabaseEngineFormDialog({
               ? 'Salvando...'
               : isEditMode
                 ? 'Salvar alteracoes'
-                : 'Criar engine'}
+                : 'Criar tipo de banco'}
           </Button>
         </div>
       </form>

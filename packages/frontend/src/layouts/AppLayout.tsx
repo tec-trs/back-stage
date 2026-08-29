@@ -69,7 +69,7 @@ const NAV_ITEMS: NavItem[] = [
       { to: '/environments', label: 'Ambientes', icon: <TagIcon /> },
       { to: '/server-types', label: 'Tipos de Maquina', icon: <CpuIcon /> },
       { to: '/application-types', label: 'Tipos de Aplicacao', icon: <AppWindowIcon /> },
-      { to: '/database-engines', label: 'Database Engines', icon: <BoxIcon /> },
+      { to: '/database-engines', label: 'Tipos de Banco', icon: <BoxIcon /> },
       { to: '/audit', label: 'Auditoria', icon: <ClipboardIcon /> },
     ],
   },
