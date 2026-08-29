@@ -56,12 +56,23 @@ export function ServerIcon() {
   );
 }
 
+export function VipIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="32" height="32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="2.5" fill="currentColor" />
+      <path d="M12 3v6.5M12 21v-6.5M4 7.5l6 3.5M20 7.5l-6 3.5M4 16.5l6-3.5M20 16.5l-6-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const iconMap = {
   url: UrlIcon,
   application: ApplicationIcon,
   service: ServiceIcon,
   database: DatabaseIcon,
   server: ServerIcon,
+  vip: VipIcon,
 };
 
 export function getIconComponent(resourceType: string) {

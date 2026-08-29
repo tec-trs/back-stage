@@ -15,9 +15,6 @@ import {
   type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import dagre from 'dagre';
 import { ResourceNodeWithIcon } from './ResourceNodeWithIcon';
 import { ToolBarSimple } from './ToolBarSimple';
 import { Sidebar } from './Sidebar';
@@ -28,34 +25,11 @@ import { useNodeClickHandler } from './NodeClickHandler';
 import { useDiagramState } from './useDiagramState';
 import { RESOURCE_COLORS, type ResourceType } from './types';
 import type { ArchitectureDiagram } from './use-architecture-diagrams';
+import { layoutWithDagre } from './dagreLayout';
 
 const GRID_COLS = 5;
 const GRID_GAP_X = 140;
 const GRID_GAP_Y = 110;
-const NODE_W = 120;
-const NODE_H = 76;
-
-// Auto-arrange the current graph left-to-right with dagre — an explicit,
-// on-demand action (not automatic) so manual placement is never fought.
-// LR (not TB) intentionally mirrors iTop's own impact-analysis graph, which
-// computes its layout the same way (a layered/Sugiyama algorithm — dagre is a
-// JS port of the same family GraphViz's `dot` uses) with rankdir=LR.
-function layoutWithDagre(nodes: any[], edges: any[]): Map<string, { x: number; y: number }> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const g = new (dagre as any).graphlib.Graph();
-  g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: 'LR', nodesep: 36, ranksep: 80 });
-  nodes.forEach((n) => g.setNode(n.id, { width: NODE_W, height: NODE_H }));
-  edges.forEach((e) => g.setEdge(e.source, e.target));
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (dagre as any).layout(g);
-  const positions = new Map<string, { x: number; y: number }>();
-  nodes.forEach((n) => {
-    const pos = g.node(n.id);
-    positions.set(n.id, pos ? { x: pos.x - NODE_W / 2, y: pos.y - NODE_H / 2 } : { x: 0, y: 0 });
-  });
-  return positions;
-}
 
 const nodeTypes = {
   url: ResourceNodeWithIcon as any,
@@ -215,7 +189,7 @@ export function ArchitectureDiagramEditor() {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-canvas">
+    <div className="flex h-full flex-col bg-canvas">
       <ToolBarSimple
         onAddNode={handleAddNode}
         onClear={handleClear}

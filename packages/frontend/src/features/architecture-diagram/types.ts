@@ -1,6 +1,6 @@
 import type { Node, Edge } from '@xyflow/react';
 
-export type ResourceType = 'url' | 'application' | 'service' | 'database' | 'server';
+export type ResourceType = 'url' | 'application' | 'service' | 'database' | 'server' | 'vip';
 
 export interface ResourceNode extends Node {
   type: ResourceType;
@@ -31,6 +31,8 @@ export const RESOURCE_COLORS: Record<ResourceType, string> = {
   database: '#ec4899',
   url: '#f59e0b',
   service: '#06b6d4',
+  // Same cyan the Ecosystem graph uses for VIPs (TYPE_STYLE.vip in ResourceGraph.tsx)
+  vip: '#06b6d4',
 };
 
 export const RESOURCE_LABELS: Record<ResourceType, string> = {
@@ -39,4 +41,5 @@ export const RESOURCE_LABELS: Record<ResourceType, string> = {
   service: 'Serviço',
   database: 'Banco de Dados',
   server: 'Servidor',
+  vip: 'VIP',
 };
