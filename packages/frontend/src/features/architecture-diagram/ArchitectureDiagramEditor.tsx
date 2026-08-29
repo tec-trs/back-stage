@@ -24,11 +24,12 @@ import { ExportImageDialog } from './ExportImageDialog';
 import { useNodeClickHandler } from './NodeClickHandler';
 import { useDiagramState } from './useDiagramState';
 import { RESOURCE_COLORS, type ResourceType } from './types';
+import { getResourceNodeSize, type NodeServiceSummary } from './nodeSizing';
 import type { ArchitectureDiagram } from './use-architecture-diagrams';
 import { layoutWithDagre } from './dagreLayout';
 
 const GRID_COLS = 5;
-const GRID_GAP_X = 140;
+const GRID_GAP_X = 200; // wide enough for a server node grown to 176px for nested services
 const GRID_GAP_Y = 110;
 
 const nodeTypes = {
@@ -83,7 +84,7 @@ export function ArchitectureDiagramEditor() {
   );
 
   const handleAddNode = useCallback(
-    (type: ResourceType, label: string, description?: string, resourceId?: string) => {
+    (type: ResourceType, label: string, description?: string, resourceId?: string, services?: NodeServiceSummary[]) => {
       const nodeId = resourceId || `${type}-${Date.now()}`;
       diagramState.addNode(type, label, description);
       setNodes((nds) => {
@@ -101,6 +102,7 @@ export function ArchitectureDiagramEditor() {
               resourceType: type,
               description,
               resourceId,
+              services,
             },
           },
         ];
@@ -120,7 +122,12 @@ export function ArchitectureDiagramEditor() {
 
   const handleOrganize = useCallback(() => {
     setNodes((nds) => {
-      const positions = layoutWithDagre(nds, edges);
+      const sized = nds.map((n) => {
+        const data = n.data as { resourceType?: ResourceType; services?: NodeServiceSummary[] } | undefined;
+        const { width, height } = getResourceNodeSize(data?.resourceType ?? 'service', data?.services);
+        return { id: n.id, width, height };
+      });
+      const positions = layoutWithDagre(sized, edges);
       const arranged = nds.map((n) => ({ ...n, position: positions.get(n.id) ?? n.position }));
       diagramState.setNodes(arranged as any);
       return arranged;

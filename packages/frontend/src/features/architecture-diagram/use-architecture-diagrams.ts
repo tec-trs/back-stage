@@ -10,6 +10,11 @@ export interface ArchitectureDiagramNode {
     resourceType: string;
     description?: string;
     resourceId?: string;
+    // Lightweight services registered on a servidor (servers.services) — same
+    // nested-in-node rendering as the live graph and the Mapas graph, carried
+    // along verbatim when a manual diagram is saved/loaded (nodes/edges are
+    // stored as opaque JSON on the backend, so this round-trips for free).
+    services?: { name: string; status: string }[];
   };
 }
 

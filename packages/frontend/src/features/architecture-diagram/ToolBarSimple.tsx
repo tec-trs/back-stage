@@ -15,9 +15,16 @@ import { useServers } from '../servers/use-servers';
 import { useDatabases } from '../databases/use-databases';
 import { useServices } from '../services/use-services';
 import { RESOURCE_LABELS, type ResourceType } from './types';
+import type { NodeServiceSummary } from './nodeSizing';
 
 interface ToolBarSimpleProps {
-  onAddNode: (type: ResourceType, label: string, description?: string, resourceId?: string) => void;
+  onAddNode: (
+    type: ResourceType,
+    label: string,
+    description?: string,
+    resourceId?: string,
+    services?: NodeServiceSummary[],
+  ) => void;
   onClear: () => void;
   onExport: () => void;
   onImport: () => void;
@@ -102,7 +109,12 @@ export function ToolBarSimple({
       const subtitle = rawSubtitle && rawSubtitle.trim().toLowerCase() !== label.trim().toLowerCase()
         ? rawSubtitle
         : undefined;
-      onAddNode(selectedType, label, subtitle, resource.id);
+      // Servers carry their registered services (servers.services) — pass them
+      // along so the node renders the same nested-services box the live graph
+      // and the Mapas graph show for the same server.
+      const services: NodeServiceSummary[] | undefined =
+        selectedType === 'server' ? (resource.services as NodeServiceSummary[] | undefined) : undefined;
+      onAddNode(selectedType, label, subtitle, resource.id, services);
       setSelectedResourceId('');
     }
   };
