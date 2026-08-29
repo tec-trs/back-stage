@@ -49,7 +49,9 @@ interface TraversalRow {
   target_type: ResourceType;
   target_id: string;
   relation_type: string;
-  depth: number;
+  // Only present while depth still bounds the recursive CTE; the final
+  // outer SELECT DISTINCT (getSubgraph) no longer selects it — see below.
+  depth?: number;
 }
 
 interface ImpactRow {
@@ -397,7 +399,7 @@ export class ResourceRelationshipRepository {
           ${relationFilter}
           AND NOT ((ae.source_type || ':' || ae.source_id) = ANY(t.path))
       )
-      SELECT DISTINCT source_type, source_id, target_type, target_id, relation_type, depth FROM traversal
+      SELECT DISTINCT source_type, source_id, target_type, target_id, relation_type FROM traversal
     `, params);
 
     console.log(`[getSubgraph] query returned ${rows.length} rows`);
@@ -432,14 +434,20 @@ export class ResourceRelationshipRepository {
     const nodeMap = await this.getResourceNodesByTypeAndIds(resourcesByType);
     const nodes: GraphNode[] = Array.from(nodeMap.values());
 
-    const edges = rows.map((r) => ({
-      id: `${r.source_type}:${r.source_id}→${r.target_type}:${r.target_id}`,
-      sourceType: r.source_type,
-      sourceId: r.source_id,
-      targetType: r.target_type,
-      targetId: r.target_id,
-      relationType: r.relation_type as any,
-    }));
+    const edgesById = new Map<string, GraphEdge>();
+    for (const r of rows) {
+      const id = `${r.source_type}:${r.source_id}→${r.target_type}:${r.target_id}`;
+      if (edgesById.has(id)) continue; // same pair reached via more than one traversal path
+      edgesById.set(id, {
+        id,
+        sourceType: r.source_type,
+        sourceId: r.source_id,
+        targetType: r.target_type,
+        targetId: r.target_id,
+        relationType: r.relation_type as any,
+      });
+    }
+    const edges = Array.from(edgesById.values());
 
     return { nodes, edges };
   }
