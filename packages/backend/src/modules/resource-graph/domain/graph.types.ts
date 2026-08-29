@@ -10,6 +10,11 @@ export interface ResourceRef {
   criticality?: string;
 }
 
+export interface GraphNodeService {
+  name: string;
+  status: string;
+}
+
 export interface GraphNode {
   id: string;
   resourceType: ResourceType;
@@ -20,6 +25,10 @@ export interface GraphNode {
   hostedOnServerId?: string | null;
   monitoringUrl?: string | null;
   displayGroup?: string | null;
+  // Lightweight services registered on a servidor (servers.services JSONB) — not
+  // an independent graph resource, just metadata rendered nested inside the
+  // server's node so the diagram can show what runs on it without adding edges.
+  services?: GraphNodeService[];
 }
 
 export interface GraphEdge {

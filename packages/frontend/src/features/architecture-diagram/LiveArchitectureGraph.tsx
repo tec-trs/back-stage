@@ -18,6 +18,7 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { AddRelationshipDialog } from '../resource-graph/AddRelationshipDialog';
 import { useFullGraph } from '../resource-graph/use-resource-graph';
 import { ResourceNodeWithIcon } from './ResourceNodeWithIcon';
+import { getResourceNodeSize } from './nodeSizing';
 import { ExportImageDialog } from './ExportImageDialog';
 import { useNodeClickHandler } from './NodeClickHandler';
 import { layoutWithDagre } from './dagreLayout';
@@ -86,7 +87,10 @@ export function LiveArchitectureGraph() {
   );
 
   const { rfNodes, rfEdges } = useMemo(() => {
-    const dagreNodes = knownNodes.map((n) => ({ id: `${n.resourceType}:${n.id}` }));
+    const dagreNodes = knownNodes.map((n) => {
+      const { width, height } = getResourceNodeSize(n.resourceType as ResourceType, n.services);
+      return { id: `${n.resourceType}:${n.id}`, width, height };
+    });
     const dagreEdges = knownEdges.map((e) => ({
       source: `${e.sourceType}:${e.sourceId}`,
       target: `${e.targetType}:${e.targetId}`,
@@ -104,6 +108,7 @@ export function LiveArchitectureGraph() {
           resourceType: n.resourceType as ResourceType,
           description: n.status,
           resourceId: n.id,
+          services: n.services,
         },
       };
     });
@@ -213,7 +218,7 @@ export function LiveArchitectureGraph() {
           onNodeClick={(_, node) => handleNodeClick(node)}
           onNodeDragStop={handleNodeDragStop}
           defaultEdgeOptions={{
-            type: 'straight',
+            type: 'smoothstep',
             style: { stroke: '#475569', strokeWidth: 1.25 },
             markerEnd: { type: MarkerType.ArrowClosed, color: '#475569', width: 11, height: 11 },
           }}

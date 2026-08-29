@@ -29,6 +29,7 @@ import {
   type RelationshipMapEdge,
 } from '../features/relationship-maps/use-relationship-maps';
 import { ResourceNodeWithIcon } from '../features/architecture-diagram/ResourceNodeWithIcon';
+import { getResourceNodeSize } from '../features/architecture-diagram/nodeSizing';
 import { layoutWithDagre } from '../features/architecture-diagram/dagreLayout';
 import type { ResourceType } from '../features/architecture-diagram/types';
 
@@ -127,7 +128,7 @@ function MapGraph({ nodes, edges }: { nodes: RFNode[]; edges: RFEdge[] }) {
         edges={edges}
         nodeTypes={nodeTypes}
         defaultEdgeOptions={{
-          type: 'straight',
+          type: 'smoothstep',
           style: { stroke: '#475569', strokeWidth: 1.25 },
           markerEnd: { type: MarkerType.ArrowClosed, color: '#475569', width: 11, height: 11 },
         }}
@@ -159,7 +160,10 @@ export function RelationshipMapDetailPage() {
   const { rfNodes, rfEdges, nodeLabelById } = useMemo(() => {
     if (!map) return { rfNodes: [] as RFNode[], rfEdges: [] as RFEdge[], nodeLabelById: new Map<string, string>() };
 
-    const dagreNodes = map.nodes.map((n) => ({ id: `${n.resourceType}:${n.id}` }));
+    const dagreNodes = map.nodes.map((n) => {
+      const { width, height } = getResourceNodeSize(n.resourceType as ResourceType, n.services);
+      return { id: `${n.resourceType}:${n.id}`, width, height };
+    });
     const dagreEdges = map.edges.map((e) => ({
       source: `${e.sourceType}:${e.sourceId}`,
       target: `${e.targetType}:${e.targetId}`,
@@ -172,7 +176,13 @@ export function RelationshipMapDetailPage() {
         id: nodeId,
         type: n.resourceType,
         position: positions.get(nodeId) ?? { x: 0, y: 0 },
-        data: { label: n.label, resourceType: n.resourceType as ResourceType, description: n.status, resourceId: n.id },
+        data: {
+          label: n.label,
+          resourceType: n.resourceType as ResourceType,
+          description: n.status,
+          resourceId: n.id,
+          services: n.services,
+        },
       };
     });
 

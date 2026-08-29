@@ -236,12 +236,18 @@ export class RelationshipMapRepository {
       if (!meta || ids.size === 0) continue;
 
       const rows = await this.db(meta.table)
-        .select('id', `${meta.labelColumn} as label`, 'status')
+        .select('id', `${meta.labelColumn} as label`, 'status', ...(type === 'server' ? ['services'] : []))
         .whereIn('id', Array.from(ids))
         .whereNull('deleted_at');
 
       for (const row of rows) {
-        nodes.push({ id: row.id, resourceType: type, label: row.label, status: row.status });
+        nodes.push({
+          id: row.id,
+          resourceType: type,
+          label: row.label,
+          status: row.status,
+          services: type === 'server' ? (row.services ?? []) : undefined,
+        });
       }
     }
 

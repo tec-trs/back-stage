@@ -2,6 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../shared/api/http-client.js';
 import { resourceGraphQueryPredicate } from '../../shared/api/query-helpers.js';
 
+export interface GraphNodeService {
+  name: string;
+  status: string;
+}
+
 export interface GraphNode {
   id: string;
   resourceType: 'server' | 'application' | 'database' | 'url' | 'vip';
@@ -12,6 +17,9 @@ export interface GraphNode {
   hostedOnServerId?: string | null;
   monitoringUrl?: string | null;
   displayGroup?: string | null;
+  // Lightweight services registered on a servidor (servers.services) — nested
+  // visually inside the server's node, not an independently linkable resource.
+  services?: GraphNodeService[];
 }
 
 export interface GraphEdge {

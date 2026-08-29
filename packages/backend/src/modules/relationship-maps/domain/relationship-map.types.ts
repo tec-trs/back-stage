@@ -12,11 +12,19 @@ export interface RelationshipMap {
   deletedAt?: Date | null;
 }
 
+export interface RelationshipMapNodeService {
+  name: string;
+  status: string;
+}
+
 export interface RelationshipMapNode {
   id: string;
   resourceType: MapResourceType;
   label: string;
   status?: string;
+  // Lightweight services registered on a servidor (servers.services JSONB), same
+  // as the live graph — nested visually inside the server's node.
+  services?: RelationshipMapNodeService[];
 }
 
 export interface RelationshipMapEdge {

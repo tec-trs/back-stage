@@ -15,7 +15,7 @@ export const DIAGRAM_NODE_H = 76;
  * and the live, auto-generated CMDB graph so both read the same way.
  */
 export function layoutWithDagre(
-  nodes: { id: string }[],
+  nodes: { id: string; width?: number; height?: number }[],
   edges: { source: string; target: string }[],
   options: { nodeWidth?: number; nodeHeight?: number; nodesep?: number; ranksep?: number } = {},
 ): Map<string, { x: number; y: number }> {
@@ -25,7 +25,10 @@ export function layoutWithDagre(
   const g = new (dagre as any).graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
   g.setGraph({ rankdir: 'LR', nodesep, ranksep });
-  nodes.forEach((n) => g.setNode(n.id, { width: nodeWidth, height: nodeHeight }));
+  // Nodes may carry their own width/height (e.g. a server grown taller to fit
+  // nested services) — those override the uniform default so dagre reserves
+  // enough room instead of overlapping taller nodes with their neighbors.
+  nodes.forEach((n) => g.setNode(n.id, { width: n.width ?? nodeWidth, height: n.height ?? nodeHeight }));
   edges.forEach((e) => g.setEdge(e.source, e.target));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (dagre as any).layout(g);
@@ -33,7 +36,9 @@ export function layoutWithDagre(
   const positions = new Map<string, { x: number; y: number }>();
   nodes.forEach((n) => {
     const pos = g.node(n.id);
-    positions.set(n.id, pos ? { x: pos.x - nodeWidth / 2, y: pos.y - nodeHeight / 2 } : { x: 0, y: 0 });
+    const w = n.width ?? nodeWidth;
+    const h = n.height ?? nodeHeight;
+    positions.set(n.id, pos ? { x: pos.x - w / 2, y: pos.y - h / 2 } : { x: 0, y: 0 });
   });
   return positions;
 }

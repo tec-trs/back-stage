@@ -15,11 +15,19 @@ export interface RelationshipMap {
   updatedAt: string;
 }
 
+export interface RelationshipMapNodeService {
+  name: string;
+  status: string;
+}
+
 export interface RelationshipMapNode {
   id: string;
   resourceType: MapResourceType;
   label: string;
   status?: string;
+  // Lightweight services registered on a servidor (servers.services) — nested
+  // visually inside the server's node, not an independently linkable resource.
+  services?: RelationshipMapNodeService[];
 }
 
 export interface RelationshipMapEdge {
