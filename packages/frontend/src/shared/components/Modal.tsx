@@ -47,9 +47,9 @@ export function Modal({ title, isOpen, onClose, children, size = 'md' }: ModalPr
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className={`relative z-10 w-full ${SIZE_CLASSES[size]} rounded-lg border border-slate-800 bg-slate-900 p-6 shadow-xl`}
+        className={`relative z-10 flex max-h-[90vh] w-full flex-col ${SIZE_CLASSES[size]} rounded-lg border border-slate-800 bg-slate-900 shadow-xl`}
       >
-        <div className="mb-4 flex items-start justify-between gap-4">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-800 p-6 pb-4">
           <h2 id="modal-title" className="text-lg font-semibold text-slate-100">
             {title}
           </h2>
@@ -62,7 +62,10 @@ export function Modal({ title, isOpen, onClose, children, size = 'md' }: ModalPr
             &times;
           </button>
         </div>
-        {children}
+        {/* Content scrolls within the dialog once it outgrows the viewport (e.g. a
+            server's Discos tab after adding several rows) instead of the whole
+            page growing a scrollbar and pushing the header/tabs out of view. */}
+        <div className="overflow-y-auto p-6">{children}</div>
       </div>
     </div>,
     document.body,
