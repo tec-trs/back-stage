@@ -8,6 +8,7 @@ import type {
   DiskType,
   ServerEnvironment,
   ServerProvider,
+  ServerService,
   ServerStatus,
   ServerSummary,
   ServerType,
@@ -55,6 +56,8 @@ export interface CreateServerInput {
   monitoringUrl?: string | null;
   displayGroup?: string | null;
   disks?: ServerDiskInput[];
+  tags?: string[];
+  services?: ServerService[];
 }
 
 export function useCreateServer(duplicateFromId?: string): UseMutationResult<ServerSummary, Error, CreateServerInput> {

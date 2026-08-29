@@ -2,14 +2,24 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { useServer } from '../features/servers/use-server';
+import { useUpdateServer } from '../features/servers/use-update-server';
+import { ServiceEditModal } from '../features/servers/ServiceEditModal';
+import {
+  serviceInputToPayload,
+  serviceToInput,
+  servicesFromServer,
+  type ServiceInput,
+} from '../features/servers/service-input';
 import { AuditTimeline } from '../features/audit/AuditTimeline';
 import { AddRelationshipDialog } from '../features/resource-graph/AddRelationshipDialog';
 import { ImpactAnalysisPanel } from '../features/resource-graph/ImpactAnalysisPanel';
 import { useSubgraph } from '../features/resource-graph/use-resource-graph';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
+import { ErrorMessage } from '../shared/components/ErrorMessage';
 import { ResourceGraph } from '../shared/components/ResourceGraph';
 import { NotFoundError } from '../shared/components/NotFoundError';
+import { PencilIcon, PlusIcon, TrashIcon } from '../shared/components/icons';
 import { Spinner } from '../shared/components/Spinner';
 import {
   translateDiskPurpose,
@@ -38,6 +48,46 @@ export function ServerDetailPage() {
   const [simulationSourceId, setSimulationSourceId] = useState<string | undefined>();
   const [impactedByDepth, setImpactedByDepth] = useState<Map<string, number>>(new Map());
   const impactedNodeIds = useMemo(() => new Set(impactedByDepth.keys()), [impactedByDepth]);
+
+  const updateServer = useUpdateServer();
+  const [editingService, setEditingService] = useState<{ service: ServiceInput; index: number | null } | null>(null);
+
+  function openAddService(): void {
+    if (!data) return;
+    const existing = servicesFromServer(data);
+    const seq = existing.length > 0 ? Math.max(...existing.map((s) => s.seq)) + 1 : 1;
+    setEditingService({
+      service: {
+        seq,
+        name: '',
+        commandStart: '',
+        commandStop: '',
+        commandStatus: '',
+        ports: '',
+        status: 'active',
+        observations: '',
+      },
+      index: null,
+    });
+  }
+
+  function saveService(updated: ServiceInput, index: number | null): void {
+    if (!data) return;
+    const current = servicesFromServer(data);
+    const next = index === null ? [...current, updated] : current.map((s, i) => (i === index ? updated : s));
+    updateServer.mutate(
+      { id: data.id, services: next.map(serviceInputToPayload) },
+      { onSuccess: () => setEditingService(null) },
+    );
+  }
+
+  function removeService(index: number): void {
+    if (!data) return;
+    if (!confirm('Remover este servico do servidor?')) return;
+    const current = servicesFromServer(data);
+    const next = current.filter((_, i) => i !== index);
+    updateServer.mutate({ id: data.id, services: next.map(serviceInputToPayload) });
+  }
 
   return (
     <div>
@@ -142,11 +192,32 @@ export function ServerDetailPage() {
             </dl>
           </section>
 
-          {data.services.length > 0 && (
-            <section>
-              <h2 className="mb-2 text-lg font-medium text-slate-200">Servicos</h2>
+          <section>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-lg font-medium text-slate-200">Servicos</h2>
+              <Button variant="secondary" size="sm" icon={<PlusIcon />} onClick={openAddService}>
+                Servico
+              </Button>
+            </div>
+
+            {updateServer.isError && (
+              <div className="mb-2">
+                <ErrorMessage
+                  message={
+                    updateServer.error instanceof Error ? updateServer.error.message : 'Erro ao salvar servico'
+                  }
+                />
+              </div>
+            )}
+
+            {data.services.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
+                Nenhum servico cadastrado. Use &quot;Servico&quot; para registrar o que roda neste servidor (ex:
+                tomcat, nginx).
+              </p>
+            ) : (
               <div className="flex flex-col gap-2">
-                {data.services.map((svc) => (
+                {data.services.map((svc, index) => (
                   <div key={svc.seq} className="rounded-lg border border-slate-800 text-sm">
                     <div className="flex items-center gap-3 px-4 py-3">
                       <span className="font-mono text-xs text-slate-500">
@@ -162,6 +233,22 @@ export function ServerDetailPage() {
                       >
                         {svc.status === 'active' ? 'Ativo' : 'Inativo'}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => setEditingService({ service: serviceToInput(svc), index })}
+                        className="text-slate-500 hover:text-slate-300"
+                        title="Editar servico"
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeService(index)}
+                        className="text-slate-500 hover:text-red-400"
+                        title="Remover servico"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
                     </div>
                     <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 border-t border-slate-800 px-4 py-3">
                       <dt className="text-slate-500">Portas</dt>
@@ -183,8 +270,18 @@ export function ServerDetailPage() {
                   </div>
                 ))}
               </div>
-            </section>
-          )}
+            )}
+
+            {editingService && (
+              <ServiceEditModal
+                service={editingService.service}
+                index={editingService.index}
+                isWindows={(data.osName ?? '').toLowerCase().includes('windows')}
+                onSave={saveService}
+                onCancel={() => setEditingService(null)}
+              />
+            )}
+          </section>
 
           {/* Hosted resources derived from the subgraph */}
           {subgraph && (() => {

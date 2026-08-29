@@ -4,6 +4,7 @@ import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
 import { ServiceEditModal, type ServiceInput } from './ServiceEditModal';
+import { csvToList, serviceInputToPayload, servicesFromServer } from './service-input';
 import { TagInput } from '../../shared/components/TagInput';
 import { Tabs, type TabItem } from '../../shared/components/Tabs';
 import {
@@ -51,13 +52,6 @@ const TABS: TabItem[] = [
 
 const inputClass =
   'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
-
-function csvToList(value: string): string[] {
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
 
 interface FormState {
   hostname: string;
@@ -131,19 +125,6 @@ function formFromServer(server: ServerSummary): FormState {
     displayGroup: server.displayGroup ?? '',
     ownerTeamSlugs: server.ownerTeam ? server.ownerTeam.split(',').map((s) => s.trim()).filter(Boolean) : [],
   };
-}
-
-function servicesFromServer(server: ServerSummary): ServiceInput[] {
-  return server.services.map((svc) => ({
-    seq: svc.seq,
-    name: svc.name,
-    commandStart: svc.commandStart ?? '',
-    commandStop: svc.commandStop ?? '',
-    commandStatus: svc.commandStatus ?? '',
-    ports: (svc.ports ?? []).join(', '),
-    status: svc.status,
-    observations: svc.observations ?? '',
-  }));
 }
 
 export function ServerFormDialog({
@@ -286,16 +267,7 @@ export function ServerFormDialog({
       observations: form.observations.trim() || null,
       displayGroup: form.displayGroup.trim() || null,
       tags: tags.map((t) => t.trim()).filter(Boolean),
-      services: services.map((svc) => ({
-        seq: svc.seq,
-        name: svc.name.trim(),
-        commandStart: svc.commandStart.trim() || null,
-        commandStop: svc.commandStop.trim() || null,
-        commandStatus: svc.commandStatus.trim() || null,
-        ports: csvToList(svc.ports).map(Number).filter((n) => n >= 1 && n <= 65535),
-        status: svc.status,
-        observations: svc.observations.trim() || null,
-      })),
+      services: services.map(serviceInputToPayload),
       ownerTeam: form.ownerTeamSlugs.join(',') || null,
       disks,
     };

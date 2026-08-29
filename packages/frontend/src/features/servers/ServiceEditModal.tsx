@@ -3,17 +3,9 @@ import { type FormEvent, useState } from 'react';
 import { Button } from '../../shared/components/Button';
 import { Modal } from '../../shared/components/Modal';
 import type { ServiceStatus } from './use-servers';
+import type { ServiceInput } from './service-input';
 
-export interface ServiceInput {
-  seq: number;
-  name: string;
-  commandStart: string;
-  commandStop: string;
-  commandStatus: string;
-  ports: string;
-  status: ServiceStatus;
-  observations: string;
-}
+export type { ServiceInput };
 
 const inputClass =
   'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
