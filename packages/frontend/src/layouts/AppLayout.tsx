@@ -79,7 +79,6 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Infraestrutura',
     icon: <LayersIcon />,
     children: [
-      { to: '/infrastructure', label: 'Catalogo de Infraestrutura', icon: <LayersIcon /> },
       { to: '/servers', label: 'Servidores', icon: <ServerIcon /> },
     ],
   },
