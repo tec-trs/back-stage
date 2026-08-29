@@ -23,8 +23,14 @@ export interface RelationshipMapNode {
 }
 
 export interface RelationshipMapEdge {
+  // The membership row's own id — pass this (not relationshipId) to detach.
   id: string;
-  relationshipId: string;
+  // Id of the underlying resource_relationships row, when one exists.
+  relationshipId: string | null;
+  // True for a relationship type the CMDB derives elsewhere (e.g. "hosts"
+  // servidor->aplicacao, "expoe" ->url) instead of storing its own row —
+  // tagged into the map by natural key rather than by a real relationship id.
+  isImplicit: boolean;
   sourceType: MapResourceType;
   sourceId: string;
   targetType: MapResourceType;
@@ -37,6 +43,16 @@ export interface RelationshipMapDetail extends RelationshipMap {
   nodes: RelationshipMapNode[];
   edges: RelationshipMapEdge[];
 }
+
+export interface ImplicitRelationshipKey {
+  sourceType: MapResourceType;
+  sourceId: string;
+  targetType: MapResourceType;
+  targetId: string;
+  relationType: string;
+}
+
+export type AttachRelationshipInput = { relationshipId: string } | ImplicitRelationshipKey;
 
 const MAPS_KEY = ['relationship-maps'] as const;
 
@@ -92,10 +108,10 @@ export function useDeleteRelationshipMap() {
 export function useAttachRelationshipToMap(mapId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (relationshipId: string) =>
+    mutationFn: (input: AttachRelationshipInput) =>
       apiRequest<RelationshipMapDetail>(`/api/relationship-maps/${mapId}/relationships`, {
         method: 'POST',
-        body: { relationshipId },
+        body: input,
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: MAPS_KEY });
@@ -106,8 +122,11 @@ export function useAttachRelationshipToMap(mapId: string) {
 export function useDetachRelationshipFromMap(mapId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (relationshipId: string) =>
-      apiRequest<RelationshipMapDetail>(`/api/relationship-maps/${mapId}/relationships/${relationshipId}`, {
+    // memberId is the membership row's own id (RelationshipMapEdge.id), not the
+    // underlying relationship id — required since an implicit member has no
+    // underlying relationship id to key off of.
+    mutationFn: (memberId: string) =>
+      apiRequest<RelationshipMapDetail>(`/api/relationship-maps/${mapId}/relationships/${memberId}`, {
         method: 'DELETE',
       }),
     onSuccess: () => {

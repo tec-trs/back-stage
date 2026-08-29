@@ -7,7 +7,7 @@ import type {
   attachRelationshipSchema,
   createRelationshipMapSchema,
   mapIdParamSchema,
-  mapRelationshipParamSchema,
+  mapMemberParamSchema,
   updateRelationshipMapSchema,
 } from './relationship-map.validation.js';
 
@@ -15,7 +15,7 @@ type CreateMapBody = z.infer<typeof createRelationshipMapSchema>;
 type UpdateMapBody = z.infer<typeof updateRelationshipMapSchema>;
 type AttachBody = z.infer<typeof attachRelationshipSchema>;
 type MapIdParam = z.infer<typeof mapIdParamSchema>;
-type MapRelationshipParam = z.infer<typeof mapRelationshipParamSchema>;
+type MapMemberParam = z.infer<typeof mapMemberParamSchema>;
 
 export class RelationshipMapController {
   public constructor(private readonly service: RelationshipMapService) {}
@@ -64,15 +64,15 @@ export class RelationshipMapController {
     const body = request.body as AttachBody;
     const orgId = orgContext.getOrThrow();
 
-    const detail = await this.service.attachRelationship(params.mapId, orgId, body.relationshipId);
+    const detail = await this.service.attachRelationship(params.mapId, orgId, body);
     response.status(201).json(detail);
   };
 
   public detachRelationship = async (request: Request, response: Response): Promise<void> => {
-    const params = request.params as unknown as MapRelationshipParam;
+    const params = request.params as unknown as MapMemberParam;
     const orgId = orgContext.getOrThrow();
 
-    const detail = await this.service.detachRelationship(params.mapId, orgId, params.relationshipId);
+    const detail = await this.service.detachRelationship(params.mapId, orgId, params.memberId);
     response.status(200).json(detail);
   };
 }

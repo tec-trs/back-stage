@@ -8,7 +8,7 @@ import {
   attachRelationshipSchema,
   createRelationshipMapSchema,
   mapIdParamSchema,
-  mapRelationshipParamSchema,
+  mapMemberParamSchema,
   updateRelationshipMapSchema,
 } from './relationship-map.validation.js';
 
@@ -51,8 +51,8 @@ export function createRelationshipMapRouter(controller: RelationshipMapControlle
   );
 
   router.delete(
-    '/:mapId/relationships/:relationshipId',
-    validateMiddleware({ params: mapRelationshipParamSchema }),
+    '/:mapId/relationships/:memberId',
+    validateMiddleware({ params: mapMemberParamSchema }),
     asyncHandler((req, res) => controller.detachRelationship(req, res)),
   );
 

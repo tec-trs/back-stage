@@ -25,6 +25,7 @@ import {
   useAttachRelationshipToMap,
   useRelationshipMap,
   useUpdateRelationshipMap,
+  type MapResourceType,
   type RelationshipMapEdge,
 } from '../features/relationship-maps/use-relationship-maps';
 import { ResourceNodeWithIcon } from '../features/architecture-diagram/ResourceNodeWithIcon';
@@ -35,11 +36,11 @@ const inputClass =
   'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 
 // Some relationship types are derived by the CMDB rather than stored as a
-// standalone row in resource_relationships (e.g. "hospeda" between servidor
-// e aplicacao is modeled via application_deployments, and "expoe" to a URL
-// updates the URL's owner) — their edge id is a synthetic string, not a real
-// relationship id, so they can't be tagged into a map. Detect that case to
-// give a clear explanation instead of a raw validation error.
+// standalone row in resource_relationships (e.g. "hospeda" between servidor e
+// aplicacao is modeled via application_deployments, and "expoe" to a URL
+// updates the URL's owner) — their create-relationship response carries a
+// synthetic id, not a real relationship id. When that happens we tag the map
+// membership by natural key (source/target/relation type) instead.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const RELATION_LABEL: Record<string, string> = {
@@ -154,7 +155,6 @@ export function RelationshipMapDetailPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddRelationshipOpen, setIsAddRelationshipOpen] = useState(false);
   const [isGraphOpen, setIsGraphOpen] = useState(false);
-  const [attachNotice, setAttachNotice] = useState<string | null>(null);
 
   const { rfNodes, rfEdges, nodeLabelById } = useMemo(() => {
     if (!map) return { rfNodes: [] as RFNode[], rfEdges: [] as RFEdge[], nodeLabelById: new Map<string, string>() };
@@ -196,14 +196,21 @@ export function RelationshipMapDetailPage() {
   }
 
   function handleRelationshipCreated(edge: GraphEdge): void {
-    if (!UUID_RE.test(edge.id)) {
-      setAttachNotice(
-        'O relacionamento foi criado, mas este tipo (por exemplo, "hospeda" entre servidor e aplicacao, ou "expoe" para uma URL) e derivado automaticamente pelo CMDB e nao tem um registro proprio — por isso nao pode ser adicionado a um mapa. Ele ja aparece na visao geral do grafo e nas telas de detalhe dos recursos.',
-      );
+    if (UUID_RE.test(edge.id)) {
+      attachRelationship.mutate({ relationshipId: edge.id });
       return;
     }
-    setAttachNotice(null);
-    attachRelationship.mutate(edge.id);
+
+    // Implicit relationship (e.g. "hospeda" servidor->aplicacao, "expoe" ->url) —
+    // there's no standalone relationship row to point at, so tag it by its
+    // source/target/relation-type instead.
+    attachRelationship.mutate({
+      sourceType: edge.sourceType as MapResourceType,
+      sourceId: edge.sourceId,
+      targetType: edge.targetType as MapResourceType,
+      targetId: edge.targetId,
+      relationType: edge.relationType,
+    });
   }
 
   function handleDeleteMap(): void {
@@ -276,14 +283,13 @@ export function RelationshipMapDetailPage() {
         <MapGraph nodes={rfNodes} edges={rfEdges} />
       </Modal>
 
-      {(attachNotice || attachRelationship.isError) && (
+      {attachRelationship.isError && (
         <div className="mb-4">
           <ErrorMessage
             message={
-              attachNotice ??
-              (attachRelationship.error instanceof Error
+              attachRelationship.error instanceof Error
                 ? attachRelationship.error.message
-                : 'Erro ao adicionar relacionamento ao mapa')
+                : 'Erro ao adicionar relacionamento ao mapa'
             }
           />
         </div>
@@ -293,14 +299,7 @@ export function RelationshipMapDetailPage() {
         <h2 className="text-sm font-semibold text-slate-300">
           Relacionamentos ({map.edges.length})
         </h2>
-        <Button
-          size="sm"
-          icon={<PlusIcon />}
-          onClick={() => {
-            setAttachNotice(null);
-            setIsAddRelationshipOpen(true);
-          }}
-        >
+        <Button size="sm" icon={<PlusIcon />} onClick={() => setIsAddRelationshipOpen(true)}>
           Adicionar Relacionamento
         </Button>
       </div>
@@ -330,7 +329,17 @@ export function RelationshipMapDetailPage() {
                   <td className="px-4 py-2 font-medium text-slate-200">
                     {describeNode(nodeLabelById, edge.sourceType, edge.sourceId)}
                   </td>
-                  <td className="px-4 py-2 text-slate-400">{RELATION_LABEL[edge.relationType] ?? edge.relationType}</td>
+                  <td className="px-4 py-2 text-slate-400">
+                    {RELATION_LABEL[edge.relationType] ?? edge.relationType}
+                    {edge.isImplicit && (
+                      <span
+                        className="ml-2 rounded border border-slate-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-500"
+                        title="Este relacionamento e derivado automaticamente pelo CMDB (ex: deployments, dono da URL) e nao tem um registro proprio em Relacionamentos."
+                      >
+                        derivado
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-2 font-medium text-slate-200">
                     {describeNode(nodeLabelById, edge.targetType, edge.targetId)}
                   </td>
@@ -338,7 +347,7 @@ export function RelationshipMapDetailPage() {
                   <td className="px-4 py-2">
                     <button
                       type="button"
-                      onClick={() => detachRelationship.mutate(edge.relationshipId)}
+                      onClick={() => detachRelationship.mutate(edge.id)}
                       className="text-slate-500 hover:text-red-400"
                       title="Remover deste mapa"
                     >

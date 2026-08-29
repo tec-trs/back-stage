@@ -2,6 +2,7 @@ import { NotFoundError, ValidationError } from '@back-stage/shared';
 import type { Knex } from 'knex';
 
 import type {
+  AttachRelationshipInput,
   CreateRelationshipMapDto,
   RelationshipMap,
   RelationshipMapDetail,
@@ -91,37 +92,57 @@ export class RelationshipMapService {
     }
   }
 
-  async attachRelationship(mapId: string, organizationId: string, relationshipId: string): Promise<RelationshipMapDetail> {
+  async attachRelationship(mapId: string, organizationId: string, input: AttachRelationshipInput): Promise<RelationshipMapDetail> {
     await this.getMap(mapId, organizationId);
 
-    const relationship = await this.db('resource_relationships')
-      .where({ id: relationshipId, organization_id: organizationId, deleted_at: null })
-      .first('id');
-    if (!relationship) {
-      throw new NotFoundError('Relacionamento', relationshipId);
-    }
+    if ('relationshipId' in input) {
+      const relationship = await this.db('resource_relationships')
+        .where({ id: input.relationshipId, organization_id: organizationId, deleted_at: null })
+        .first('id');
+      if (!relationship) {
+        throw new NotFoundError('Relacionamento', input.relationshipId);
+      }
 
-    const alreadyMember = await this.repository.findActiveMember(mapId, relationshipId);
-    if (alreadyMember) {
-      throw new ValidationError('Este relacionamento já está neste mapa');
-    }
-
-    try {
-      await this.repository.addMember(mapId, organizationId, relationshipId);
-    } catch (err) {
-      if (isUniqueViolation(err)) {
+      const alreadyMember = await this.repository.findActiveExplicitMember(mapId, input.relationshipId);
+      if (alreadyMember) {
         throw new ValidationError('Este relacionamento já está neste mapa');
       }
-      throw err;
+
+      try {
+        await this.repository.addExplicitMember(mapId, organizationId, input.relationshipId);
+      } catch (err) {
+        if (isUniqueViolation(err)) {
+          throw new ValidationError('Este relacionamento já está neste mapa');
+        }
+        throw err;
+      }
+    } else {
+      if (input.sourceType === input.targetType && input.sourceId === input.targetId) {
+        throw new ValidationError('Um recurso não pode ter relação consigo mesmo');
+      }
+
+      const alreadyMember = await this.repository.findActiveImplicitMember(mapId, input);
+      if (alreadyMember) {
+        throw new ValidationError('Este relacionamento já está neste mapa');
+      }
+
+      try {
+        await this.repository.addImplicitMember(mapId, organizationId, input);
+      } catch (err) {
+        if (isUniqueViolation(err)) {
+          throw new ValidationError('Este relacionamento já está neste mapa');
+        }
+        throw err;
+      }
     }
 
     return this.getMapDetail(mapId, organizationId);
   }
 
-  async detachRelationship(mapId: string, organizationId: string, relationshipId: string): Promise<RelationshipMapDetail> {
+  async detachRelationship(mapId: string, organizationId: string, memberId: string): Promise<RelationshipMapDetail> {
     await this.getMap(mapId, organizationId);
 
-    const removed = await this.repository.removeMember(mapId, organizationId, relationshipId);
+    const removed = await this.repository.removeMember(mapId, organizationId, memberId);
     if (!removed) {
       throw new ValidationError('Este relacionamento não está neste mapa');
     }

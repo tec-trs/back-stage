@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 
 import type {
   CreateRelationshipMapDto,
+  ImplicitRelationshipKey,
   MapResourceType,
   RelationshipMap,
   RelationshipMapDetail,
@@ -12,6 +13,16 @@ import type {
 
 const MAPS_TABLE = 'relationship_maps';
 const MEMBERS_TABLE = 'relationship_map_members';
+
+interface ResourceRelationshipRow {
+  id: string;
+  source_type: MapResourceType;
+  source_id: string;
+  target_type: MapResourceType;
+  target_id: string;
+  relation_type: string;
+  reason: string | null;
+}
 
 const RESOURCE_TABLE_BY_TYPE: Record<MapResourceType, { table: string; labelColumn: string }> = {
   server: { table: 'servers', labelColumn: 'hostname' },
@@ -96,7 +107,7 @@ export class RelationshipMapRepository {
     return !!row;
   }
 
-  async addMember(mapId: string, organizationId: string, relationshipId: string): Promise<void> {
+  async addExplicitMember(mapId: string, organizationId: string, relationshipId: string): Promise<void> {
     await this.db(MEMBERS_TABLE).insert({
       map_id: mapId,
       relationship_id: relationshipId,
@@ -104,16 +115,49 @@ export class RelationshipMapRepository {
     });
   }
 
-  async findActiveMember(mapId: string, relationshipId: string): Promise<boolean> {
+  async addImplicitMember(mapId: string, organizationId: string, key: ImplicitRelationshipKey): Promise<void> {
+    await this.db(MEMBERS_TABLE).insert({
+      map_id: mapId,
+      organization_id: organizationId,
+      source_type: key.sourceType,
+      source_id: key.sourceId,
+      target_type: key.targetType,
+      target_id: key.targetId,
+      relation_type: key.relationType,
+    });
+  }
+
+  async findActiveExplicitMember(mapId: string, relationshipId: string): Promise<boolean> {
     const row = await this.db(MEMBERS_TABLE)
       .where({ map_id: mapId, relationship_id: relationshipId, deleted_at: null })
       .first('id');
     return !!row;
   }
 
-  async removeMember(mapId: string, organizationId: string, relationshipId: string): Promise<boolean> {
+  async findActiveImplicitMember(mapId: string, key: ImplicitRelationshipKey): Promise<boolean> {
+    const row = await this.db(MEMBERS_TABLE)
+      .where({
+        map_id: mapId,
+        source_type: key.sourceType,
+        source_id: key.sourceId,
+        target_type: key.targetType,
+        target_id: key.targetId,
+        relation_type: key.relationType,
+        deleted_at: null,
+      })
+      .first('id');
+    return !!row;
+  }
+
+  /**
+   * Removes a member by the membership row's own id — works uniformly for both
+   * an explicit member (points at a resource_relationships row) and an implicit
+   * one (a natural-key snapshot), since neither has a relationship_id in the
+   * implicit case.
+   */
+  async removeMember(mapId: string, organizationId: string, memberId: string): Promise<boolean> {
     const result = await this.db(MEMBERS_TABLE)
-      .where({ map_id: mapId, relationship_id: relationshipId, organization_id: organizationId, deleted_at: null })
+      .where({ id: memberId, map_id: mapId, organization_id: organizationId, deleted_at: null })
       .update({ deleted_at: this.db.fn.now() });
 
     return result > 0;
@@ -129,25 +173,56 @@ export class RelationshipMapRepository {
     const mapExists = await this.exists(mapId, organizationId);
     if (!mapExists) return null;
 
-    const relationshipRows = await this.db(MEMBERS_TABLE)
-      .join('resource_relationships as rr', 'rr.id', `${MEMBERS_TABLE}.relationship_id`)
-      .select('rr.*')
-      .where({
-        [`${MEMBERS_TABLE}.map_id`]: mapId,
-        [`${MEMBERS_TABLE}.deleted_at`]: null,
-      })
-      .whereNull('rr.deleted_at');
+    const memberRows = await this.db(MEMBERS_TABLE)
+      .where({ map_id: mapId, deleted_at: null })
+      .orderBy('created_at', 'asc');
 
-    const edges: RelationshipMapEdge[] = relationshipRows.map((r) => ({
-      id: r.id,
-      relationshipId: r.id,
-      sourceType: r.source_type,
-      sourceId: r.source_id,
-      targetType: r.target_type,
-      targetId: r.target_id,
-      relationType: r.relation_type,
-      reason: r.reason ?? null,
-    }));
+    const explicitIds = memberRows.filter((m) => m.relationship_id).map((m) => m.relationship_id as string);
+
+    const relationshipById = new Map<string, ResourceRelationshipRow>();
+    if (explicitIds.length > 0) {
+      const relationshipRows = await this.db('resource_relationships')
+        .select('id', 'source_type', 'source_id', 'target_type', 'target_id', 'relation_type', 'reason')
+        .whereIn('id', explicitIds)
+        .whereNull('deleted_at') as ResourceRelationshipRow[];
+      for (const r of relationshipRows) relationshipById.set(r.id, r);
+    }
+
+    const edges: RelationshipMapEdge[] = [];
+    for (const m of memberRows) {
+      if (m.relationship_id) {
+        // The tagged relationship may have since been deleted at the source
+        // (e.g. removed from the Ecosystem graph) — skip it rather than showing
+        // a broken row; the membership row itself is left for the user to notice
+        // via a shrinking count and clean up explicitly.
+        const r = relationshipById.get(m.relationship_id);
+        if (!r) continue;
+
+        edges.push({
+          id: m.id,
+          relationshipId: r.id,
+          isImplicit: false,
+          sourceType: r.source_type,
+          sourceId: r.source_id,
+          targetType: r.target_type,
+          targetId: r.target_id,
+          relationType: r.relation_type,
+          reason: r.reason ?? null,
+        });
+      } else {
+        edges.push({
+          id: m.id,
+          relationshipId: null,
+          isImplicit: true,
+          sourceType: m.source_type,
+          sourceId: m.source_id,
+          targetType: m.target_type,
+          targetId: m.target_id,
+          relationType: m.relation_type,
+          reason: null,
+        });
+      }
+    }
 
     const idsByType: Partial<Record<MapResourceType, Set<string>>> = {};
     for (const e of edges) {
