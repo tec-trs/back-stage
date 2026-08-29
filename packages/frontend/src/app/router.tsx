@@ -96,6 +96,12 @@ const OrganizationsPage = lazy(() =>
 const ArchitectureDiagramPage = lazy(() =>
   import('../pages/ArchitectureDiagramPage').then((m) => ({ default: m.ArchitectureDiagramPage })),
 );
+const RelationshipMapsPage = lazy(() =>
+  import('../pages/RelationshipMapsPage').then((m) => ({ default: m.RelationshipMapsPage })),
+);
+const RelationshipMapDetailPage = lazy(() =>
+  import('../pages/RelationshipMapDetailPage').then((m) => ({ default: m.RelationshipMapDetailPage })),
+);
 
 function withSuspense(element: ReactNode) {
   return <Suspense fallback={<Spinner />}>{element}</Suspense>;
@@ -109,7 +115,6 @@ export const router = createBrowserRouter([
   {
     element: <ProtectedRoute />,
     children: [
-      { path: '/architecture-diagram', element: withSuspense(<ArchitectureDiagramPage />) },
       {
         element: <AppLayout />,
         children: [
@@ -142,6 +147,9 @@ export const router = createBrowserRouter([
           { path: '/risk-analysis', element: withSuspense(<RiskAnalysisPage />) },
           { path: '/groups', element: withSuspense(<GroupsPage />) },
           { path: '/organizations', element: withSuspense(<OrganizationsPage />) },
+          { path: '/architecture-diagram', element: withSuspense(<ArchitectureDiagramPage />) },
+          { path: '/relationship-maps', element: withSuspense(<RelationshipMapsPage />) },
+          { path: '/relationship-maps/:id', element: withSuspense(<RelationshipMapDetailPage />) },
           { path: '/settings', element: withSuspense(<SettingsPage />) },
         ],
       },

@@ -58,12 +58,17 @@ export function AddRelationshipDialog({
   defaultSourceType,
   defaultSourceId,
   defaultSourceLabel,
+  onCreated,
 }: {
   isOpen: boolean;
   onClose: () => void;
   defaultSourceType?: ResourceType;
   defaultSourceId?: string;
   defaultSourceLabel?: string;
+  // Called with the newly created relationship, right before onClose — lets a
+  // caller (e.g. a relationship map's detail page) chain a follow-up action such
+  // as tagging the new relationship into a curated set.
+  onCreated?: (edge: import('./use-resource-graph').GraphEdge) => void;
 }) {
   const createRelationship = useCreateRelationship();
   const [form, setForm] = useState<FormState>(emptyForm(defaultSourceType, defaultSourceId));
@@ -92,7 +97,12 @@ export function AddRelationshipDialog({
       reason: form.reason.trim() || undefined,
     };
 
-    createRelationship.mutate(payload, { onSuccess: onClose });
+    createRelationship.mutate(payload, {
+      onSuccess: (edge) => {
+        onCreated?.(edge);
+        onClose();
+      },
+    });
   }
 
   const selectedRelation = RELATION_TYPES.find((r) => r.value === form.relationType);

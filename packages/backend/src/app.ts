@@ -31,6 +31,7 @@ import { registerSearchModule } from './modules/search/search.module.js';
 import { registerServersModule } from './modules/servers/servers.module.js';
 import { registerVIPsModule } from './modules/vips/vips.module.js';
 import { registerServerGroupsModule } from './modules/server-groups/server-groups.module.js';
+import { registerRelationshipMapsModule } from './modules/relationship-maps/relationship-maps.module.js';
 import { registerServiceCatalogModule } from './modules/service-catalog/service-catalog.module.js';
 import { registerUsersModule } from './modules/users/users.module.js';
 import { registerArchitectureModule } from './modules/architecture/architecture.module.js';
@@ -117,6 +118,7 @@ export function createApp(): Express {
   app.use('/api/urls', ...withOrg, registerUrlsModule());
   app.use('/api/resource-graph', ...withOrg, registerResourceGraphModule());
   app.use('/api/architecture-diagrams', ...withOrg, registerArchitectureModule(db).router);
+  app.use('/api/relationship-maps', ...withOrg, registerRelationshipMapsModule());
   app.use(registerDeploymentsModule());
 
   app.use(notFoundMiddleware);

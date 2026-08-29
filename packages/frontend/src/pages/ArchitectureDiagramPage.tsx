@@ -15,7 +15,7 @@ export function ArchitectureDiagramPage() {
   const [tab, setTab] = useState<Tab>('live');
 
   return (
-    <div className="-mx-6 -mt-6 flex h-screen flex-col bg-canvas">
+    <div className="-mx-6 -mt-6 flex h-[calc(100vh-61px)] flex-col bg-canvas">
       <div className="flex gap-1 border-b border-line bg-surface px-4 pt-2">
         <button type="button" onClick={() => setTab('live')} className={TAB_CLASS(tab === 'live')}>
           Visão ao vivo
