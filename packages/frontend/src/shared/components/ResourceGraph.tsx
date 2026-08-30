@@ -622,19 +622,54 @@ export function ResourceGraph({
   resetLayoutKey = 0,
 }: ResourceGraphProps) {
   type GraphState = { nodes: RFNode<NodeData>[]; edges: RFEdge[] };
+  type GraphAction =
+    | { kind: 'nodes'; value: RFNode<NodeData>[] | ((prev: RFNode<NodeData>[]) => RFNode<NodeData>[]) }
+    | { kind: 'edges'; value: RFEdge[] | ((prev: RFEdge[]) => RFEdge[]) };
+  // NOTE: the functional-updater form of a setState call (`set(prev => ...)`)
+  // MUST be resolved inside the reducer, against the reducer's own `state`
+  // argument — that is the one place React guarantees the truly current
+  // value regardless of which render created the caller's closure. This used
+  // to be resolved outside the reducer (`action.nodes(graphState.nodes)`),
+  // reading `graphState` from whatever render defined that particular
+  // `setRfNodes` closure. `onNodesChange`/`onEdgesChange` below are memoized
+  // with narrow dependency arrays, so they kept referencing the very first
+  // render's `setRfNodes` — whose closed-over `graphState.nodes` was
+  // permanently the initial empty array. In practice: Effect 1 populates the
+  // graph correctly, but the moment ReactFlow's own internal "dimensions"
+  // change fires after first measuring a node (a normal, automatic event),
+  // onNodesChange applied that change to the stale empty array and wrote the
+  // (still empty) result back — wiping out the graph right after it appeared.
   const [graphState, dispatch] = useReducer(
-    (state: GraphState, action: Partial<GraphState>): GraphState => ({
-      nodes: action.nodes ?? state.nodes,
-      edges: action.edges ?? state.edges,
-    }),
+    (state: GraphState, action: GraphAction): GraphState => {
+      switch (action.kind) {
+        case 'nodes':
+          return {
+            ...state,
+            nodes: typeof action.value === 'function' ? action.value(state.nodes) : action.value,
+          };
+        case 'edges':
+          return {
+            ...state,
+            edges: typeof action.value === 'function' ? action.value(state.edges) : action.value,
+          };
+        default:
+          return state;
+      }
+    },
     { nodes: [], edges: [] }
   );
-  const setRfNodes = (nodes: RFNode<NodeData>[] | ((prev: RFNode<NodeData>[]) => RFNode<NodeData>[])) => {
-    dispatch({ nodes: typeof nodes === 'function' ? nodes(graphState.nodes) : nodes });
-  };
-  const setRfEdges = (edges: RFEdge[] | ((prev: RFEdge[]) => RFEdge[])) => {
-    dispatch({ edges: typeof edges === 'function' ? edges(graphState.edges) : edges });
-  };
+  const setRfNodes = useCallback(
+    (nodes: RFNode<NodeData>[] | ((prev: RFNode<NodeData>[]) => RFNode<NodeData>[])) => {
+      dispatch({ kind: 'nodes', value: nodes });
+    },
+    [],
+  );
+  const setRfEdges = useCallback(
+    (edges: RFEdge[] | ((prev: RFEdge[]) => RFEdge[])) => {
+      dispatch({ kind: 'edges', value: edges });
+    },
+    [],
+  );
   const rfNodes = graphState.nodes;
   const rfEdges = graphState.edges;
 
