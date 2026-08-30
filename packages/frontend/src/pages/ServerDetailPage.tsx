@@ -10,7 +10,6 @@ import {
   servicesFromServer,
   type ServiceInput,
 } from '../features/servers/service-input';
-import { AuditTimeline } from '../features/audit/AuditTimeline';
 import { AddRelationshipDialog } from '../features/resource-graph/AddRelationshipDialog';
 import { ImpactAnalysisPanel } from '../features/resource-graph/ImpactAnalysisPanel';
 import { useSubgraph } from '../features/resource-graph/use-resource-graph';
@@ -387,8 +386,6 @@ export function ServerDetailPage() {
               <Field label="Time responsavel" value={data.ownerTeam} />
             </dl>
           </section>
-
-          <AuditTimeline resourceId={data.id} resourceType="server" />
         </div>
       )}
     </div>
