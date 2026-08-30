@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useReducer } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useReducer, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -638,6 +638,11 @@ export function ResourceGraph({
   const rfNodes = graphState.nodes;
   const rfEdges = graphState.edges;
 
+  // Surfaces a crash inside Effect 1's data-building logic instead of just
+  // silently blanking the graph (previously the only signal was a
+  // console.error, so a broken render looked identical to "no dependencies").
+  const [renderError, setRenderError] = useState<string | null>(null);
+
   const editModeRef     = useRef(editMode);
   const onEdgeDeleteRef = useRef(onEdgeDelete);
   const hostedAppIdsRef = useRef<Set<string>>(new Set());
@@ -669,6 +674,7 @@ export function ResourceGraph({
   // ── Effect 1: recompute layout when graph data changes ─────────────────
   useEffect(() => {
     try {
+      setRenderError(null);
       if (!propNodes.length) {
         setRfNodes([]);
         setRfEdges([]);
@@ -866,6 +872,7 @@ export function ResourceGraph({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     } catch (err) {
       console.error('ResourceGraph Effect 1 error:', err);
+      setRenderError(err instanceof Error ? err.message : String(err));
       setRfNodes([]);
       setRfEdges([]);
     }
@@ -996,6 +1003,17 @@ export function ResourceGraph({
         <div className="flex flex-col items-center gap-3">
           <div className="h-10 w-10 rounded-full border-2 border-t-transparent border-blue-500 animate-spin" />
           <p className="text-sm text-slate-400">Carregando grafo...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (renderError) {
+    return (
+      <div className="w-full h-full flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <p className="text-sm text-red-400">Erro ao desenhar o grafo</p>
+          <p className="text-xs text-slate-500">{renderError}</p>
         </div>
       </div>
     );
