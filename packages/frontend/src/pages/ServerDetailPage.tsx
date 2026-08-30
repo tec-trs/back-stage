@@ -42,7 +42,7 @@ export function ServerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data, isLoading, isError } = useServer(id);
-  const { data: subgraph, isLoading: isSubgraphLoading } = useSubgraph('server', id ?? null, 2);
+  const { data: subgraph, isLoading: isSubgraphLoading, isError: isSubgraphError, error: subgraphError } = useSubgraph('server', id ?? null, 2);
   const [isRelationshipDialogOpen, setIsRelationshipDialogOpen] = useState(false);
   const [simulationSourceId, setSimulationSourceId] = useState<string | undefined>();
   const [impactedByDepth, setImpactedByDepth] = useState<Map<string, number>>(new Map());
@@ -341,6 +341,10 @@ export function ServerDetailPage() {
               <div className="flex justify-center py-8">
                 <Spinner />
               </div>
+            ) : isSubgraphError ? (
+              <p className="rounded-lg border border-red-900/50 bg-red-950/20 p-6 text-center text-sm text-red-400">
+                Erro ao carregar dependencias{subgraphError instanceof Error ? `: ${subgraphError.message}` : ''}.
+              </p>
             ) : subgraph && subgraph.nodes.length > 0 ? (
               <div className="h-96 overflow-hidden rounded-lg border border-slate-800">
                 <ResourceGraph

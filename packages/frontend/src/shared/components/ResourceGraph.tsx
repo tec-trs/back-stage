@@ -19,6 +19,7 @@ import {
   type Node as RFNode,
   type NodeChange,
   type NodeProps,
+  type ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -643,6 +644,16 @@ export function ResourceGraph({
   editModeRef.current     = editMode;
   onEdgeDeleteRef.current = onEdgeDelete;
 
+  // Holds the live ReactFlow instance (set via onInit) so Effect 1 can re-fit
+  // the viewport whenever the underlying graph data changes. The `fitView`
+  // boolean prop passed to <ReactFlow> below only fits the view on the very
+  // first render — it does NOT re-run when nodes/edges are added or removed
+  // later (e.g. after the user creates a relationship). Without this, newly
+  // added nodes can be positioned outside the still-stale viewport and the
+  // graph appears blank even though data was returned successfully.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rfInstanceRef = useRef<ReactFlowInstance<any, any> | null>(null);
+
   const prevResetKeyRef = useRef(resetLayoutKey);
 
   const impactedKey = useMemo(
@@ -839,6 +850,19 @@ export function ResourceGraph({
     } as RFEdge));
 
     setRfEdges(initialEdges);
+
+    // Re-fit the viewport to the newly computed layout. `fitView` (the boolean
+    // prop on <ReactFlow> below) only applies on the component's first render,
+    // so without this, adding/removing nodes after the initial mount (e.g.
+    // right after creating a relationship from this page) leaves the camera
+    // parked on the old layout and the new content can end up entirely
+    // outside the visible area. Deferred to the next two frames so ReactFlow
+    // has measured the freshly rendered nodes before we ask it to fit them.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        rfInstanceRef.current?.fitView({ padding: 0.1, maxZoom: 2, minZoom: 0.1 });
+      });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     } catch (err) {
       console.error('ResourceGraph Effect 1 error:', err);
@@ -981,6 +1005,7 @@ export function ResourceGraph({
     <ReactFlow
       nodes={decoratedNodes}
       edges={decoratedEdges}
+      onInit={(instance) => { rfInstanceRef.current = instance; }}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onNodeClick={onNodeClick}
