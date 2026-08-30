@@ -85,37 +85,39 @@ export function ServiceEditModal({
           />
         </label>
 
-        {!isWindows && (
-          <>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Comando de iniciar</span>
-              <input
-                value={form.commandStart}
-                onChange={(e) => setField('commandStart', e.target.value)}
-                placeholder="systemctl start nginx"
-                className={`${inputClass} font-mono text-sm`}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Comando de parar</span>
-              <input
-                value={form.commandStop}
-                onChange={(e) => setField('commandStop', e.target.value)}
-                placeholder="systemctl stop nginx"
-                className={`${inputClass} font-mono text-sm`}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-400">Comando de status</span>
-              <input
-                value={form.commandStatus}
-                onChange={(e) => setField('commandStatus', e.target.value)}
-                placeholder="systemctl status nginx"
-                className={`${inputClass} font-mono text-sm`}
-              />
-            </label>
-          </>
-        )}
+        {/* These used to be hidden entirely when isWindows was true, on the
+            assumption Windows services are only ever managed via services.msc.
+            That hid the fields anywhere a Windows server's service was being
+            registered, with no way to note down a PowerShell/sc.exe command
+            even for admins who do use one — so they're always shown now,
+            just with OS-appropriate example placeholders. */}
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-slate-400">Comando de iniciar</span>
+          <input
+            value={form.commandStart}
+            onChange={(e) => setField('commandStart', e.target.value)}
+            placeholder={isWindows ? 'net start nginx' : 'systemctl start nginx'}
+            className={`${inputClass} font-mono text-sm`}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-slate-400">Comando de parar</span>
+          <input
+            value={form.commandStop}
+            onChange={(e) => setField('commandStop', e.target.value)}
+            placeholder={isWindows ? 'net stop nginx' : 'systemctl stop nginx'}
+            className={`${inputClass} font-mono text-sm`}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-slate-400">Comando de status</span>
+          <input
+            value={form.commandStatus}
+            onChange={(e) => setField('commandStatus', e.target.value)}
+            placeholder={isWindows ? 'sc query nginx' : 'systemctl status nginx'}
+            className={`${inputClass} font-mono text-sm`}
+          />
+        </label>
 
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-slate-400">Observacoes</span>
