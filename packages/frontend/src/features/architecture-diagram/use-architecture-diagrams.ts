@@ -22,6 +22,17 @@ export interface ArchitectureDiagramEdge {
   id: string;
   source: string;
   target: string;
+  // label/style/data are typed loosely (any) on purpose: this interface mirrors
+  // React Flow's Edge shape (ReactNode label, CSSProperties style) closely enough
+  // that a strict structural type fights the library's own types both ways. The
+  // backend treats nodes/edges as opaque JSON regardless, so nothing here relies
+  // on these fields being narrowly typed.
+  label?: any;
+  // Present when this edge mirrors a real resource_relationships row — see
+  // RelationshipEdgeData in features/architecture-diagram/types.ts. Stored and
+  // returned as opaque JSON by the backend, so it round-trips through save/load.
+  data?: Record<string, unknown>;
+  style?: any;
 }
 
 export interface ArchitectureDiagram {

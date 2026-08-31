@@ -4,6 +4,7 @@ import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
 import { ResourceSelector } from './ResourceSelector';
+import { RELATION_TYPES, RESOURCE_TYPES, type ResourceType } from './relationship-types';
 
 import type { CreateRelationshipInput } from './use-resource-graph';
 import { useCreateRelationship } from './use-resource-graph';
@@ -11,23 +12,10 @@ import { useCreateRelationship } from './use-resource-graph';
 const inputClass =
   'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 
-export type ResourceType = 'server' | 'application' | 'database' | 'url';
-
-const RESOURCE_TYPES: Array<{ value: ResourceType; label: string }> = [
-  { value: 'server', label: 'Servidor' },
-  { value: 'application', label: 'Aplicacao' },
-  { value: 'database', label: 'Banco de Dados' },
-  { value: 'url', label: 'URL' },
-];
-
-const RELATION_TYPES: Array<{ value: string; label: string; description: string }> = [
-  { value: 'hosts', label: 'Hospeda', description: 'Ex: Servidor hospeda banco de dados' },
-  { value: 'depends_on', label: 'Depende de', description: 'Ex: Aplicacao depende de banco' },
-  { value: 'connects_to', label: 'Conecta a', description: 'Ex: Aplicacao conecta a outra' },
-  { value: 'exposes', label: 'Expoe', description: 'Ex: Aplicacao expoe URL/endpoint' },
-  { value: 'consumes', label: 'Consome', description: 'Ex: Aplicacao consome servico externo' },
-  { value: 'part_of', label: 'Parte de', description: 'Ex: Microsservico e parte de sistema' },
-];
+// Re-exported for callers that only need the resource-type union (e.g. ResourceSelector).
+// The actual list of types/relation types now lives in ./relationship-types so the
+// Architecture Diagram editor can reuse the exact same vocabulary.
+export type { ResourceType };
 
 interface FormState {
   sourceType: ResourceType;

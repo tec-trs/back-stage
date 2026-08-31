@@ -8,7 +8,24 @@ export interface ResourceNode extends Node {
     label: string;
     resourceType: ResourceType;
     description?: string;
+    // Set when this node was added from the inventory (via ToolBarSimple's resource
+    // picker) rather than hand-typed. Only nodes with a resourceId point at a real
+    // catalog entity, which is what lets a connection between two such nodes become
+    // a real resource_relationships row instead of a purely visual line — see
+    // isRelationshipCapableResourceType in features/resource-graph/relationship-types.
+    resourceId?: string;
   };
+}
+
+// Data carried on an Edge when it represents a real resource_relationships row
+// (created via useCreateRelationship / removed via useDeleteRelationship), rather
+// than a purely visual connection. Kept on Edge.data so it round-trips through
+// diagram save/load (nodes/edges are stored as opaque JSON on the backend).
+export interface RelationshipEdgeData {
+  relationshipId: string;
+  relationType: string;
+  reason?: string;
+  [key: string]: unknown;
 }
 
 export interface Diagram {
