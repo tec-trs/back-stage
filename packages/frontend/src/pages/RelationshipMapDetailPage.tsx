@@ -17,6 +17,7 @@ import { Modal } from '../shared/components/Modal';
 import { PageHeader } from '../shared/components/PageHeader';
 import { PencilIcon, PlusIcon, TrashIcon } from '../shared/components/icons';
 import { Spinner } from '../shared/components/Spinner';
+import { useDatabaseGroups } from '../features/database-groups/use-database-groups';
 import { AddRelationshipDialog } from '../features/resource-graph/AddRelationshipDialog';
 import type { GraphEdge } from '../features/resource-graph/use-resource-graph';
 import {
@@ -59,6 +60,7 @@ const nodeTypes = {
   database: ResourceNodeWithIcon as any,
   url: ResourceNodeWithIcon as any,
   vip: ResourceNodeWithIcon as any,
+  'db-group': ResourceNodeWithIcon as any,
 };
 
 function EditMapDialog({
@@ -149,6 +151,7 @@ export function RelationshipMapDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: map, isLoading, isError, error } = useRelationshipMap(id ?? null);
+  const { data: databaseGroups } = useDatabaseGroups();
   const detachRelationship = useDetachRelationshipFromMap(id ?? '');
   const attachRelationship = useAttachRelationshipToMap(id ?? '');
   const deleteMap = useDeleteRelationshipMap();
@@ -157,40 +160,101 @@ export function RelationshipMapDetailPage() {
   const [isAddRelationshipOpen, setIsAddRelationshipOpen] = useState(false);
   const [isGraphOpen, setIsGraphOpen] = useState(false);
 
+  // Visão gráfica apenas — a tabela de Relacionamentos abaixo continua
+  // listando cada banco individualmente (nodeLabelById não passa por este
+  // agrupamento). Mesmo critério do Ecossistema: um Agrupador de Bancos
+  // curado cujos bancos (2+) estejam neste mapa colapsa num único nó, não
+  // importa quantos relacionamentos reais o mapa já documenta entre eles —
+  // a existência do agrupador é o gatilho, não a contagem de arestas.
   const { rfNodes, rfEdges, nodeLabelById } = useMemo(() => {
     if (!map) return { rfNodes: [] as RFNode[], rfEdges: [] as RFEdge[], nodeLabelById: new Map<string, string>() };
 
-    const dagreNodes = map.nodes.map((n) => {
-      const { width, height } = getResourceNodeSize(n.resourceType as ResourceType, n.services);
-      return { id: `${n.resourceType}:${n.id}`, width, height };
-    });
-    const dagreEdges = map.edges.map((e) => ({
-      source: `${e.sourceType}:${e.sourceId}`,
-      target: `${e.targetType}:${e.targetId}`,
-    }));
+    const dbNodeIds = new Set(map.nodes.filter((n) => n.resourceType === 'database').map((n) => n.id));
+    const dbLabelById = new Map(map.nodes.map((n) => [n.id, n.label]));
+
+    const dbIdToGroupNodeId = new Map<string, string>();
+    const groupMeta = new Map<string, { label: string; dbIds: string[] }>();
+
+    const sortedGroups = (databaseGroups ?? [])
+      .filter((g) => g.databaseIds && g.databaseIds.length > 0)
+      .slice()
+      .sort((a, b) => (a.databaseIds!.length - b.databaseIds!.length));
+
+    for (const group of sortedGroups) {
+      const presentDbIds = group.databaseIds!.filter((dbId) => dbNodeIds.has(dbId) && !dbIdToGroupNodeId.has(dbId));
+      if (presentDbIds.length < 2) continue;
+      const groupNodeId = `db-group:curated-${group.id}`;
+      groupMeta.set(groupNodeId, { label: group.name, dbIds: presentDbIds });
+      for (const dbId of presentDbIds) dbIdToGroupNodeId.set(dbId, groupNodeId);
+    }
+
+    function keyFor(resourceType: string, resourceId: string): string {
+      const groupNodeId = resourceType === 'database' ? dbIdToGroupNodeId.get(resourceId) : undefined;
+      return groupNodeId ?? `${resourceType}:${resourceId}`;
+    }
+
+    const visibleNodes = map.nodes.filter((n) => !(n.resourceType === 'database' && dbIdToGroupNodeId.has(n.id)));
+
+    const dagreNodes = [
+      ...visibleNodes.map((n) => {
+        const { width, height } = getResourceNodeSize(n.resourceType as ResourceType, n.services);
+        return { id: `${n.resourceType}:${n.id}`, width, height };
+      }),
+      ...Array.from(groupMeta.keys()).map((groupNodeId) => {
+        const { width, height } = getResourceNodeSize('database' as ResourceType);
+        return { id: groupNodeId, width, height };
+      }),
+    ];
+
+    // Redireciona as pontas de cada relacionamento para o nó do agrupador
+    // quando o banco original entrou num grupo, deduplicando arestas que
+    // colapsariam para o mesmo par (origem, destino) — por exemplo, dois
+    // relacionamentos distintos apontando para bancos diferentes do mesmo
+    // agrupador viram uma única aresta até o nó do agrupador.
+    const dagreEdges: { source: string; target: string }[] = [];
+    const edgeByKey = new Map<string, RFEdge>();
+    for (const e of map.edges) {
+      const source = keyFor(e.sourceType, e.sourceId);
+      const target = keyFor(e.targetType, e.targetId);
+      if (source === target) continue; // colapsou num auto-relacionamento — descarta
+      dagreEdges.push({ source, target });
+      const key = `${source}->${target}`;
+      if (!edgeByKey.has(key)) {
+        edgeByKey.set(key, { id: `edge-${key}`, source, target });
+      }
+    }
+
     const positions = layoutWithDagre(dagreNodes, dagreEdges);
 
-    const nodes: RFNode[] = map.nodes.map((n) => {
-      const nodeId = `${n.resourceType}:${n.id}`;
-      return {
-        id: nodeId,
-        type: n.resourceType,
-        position: positions.get(nodeId) ?? { x: 0, y: 0 },
+    const nodes: RFNode[] = [
+      ...visibleNodes.map((n) => {
+        const nodeId = `${n.resourceType}:${n.id}`;
+        return {
+          id: nodeId,
+          type: n.resourceType,
+          position: positions.get(nodeId) ?? { x: 0, y: 0 },
+          data: {
+            label: n.label,
+            resourceType: n.resourceType as ResourceType,
+            description: n.status,
+            resourceId: n.id,
+            services: n.services,
+          },
+        };
+      }),
+      ...Array.from(groupMeta.entries()).map(([groupNodeId, meta]) => ({
+        id: groupNodeId,
+        type: 'db-group',
+        position: positions.get(groupNodeId) ?? { x: 0, y: 0 },
         data: {
-          label: n.label,
-          resourceType: n.resourceType as ResourceType,
-          description: n.status,
-          resourceId: n.id,
-          services: n.services,
+          label: meta.label,
+          resourceType: 'db-group' as ResourceType,
+          description: meta.dbIds.map((dbId) => dbLabelById.get(dbId) ?? dbId).join(', '),
         },
-      };
-    });
+      })),
+    ];
 
-    const edges: RFEdge[] = map.edges.map((e) => ({
-      id: e.id,
-      source: `${e.sourceType}:${e.sourceId}`,
-      target: `${e.targetType}:${e.targetId}`,
-    }));
+    const edges: RFEdge[] = Array.from(edgeByKey.values());
 
     const labelById = new Map<string, string>();
     for (const n of map.nodes) {
@@ -198,7 +262,7 @@ export function RelationshipMapDetailPage() {
     }
 
     return { rfNodes: nodes, rfEdges: edges, nodeLabelById: labelById };
-  }, [map]);
+  }, [map, databaseGroups]);
 
   function describeNode(labelById: Map<string, string>, type: string, id: string): string {
     const label = labelById.get(`${type}:${id}`);

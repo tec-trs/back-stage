@@ -1,6 +1,12 @@
 import type { Node, Edge } from '@xyflow/react';
 
-export type ResourceType = 'url' | 'application' | 'service' | 'database' | 'server' | 'vip';
+export type ResourceType = 'url' | 'application' | 'service' | 'database' | 'server' | 'vip' | 'db-group';
+
+// 'db-group' is a purely visual, client-side node: it never comes from a real
+// resource_relationships row or a hand-added diagram shape — it stands in for
+// several bancos folded into one node (see EcosystemPage and
+// RelationshipMapDetailPage's clustering) and is never itself a valid
+// isRelationshipCapableResourceType target.
 
 export interface ResourceNode extends Node {
   type: ResourceType;
@@ -50,6 +56,8 @@ export const RESOURCE_COLORS: Record<ResourceType, string> = {
   service: '#06b6d4',
   // Same cyan the Ecosystem graph uses for VIPs (TYPE_STYLE.vip in ResourceGraph.tsx)
   vip: '#06b6d4',
+  // Same purple the Ecosystem graph uses for its own db-group nodes.
+  'db-group': '#a855f7',
 };
 
 export const RESOURCE_LABELS: Record<ResourceType, string> = {
@@ -59,4 +67,5 @@ export const RESOURCE_LABELS: Record<ResourceType, string> = {
   database: 'Banco de Dados',
   server: 'Servidor',
   vip: 'VIP',
+  'db-group': 'Bancos (agrupado)',
 };

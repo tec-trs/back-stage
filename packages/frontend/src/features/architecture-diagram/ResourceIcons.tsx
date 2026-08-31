@@ -73,6 +73,8 @@ const iconMap = {
   database: DatabaseIcon,
   server: ServerIcon,
   vip: VipIcon,
+  // Reuses the banco icon — a db-group node stands in for several bancos.
+  'db-group': DatabaseIcon,
 };
 
 export function getIconComponent(resourceType: string) {

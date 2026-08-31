@@ -303,101 +303,123 @@ export function EcosystemPage() {
     return matches;
   }, [searchTerm, data]);
 
-  // ── Opção A: agrupar bancos quando aplicação tem ≥ 2 ──────────────────────
+  // ── Agrupamento de bancos no diagrama ─────────────────────────────────
+  // Dois gatilhos, nessa ordem de precedência:
+  //   1. Agrupador curado (Agrupadores de Bancos): colapsa sempre que 2+
+  //      dos seus bancos aparecem neste grafo, independente de quantas
+  //      dependências reais já existem — a documentação em si é o gatilho,
+  //      não a contagem de relacionamentos. Agrupador menor primeiro, para
+  //      que um agrupador mais específico "ganhe" de um mais genérico que
+  //      também contenha o mesmo banco.
+  //   2. Fallback automático: aplicação com 2+ dependências reais de banco
+  //      ainda colapsa mesmo sem agrupador — útil para desafogar o
+  //      diagrama antes de existir documentação. Só considera bancos que
+  //      nenhum agrupador curado já reivindicou no passo 1.
   const { graphNodes, graphEdges, dbGroups } = useMemo(() => {
     if (!data) return { graphNodes: [], graphEdges: [], dbGroups: [] };
 
-    // Curated grupos (see database-groups) whose bancos are all present in a
-    // computed cluster get their real, human-chosen name on the card instead
-    // of the generic "N bancos" — e.g. "BANCOS BBF" instead of "9 bancos".
-    // Sorted smallest-grupo-first so a precise match wins over a broader
-    // grupo that happens to also contain every banco in the cluster.
-    const candidateGroups = (databaseGroups ?? [])
+    const nodeById = new Map(data.nodes.map((n) => [n.id, n]));
+
+    // dbId → id do nó sintético que o representa neste diagrama.
+    const dbIdToGroupNodeId = new Map<string, string>();
+    // id do nó sintético → rótulo e lista de dbIds que ele representa.
+    const groupMeta = new Map<string, { label: string; dbIds: string[] }>();
+
+    const sortedGroups = (databaseGroups ?? [])
       .filter((g) => g.databaseIds && g.databaseIds.length > 0)
       .slice()
       .sort((a, b) => (a.databaseIds!.length - b.databaseIds!.length));
 
-    function curatedLabelFor(dbIds: string[]): string | undefined {
-      for (const group of candidateGroups) {
-        const memberSet = new Set(group.databaseIds);
-        if (dbIds.every((id) => memberSet.has(id))) return group.name;
-      }
-      return undefined;
+    for (const group of sortedGroups) {
+      const presentDbIds = group.databaseIds!.filter((dbId) => {
+        if (dbIdToGroupNodeId.has(dbId)) return false; // já reivindicado por um agrupador mais específico
+        return nodeById.get(dbId)?.resourceType === 'database';
+      });
+      if (presentDbIds.length < 2) continue;
+
+      const groupNodeId = `db-group-curated-${group.id}`;
+      groupMeta.set(groupNodeId, { label: group.name, dbIds: presentDbIds });
+      for (const dbId of presentDbIds) dbIdToGroupNodeId.set(dbId, groupNodeId);
     }
 
-    const nodeById = new Map(data.nodes.map((n) => [n.id, n]));
-
-    // Mapa appId → edges de banco (sourceId=app, targetId=db)
+    // Mapa appId → edges de banco (sourceId=app, targetId=db), ignorando
+    // bancos que já foram reivindicados por um agrupador curado acima.
     const appDbEdgeMap = new Map<string, typeof data.edges>();
     for (const edge of data.edges) {
       const src = nodeById.get(edge.sourceId);
       const tgt = nodeById.get(edge.targetId);
-      if (src?.resourceType === 'application' && tgt?.resourceType === 'database') {
+      if (
+        src?.resourceType === 'application' &&
+        tgt?.resourceType === 'database' &&
+        !dbIdToGroupNodeId.has(edge.targetId)
+      ) {
         if (!appDbEdgeMap.has(edge.sourceId)) appDbEdgeMap.set(edge.sourceId, []);
         appDbEdgeMap.get(edge.sourceId)!.push(edge);
       }
     }
 
-    const groups: DbGroup[] = [];
-    const hiddenNodeIds = new Set<string>();
-    const hiddenEdgeIds = new Set<string>();
-    const syntheticNodes: EcoNode[] = [];
-    const syntheticEdges: typeof data.edges = [];
-
     for (const [appId, dbEdges] of appDbEdgeMap) {
       if (dbEdges.length < 2) continue;
 
-      const groupId = `db-group-${appId}`;
+      const groupNodeId = `db-group-${appId}`;
       const dbIds = dbEdges.map((e) => e.targetId);
-      const dbLabels = dbIds.map((id) => nodeById.get(id)?.label ?? id);
+      groupMeta.set(groupNodeId, { label: `${dbIds.length} bancos`, dbIds });
+      for (const dbId of dbIds) dbIdToGroupNodeId.set(dbId, groupNodeId);
+    }
 
-      groups.push({ id: groupId, dbIds, dbLabels });
+    const groups: DbGroup[] = Array.from(groupMeta.entries()).map(([id, meta]) => ({
+      id,
+      dbIds: meta.dbIds,
+      dbLabels: meta.dbIds.map((dbId) => nodeById.get(dbId)?.label ?? dbId),
+    }));
 
-      syntheticNodes.push({
-        id: groupId,
-        resourceType: 'db-group',
-        label: curatedLabelFor(dbIds) ?? `${dbEdges.length} bancos`,
-        dbLabels,
-      });
+    const hiddenNodeIds = new Set(dbIdToGroupNodeId.keys());
+    const syntheticNodes: EcoNode[] = groups.map((g) => ({
+      id: g.id,
+      resourceType: 'db-group',
+      label: groupMeta.get(g.id)!.label,
+      dbLabels: g.dbLabels,
+    }));
 
-      syntheticEdges.push({
-        id: `edge-${appId}-${groupId}`,
-        sourceType: 'application',
-        sourceId: appId,
-        targetType: 'db-group',
-        targetId: groupId,
-        relationType: 'connects_to',
-      });
+    // Redireciona QUALQUER aresta que toque um banco agrupado (não só
+    // "hospeda" de servidor, como antes) para o nó sintético do grupo —
+    // assim um servidor, outra aplicação ou qualquer outra relação real
+    // continua aparecendo no diagrama em vez de desaparecer silenciosamente
+    // porque seu alvo virou um nó oculto. Arestas que colapsariam para o
+    // mesmo par (origem, destino, tipo) — por exemplo, duas aplicações
+    // distintas dependendo de bancos diferentes do mesmo agrupador — são
+    // deduplicadas.
+    function redirect(type: string, id: string): { type: string; id: string } {
+      const groupNodeId = type === 'database' ? dbIdToGroupNodeId.get(id) : undefined;
+      return groupNodeId ? { type: 'db-group', id: groupNodeId } : { type, id };
+    }
 
-      // Every "servidor hospeda banco" edge for a banco just folded into
-      // this grupo would otherwise vanish silently — its target node (the
-      // banco) is now hidden, so the node/edge filter below drops any edge
-      // touching it, and the servidor would look like it hosts nothing.
-      // Re-point those edges at the grupo instead: one synthetic edge per
-      // servidor that hosts at least one of this grupo's bancos, so "17
-      // bancos" collapses on both sides of the diagram (aplicação AND
-      // servidor), not just the aplicação's.
-      const dbIdsByServer = new Map<string, string[]>();
-      for (const dbId of dbIds) {
-        const serverId = nodeById.get(dbId)?.hostedOnServerId;
-        if (!serverId) continue;
-        if (!dbIdsByServer.has(serverId)) dbIdsByServer.set(serverId, []);
-        dbIdsByServer.get(serverId)!.push(dbId);
-      }
-      for (const serverId of dbIdsByServer.keys()) {
-        syntheticEdges.push({
-          id: `edge-${serverId}-${groupId}`,
-          sourceType: 'server',
-          sourceId: serverId,
-          targetType: 'db-group',
-          targetId: groupId,
-          relationType: 'hosts',
+    const hiddenEdgeIds = new Set<string>();
+    const syntheticEdgeByKey = new Map<string, (typeof data.edges)[number]>();
+
+    for (const edge of data.edges) {
+      const src = redirect(edge.sourceType, edge.sourceId);
+      const tgt = redirect(edge.targetType, edge.targetId);
+      const unchanged =
+        src.type === edge.sourceType && src.id === edge.sourceId && tgt.type === edge.targetType && tgt.id === edge.targetId;
+      if (unchanged) continue;
+
+      hiddenEdgeIds.add(edge.id);
+      if (src.type === tgt.type && src.id === tgt.id) continue; // colapsou num auto-relacionamento — descarta
+
+      const key = `${src.type}:${src.id}->${tgt.type}:${tgt.id}:${edge.relationType}`;
+      if (!syntheticEdgeByKey.has(key)) {
+        syntheticEdgeByKey.set(key, {
+          ...edge,
+          id: `edge-${key}`,
+          sourceType: src.type,
+          sourceId: src.id,
+          targetType: tgt.type,
+          targetId: tgt.id,
         });
       }
-
-      for (const id of dbIds) hiddenNodeIds.add(id);
-      for (const e of dbEdges) hiddenEdgeIds.add(e.id);
     }
+    const syntheticEdges = Array.from(syntheticEdgeByKey.values());
 
     // Apply type filters
     const filteredNodes = [
