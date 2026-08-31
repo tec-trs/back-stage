@@ -89,6 +89,7 @@ const NAV_ITEMS: NavItem[] = [
   { kind: 'link', to: '/ecosystem', label: 'Ecossistema', icon: <NetworkIcon /> },
   { kind: 'link', to: '/architecture-diagram', label: 'Diagrama Arquitetura', icon: <LayersIcon /> },
   { kind: 'link', to: '/relationship-maps', label: 'Mapas', icon: <TagIcon /> },
+  { kind: 'link', to: '/database-groups', label: 'Agrupadores de Bancos', icon: <BoxIcon /> },
   { kind: 'link', to: '/settings', label: 'Configuracoes', icon: <SettingsIcon /> },
   { kind: 'link', to: '/organizations', label: 'Organizacoes', icon: <GroupIcon />, adminOnly: true },
 ];
