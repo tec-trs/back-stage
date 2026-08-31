@@ -132,11 +132,17 @@ export function ToolBarSimple({
         className={SELECT_CLASS}
       >
         <option value="">-- Selecione tipo --</option>
-        {(Object.entries(RESOURCE_LABELS) as Array<[ResourceType, string]>).map(([type, label]) => (
-          <option key={type} value={type}>
-            {label}
-          </option>
-        ))}
+        {(Object.entries(RESOURCE_LABELS) as Array<[ResourceType, string]>)
+          // 'db-group' is a synthetic, client-side-only node used to collapse
+          // several bancos in the Ecossistema/Mapa graph view — it has no
+          // backing catalog list, so it can't be picked as a resource type
+          // when hand-adding a shape to a diagram.
+          .filter(([type]) => type !== 'db-group')
+          .map(([type, label]) => (
+            <option key={type} value={type}>
+              {label}
+            </option>
+          ))}
       </select>
 
       {selectedType && (
