@@ -1,6 +1,7 @@
 import { type FormEvent, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
+import { DatabaseGroupFormDialog } from '../features/database-groups/DatabaseGroupFormDialog';
 import {
   useAddDatabaseGroupApplication,
   useAddDatabaseGroupMember,
@@ -8,7 +9,6 @@ import {
   useDeleteDatabaseGroup,
   useRemoveDatabaseGroupApplication,
   useRemoveDatabaseGroupMember,
-  useUpdateDatabaseGroup,
 } from '../features/database-groups/use-database-groups';
 import { useAllDatabases } from '../features/databases/use-databases';
 import { ResourceSelector } from '../features/resource-graph/ResourceSelector';
@@ -19,74 +19,12 @@ import { Modal } from '../shared/components/Modal';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Spinner } from '../shared/components/Spinner';
 
-const inputClass =
-  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
-
 const CRITICALITY_LABEL: Record<string, string> = {
   critical: 'Crítica',
   high: 'Alta',
   medium: 'Média',
   low: 'Baixa',
 };
-
-function EditGroupDialog({
-  isOpen,
-  onClose,
-  groupId,
-  initialName,
-  initialDescription,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  groupId: string;
-  initialName: string;
-  initialDescription: string;
-}) {
-  const [name, setName] = useState(initialName);
-  const [description, setDescription] = useState(initialDescription);
-  const updateGroup = useUpdateDatabaseGroup(groupId);
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    updateGroup.mutate(
-      { name: name.trim(), description: description.trim() || undefined },
-      { onSuccess: () => onClose() },
-    );
-  }
-
-  return (
-    <Modal title="Editar Agrupador" isOpen={isOpen} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-400">Nome *</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} required />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-400">Descrição (opcional)</span>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className={`${inputClass} resize-none`}
-            rows={2}
-          />
-        </label>
-        {updateGroup.isError && (
-          <ErrorMessage
-            message={updateGroup.error instanceof Error ? updateGroup.error.message : 'Erro ao salvar agrupador'}
-          />
-        )}
-        <div className="flex justify-end gap-3 border-t border-slate-800 pt-4">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={updateGroup.isPending || !name.trim()}>
-            {updateGroup.isPending ? 'Salvando...' : 'Salvar'}
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
 
 // Bulk add: a checklist of every banco not already in the agrupador, instead
 // of the single-pick ResourceSelector — picking 9+ bancos one at a time
@@ -281,7 +219,7 @@ function AddApplicationDialog({
   }
 
   return (
-    <Modal title="Documentar Aplicação neste Agrupador" isOpen={isOpen} onClose={handleClose}>
+    <Modal title="Novo Relacionamento (Aplicação)" isOpen={isOpen} onClose={handleClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <p className="text-xs text-slate-500">
           Marca esta aplicação como usuária deste agrupador, independente de já existir um
@@ -370,6 +308,9 @@ export function DatabaseGroupDetailPage() {
         description={group.description || 'Sem descrição'}
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setIsAddApplicationOpen(true)}>
+              + Relacionamento
+            </Button>
             <Button variant="secondary" size="sm" icon={<PencilIcon />} onClick={() => setIsEditOpen(true)}>
               Editar
             </Button>
@@ -380,12 +321,10 @@ export function DatabaseGroupDetailPage() {
         }
       />
 
-      <EditGroupDialog
+      <DatabaseGroupFormDialog
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
-        groupId={group.id}
-        initialName={group.name}
-        initialDescription={group.description ?? ''}
+        group={group}
       />
       <AddDatabasesDialog
         isOpen={isAddMemberOpen}
@@ -453,16 +392,13 @@ export function DatabaseGroupDetailPage() {
         <h2 className="text-sm font-semibold text-slate-300">
           Aplicações que usam este agrupador ({group.applications.length})
         </h2>
-        <Button size="sm" icon={<PlusIcon />} onClick={() => setIsAddApplicationOpen(true)}>
-          Adicionar Aplicação
-        </Button>
       </div>
 
       {group.applications.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-800 p-10 text-center">
           <p className="font-medium text-slate-200">Nenhuma aplicação documentada ainda</p>
           <p className="text-sm text-slate-500">
-            Use &quot;Adicionar Aplicação&quot; para registrar quem usa este agrupador.
+            Use &quot;+ Relacionamento&quot;, no topo da página, para registrar quem usa este agrupador.
           </p>
         </div>
       ) : (

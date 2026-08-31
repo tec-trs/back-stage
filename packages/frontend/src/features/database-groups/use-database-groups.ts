@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 
 import { apiRequest } from '../../shared/api/http-client';
 
@@ -89,6 +89,31 @@ export function useDeleteDatabaseGroup() {
     mutationFn: (groupId: string) =>
       apiRequest<void>(`/api/database-groups/${groupId}`, { method: 'DELETE' }),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: GROUPS_KEY });
+    },
+  });
+}
+
+// No bulk-delete endpoint on the backend for database groups (unlike
+// /api/servers/bulk-delete) — fire the individual DELETEs in parallel and
+// settle together, same approach used by AddDatabasesDialog's bulk-add.
+// Mirrors useBulkDeleteServers' shape ({ deleted }) so the list page's
+// toolbar can be built the same way for both cadastros.
+export function useBulkDeleteDatabaseGroups(): UseMutationResult<{ deleted: number }, Error, string[]> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const results = await Promise.allSettled(
+        ids.map((groupId) => apiRequest<void>(`/api/database-groups/${groupId}`, { method: 'DELETE' })),
+      );
+      const failedCount = results.filter((r) => r.status === 'rejected').length;
+      if (failedCount > 0) {
+        throw new Error(`${failedCount} de ${ids.length} agrupador(es) não foram eliminados.`);
+      }
+      return { deleted: ids.length };
+    },
+    onSettled: () => {
+      // Refresh even on partial failure — some deletes may have succeeded.
       void queryClient.invalidateQueries({ queryKey: GROUPS_KEY });
     },
   });

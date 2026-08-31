@@ -1,137 +1,164 @@
-import { type FormEvent, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { useCreateDatabaseGroup, useDatabaseGroups } from '../features/database-groups/use-database-groups';
+import { DatabaseGroupFormDialog } from '../features/database-groups/DatabaseGroupFormDialog';
+import {
+  useBulkDeleteDatabaseGroups,
+  useDatabaseGroups,
+  type DatabaseGroup,
+} from '../features/database-groups/use-database-groups';
 import { Button } from '../shared/components/Button';
+import { ConfirmDialog } from '../shared/components/ConfirmDialog';
 import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
-import { PlusIcon } from '../shared/components/icons';
-import { Modal } from '../shared/components/Modal';
+import { PencilIcon, PlusIcon, TrashIcon } from '../shared/components/icons';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Spinner } from '../shared/components/Spinner';
 
-const inputClass =
-  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
-
-function CreateGroupDialog({ isOpen, onClose }: { isOpen: boolean; onClose: (createdId?: string) => void }) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const createGroup = useCreateDatabaseGroup();
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    createGroup.mutate(
-      { name: name.trim(), description: description.trim() || undefined },
-      {
-        onSuccess: (group) => {
-          setName('');
-          setDescription('');
-          createGroup.reset();
-          onClose(group.id);
-        },
-      },
-    );
-  }
-
-  function handleClose(): void {
-    setName('');
-    setDescription('');
-    createGroup.reset();
-    onClose();
-  }
-
-  return (
-    <Modal title="Novo Agrupador de Bancos" isOpen={isOpen} onClose={handleClose}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <p className="text-xs text-slate-500">
-          Um agrupador reúne, sob um nome, um conjunto de bancos de dados do inventário — para
-          documentar uma instância, empresa ou módulo, mesmo quando o mesmo banco também pertence a
-          outro agrupador.
-        </p>
-
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-400">Nome *</span>
-          <input
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ex: BANCOS BBF"
-            className={inputClass}
-            required
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-400">Descrição (opcional)</span>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Para que serve este agrupador?"
-            className={`${inputClass} resize-none`}
-            rows={2}
-          />
-        </label>
-
-        {createGroup.isError && (
-          <ErrorMessage
-            message={createGroup.error instanceof Error ? createGroup.error.message : 'Erro ao criar agrupador'}
-          />
-        )}
-
-        <div className="flex justify-end gap-3 border-t border-slate-800 pt-4">
-          <Button type="button" variant="secondary" onClick={handleClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={createGroup.isPending || !name.trim()}>
-            {createGroup.isPending ? 'Criando...' : 'Criar Agrupador'}
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
 export function DatabaseGroupsPage() {
   const { data, isLoading, isError, error } = useDatabaseGroups();
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const bulkDelete = useBulkDeleteDatabaseGroups();
   const navigate = useNavigate();
+
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<DatabaseGroup | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
+  const items = data ?? [];
+  const selectedItems = items.filter((g) => selectedIds.has(g.id));
+  const singleSelected = selectedItems.length === 1 ? selectedItems[0] : null;
+  const allVisible = items.length > 0 && items.every((g) => selectedIds.has(g.id));
+
+  function toggleAll(): void {
+    if (allVisible) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map((g) => g.id)));
+    }
+  }
+
+  function toggleOne(id: string): void {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function openCreateDialog(): void {
+    setEditingGroup(null);
+    setIsFormOpen(true);
+  }
+
+  function openEditDialog(group: DatabaseGroup): void {
+    setEditingGroup(group);
+    setIsFormOpen(true);
+  }
+
+  function closeDialog(createdId?: string): void {
+    setIsFormOpen(false);
+    setEditingGroup(null);
+    setSelectedIds(new Set());
+    if (createdId) navigate(`/database-groups/${createdId}`);
+  }
+
+  async function handleConfirmDelete(): Promise<void> {
+    if (selectedItems.length === 0) return;
+    await bulkDelete.mutateAsync(selectedItems.map((g) => g.id));
+    setSelectedIds(new Set());
+    setConfirmDeleteOpen(false);
+  }
+
+  function closeConfirmDelete(): void {
+    setConfirmDeleteOpen(false);
+    bulkDelete.reset();
+  }
+
+  const deleteLabel = selectedItems.length > 1 ? `Eliminar (${selectedItems.length})` : 'Eliminar';
+  const deleteMessage =
+    selectedItems.length === 1
+      ? `Tem certeza que deseja eliminar o agrupador "${singleSelected?.name}"? Os bancos em si não são afetados.`
+      : `Tem certeza que deseja eliminar ${selectedItems.length} agrupadores? Os bancos em si não são afetados.`;
 
   return (
     <div>
       <PageHeader
         title="Agrupadores de Bancos"
         description="Coleções nomeadas de bancos de dados do inventário, para documentar instâncias, empresas ou módulos que fazem mais sentido discutidos em conjunto"
-        actions={
-          <Button icon={<PlusIcon />} onClick={() => setIsCreateOpen(true)}>
-            Novo Agrupador
-          </Button>
-        }
       />
 
-      <CreateGroupDialog
-        isOpen={isCreateOpen}
-        onClose={(createdId) => {
-          setIsCreateOpen(false);
-          if (createdId) navigate(`/database-groups/${createdId}`);
-        }}
+      <DatabaseGroupFormDialog isOpen={isFormOpen} onClose={closeDialog} group={editingGroup} />
+      <ConfirmDialog
+        isOpen={confirmDeleteOpen}
+        title="Eliminar agrupador"
+        message={deleteMessage}
+        confirmLabel="Eliminar"
+        onConfirm={handleConfirmDelete}
+        onCancel={closeConfirmDelete}
+        isPending={bulkDelete.isPending}
+        error={bulkDelete.isError ? (bulkDelete.error?.message ?? 'Erro ao eliminar agrupador') : null}
       />
+
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
+        <Button size="sm" icon={<PlusIcon />} onClick={openCreateDialog} title="Incluir um novo agrupador">
+          Incluir Agrupador
+        </Button>
+        <div className="mx-1 h-6 w-px bg-slate-800" />
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<PencilIcon />}
+          disabled={!singleSelected}
+          onClick={() => singleSelected && openEditDialog(singleSelected)}
+          title={singleSelected ? `Editar ${singleSelected.name}` : 'Selecione um agrupador para editar'}
+        >
+          Editar
+        </Button>
+        <Button
+          size="sm"
+          variant="danger"
+          icon={<TrashIcon />}
+          disabled={selectedItems.length === 0 || bulkDelete.isPending}
+          onClick={() => setConfirmDeleteOpen(true)}
+          title={selectedItems.length > 0 ? `Eliminar ${selectedItems.length} agrupador(es)` : 'Selecione agrupadores para eliminar'}
+        >
+          {deleteLabel}
+        </Button>
+        <span className="ml-auto text-xs text-slate-500">
+          {selectedItems.length > 0
+            ? selectedItems.length === 1
+              ? `Selecionado: ${singleSelected?.name}`
+              : `${selectedItems.length} agrupadores selecionados`
+            : 'Selecione agrupadores na lista para editar ou eliminar.'}
+        </span>
+      </div>
 
       {isLoading && <Spinner />}
       {isError && (
         <ErrorMessage message={error instanceof Error ? error.message : 'Erro ao carregar agrupadores'} />
       )}
-      {data && data.length === 0 && (
+      {data && items.length === 0 && (
         <EmptyState
           title="Nenhum agrupador cadastrado"
-          description='Crie um agrupador e comece a adicionar bancos com "Novo Agrupador".'
+          description='Crie um agrupador e comece a adicionar bancos com "Incluir Agrupador".'
         />
       )}
 
-      {data && data.length > 0 && (
+      {data && items.length > 0 && (
         <div className="overflow-hidden rounded-lg border border-slate-800">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-900 text-slate-400">
               <tr>
+                <th className="w-10 px-4 py-2">
+                  <input
+                    type="checkbox"
+                    checked={allVisible}
+                    onChange={toggleAll}
+                    className="h-4 w-4 accent-sky-500"
+                    aria-label="Selecionar todos"
+                  />
+                </th>
                 <th className="px-4 py-2 font-medium">Nome</th>
                 <th className="px-4 py-2 font-medium">Descrição</th>
                 <th className="px-4 py-2 font-medium">Bancos</th>
@@ -140,10 +167,30 @@ export function DatabaseGroupsPage() {
               </tr>
             </thead>
             <tbody>
-              {data.map((group) => (
-                <tr key={group.id} className="border-t border-slate-800 hover:bg-slate-900/50">
+              {items.map((group) => (
+                <tr
+                  key={group.id}
+                  onClick={() => toggleOne(group.id)}
+                  className={`cursor-pointer border-t border-slate-800 ${
+                    selectedIds.has(group.id) ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
+                  }`}
+                >
                   <td className="px-4 py-2">
-                    <Link to={`/database-groups/${group.id}`} className="font-medium text-slate-100 hover:underline">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(group.id)}
+                      onChange={() => toggleOne(group.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={`Selecionar ${group.name}`}
+                      className="h-4 w-4 accent-sky-500"
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <Link
+                      to={`/database-groups/${group.id}`}
+                      onClick={(event) => event.stopPropagation()}
+                      className="font-medium text-slate-100 hover:underline"
+                    >
                       {group.name}
                     </Link>
                   </td>
