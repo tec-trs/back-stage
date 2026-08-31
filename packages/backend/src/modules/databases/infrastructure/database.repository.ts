@@ -52,7 +52,7 @@ export type UpdateDatabaseInput = Partial<CreateDatabaseInput>;
 export interface IDatabaseRepository {
   findMany(filters: DatabaseFilters, pagination: Pagination): Promise<{ items: Database[]; total: number }>;
   findById(id: string): Promise<Database | undefined>;
-  findByName(name: string): Promise<Database | undefined>;
+  findByNameAndLocation(name: string, hostedOnServerId: string | null, port: number | null): Promise<Database | undefined>;
   create(input: CreateDatabaseInput): Promise<Database>;
   update(id: string, input: UpdateDatabaseInput): Promise<Database | undefined>;
   setStatus(id: string, status: string): Promise<Database | undefined>;
@@ -146,8 +146,28 @@ export class DatabaseRepository implements IDatabaseRepository {
     return database;
   }
 
-  public async findByName(name: string): Promise<Database | undefined> {
-    const row = (await this.baseQuery().where('name', name).first()) as DatabaseRow | undefined;
+  // Mirrors databases_org_server_name_port_unique_active: the same banco
+  // name legitimately repeats within an organization when it's not hosted
+  // on the same server+port as another row (e.g. distinct servers, or one
+  // of the two not yet documented). When hostedOnServerId or port is
+  // unknown there is nothing to disambiguate by — same as the partial
+  // unique index itself, which treats NULL as distinct from any other
+  // NULL and so does not constrain that combination either — so this
+  // returns undefined (no conflict) rather than guessing.
+  public async findByNameAndLocation(
+    name: string,
+    hostedOnServerId: string | null,
+    port: number | null,
+  ): Promise<Database | undefined> {
+    if (!hostedOnServerId || port === null || port === undefined) {
+      return undefined;
+    }
+
+    const row = (await this.baseQuery()
+      .where('name', name)
+      .where('hosted_on_server_id', hostedOnServerId)
+      .where('port', port)
+      .first()) as DatabaseRow | undefined;
     if (!row) {
       return undefined;
     }
@@ -197,6 +217,8 @@ export class DatabaseRepository implements IDatabaseRepository {
   public async update(id: string, input: UpdateDatabaseInput): Promise<Database | undefined> {
     const updateData: Record<string, unknown> = {};
 
+    if (input.name !== undefined) updateData.name = input.name;
+    if (input.hostedOnServerId !== undefined) updateData.hosted_on_server_id = input.hostedOnServerId;
     if (input.engine !== undefined) updateData.engine = input.engine;
     if (input.displayName !== undefined) updateData.display_name = input.displayName;
     if (input.description !== undefined) updateData.description = input.description;

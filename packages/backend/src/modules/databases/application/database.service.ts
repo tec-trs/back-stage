@@ -42,9 +42,15 @@ export class DatabaseService {
   }
 
   public async create(input: CreateDatabaseInput, audit: AuditContext): Promise<Database> {
-    const existing = await this.databaseRepository.findByName(input.name);
+    const existing = await this.databaseRepository.findByNameAndLocation(
+      input.name,
+      input.hostedOnServerId ?? null,
+      input.port ?? null,
+    );
     if (existing) {
-      throw new ConflictError(`Ja existe um banco de dados com o nome '${input.name}'`);
+      throw new ConflictError(
+        `Ja existe um banco de dados chamado '${input.name}' neste servidor, nesta porta`,
+      );
     }
 
     const database = await this.databaseRepository.create(input);
@@ -67,12 +73,22 @@ export class DatabaseService {
   }
 
   public async update(id: string, input: UpdateDatabaseInput, audit: AuditContext): Promise<Database> {
-    await this.getById(id);
+    const current = await this.getById(id);
 
-    if (input.name !== undefined) {
-      const existing = await this.databaseRepository.findByName(input.name);
+    if (input.name !== undefined || input.hostedOnServerId !== undefined || input.port !== undefined) {
+      const effectiveName = input.name ?? current.name;
+      const effectiveServerId = input.hostedOnServerId !== undefined ? input.hostedOnServerId : current.hostedOnServerId;
+      const effectivePort = input.port !== undefined ? input.port : current.port;
+
+      const existing = await this.databaseRepository.findByNameAndLocation(
+        effectiveName,
+        effectiveServerId,
+        effectivePort,
+      );
       if (existing && existing.id !== id) {
-        throw new ConflictError(`Ja existe um banco de dados com o nome '${input.name}'`);
+        throw new ConflictError(
+          `Ja existe um banco de dados chamado '${effectiveName}' neste servidor, nesta porta`,
+        );
       }
     }
 
