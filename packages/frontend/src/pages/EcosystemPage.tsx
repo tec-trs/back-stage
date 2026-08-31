@@ -305,12 +305,13 @@ export function EcosystemPage() {
   const { graphNodes, graphEdges, dbGroups } = useMemo(() => {
     if (!data) return { graphNodes: [], graphEdges: [], dbGroups: [] };
 
+    const nodeById = new Map(data.nodes.map((n) => [n.id, n]));
 
     // Mapa appId → edges de banco (sourceId=app, targetId=db)
     const appDbEdgeMap = new Map<string, typeof data.edges>();
     for (const edge of data.edges) {
-      const src = data.nodes.find((s) => s.id === edge.sourceId);
-      const tgt = data.nodes.find((t) => t.id === edge.targetId);
+      const src = nodeById.get(edge.sourceId);
+      const tgt = nodeById.get(edge.targetId);
       if (src?.resourceType === 'application' && tgt?.resourceType === 'database') {
         if (!appDbEdgeMap.has(edge.sourceId)) appDbEdgeMap.set(edge.sourceId, []);
         appDbEdgeMap.get(edge.sourceId)!.push(edge);
@@ -328,10 +329,7 @@ export function EcosystemPage() {
 
       const groupId = `db-group-${appId}`;
       const dbIds = dbEdges.map((e) => e.targetId);
-      const dbLabels = dbIds.map((id) => {
-        const node = data.nodes.find((nn) => nn.id === id);
-        return node?.label ?? id;
-      });
+      const dbLabels = dbIds.map((id) => nodeById.get(id)?.label ?? id);
 
       groups.push({ id: groupId, dbIds, dbLabels });
 
@@ -350,6 +348,32 @@ export function EcosystemPage() {
         targetId: groupId,
         relationType: 'connects_to',
       });
+
+      // Every "servidor hospeda banco" edge for a banco just folded into
+      // this grupo would otherwise vanish silently — its target node (the
+      // banco) is now hidden, so the node/edge filter below drops any edge
+      // touching it, and the servidor would look like it hosts nothing.
+      // Re-point those edges at the grupo instead: one synthetic edge per
+      // servidor that hosts at least one of this grupo's bancos, so "17
+      // bancos" collapses on both sides of the diagram (aplicação AND
+      // servidor), not just the aplicação's.
+      const dbIdsByServer = new Map<string, string[]>();
+      for (const dbId of dbIds) {
+        const serverId = nodeById.get(dbId)?.hostedOnServerId;
+        if (!serverId) continue;
+        if (!dbIdsByServer.has(serverId)) dbIdsByServer.set(serverId, []);
+        dbIdsByServer.get(serverId)!.push(dbId);
+      }
+      for (const serverId of dbIdsByServer.keys()) {
+        syntheticEdges.push({
+          id: `edge-${serverId}-${groupId}`,
+          sourceType: 'server',
+          sourceId: serverId,
+          targetType: 'db-group',
+          targetId: groupId,
+          relationType: 'hosts',
+        });
+      }
 
       for (const id of dbIds) hiddenNodeIds.add(id);
       for (const e of dbEdges) hiddenEdgeIds.add(e.id);
