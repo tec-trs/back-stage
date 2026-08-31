@@ -1,5 +1,6 @@
-import { useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import { Button } from '../../shared/components/Button';
 import {
   ChevronLeftIcon,
@@ -9,13 +10,15 @@ import {
   TrashIcon,
   UploadIcon,
 } from '../../shared/components/icons';
-import { useUrls } from '../urls/use-urls';
 import { useApplications } from '../applications/use-applications';
-import { useServers } from '../servers/use-servers';
+import { useDatabaseGroups } from '../database-groups/use-database-groups';
 import { useDatabases } from '../databases/use-databases';
+import { useServers } from '../servers/use-servers';
 import { useServices } from '../services/use-services';
-import { RESOURCE_LABELS, type ResourceType } from './types';
+import { useUrls } from '../urls/use-urls';
+
 import type { NodeServiceSummary } from './nodeSizing';
+import { RESOURCE_LABELS, type ResourceType } from './types';
 
 interface ToolBarSimpleProps {
   onAddNode: (
@@ -70,12 +73,18 @@ export function ToolBarSimple({
   const { data: serversData } = useServers();
   const { data: databasesData } = useDatabases();
   const { data: servicesData } = useServices();
+  const { data: databaseGroupsData } = useDatabaseGroups();
 
   const urls = Array.isArray(urlsData?.items) ? urlsData.items : [];
   const apps = Array.isArray(appsData?.items) ? appsData.items : [];
   const servers = Array.isArray(serversData?.items) ? serversData.items : [];
   const databases = Array.isArray(databasesData?.items) ? databasesData.items : [];
   const services = Array.isArray(servicesData?.items) ? servicesData.items : [];
+  // Agrupadores de Bancos — um "db-group" aqui é um nó puramente visual
+  // (assim como 'service'/'vip' já são): não vira um resource_relationships
+  // real ao ser conectado a outro nó, só documenta que este agrupador
+  // participa do diagrama.
+  const databaseGroups = Array.isArray(databaseGroupsData) ? databaseGroupsData : [];
 
   const getResourceList = () => {
     switch (selectedType) {
@@ -89,6 +98,8 @@ export function ToolBarSimple({
         return databases;
       case 'server':
         return servers;
+      case 'db-group':
+        return databaseGroups;
       default:
         return [];
     }
@@ -132,17 +143,11 @@ export function ToolBarSimple({
         className={SELECT_CLASS}
       >
         <option value="">-- Selecione tipo --</option>
-        {(Object.entries(RESOURCE_LABELS) as Array<[ResourceType, string]>)
-          // 'db-group' is a synthetic, client-side-only node used to collapse
-          // several bancos in the Ecossistema/Mapa graph view — it has no
-          // backing catalog list, so it can't be picked as a resource type
-          // when hand-adding a shape to a diagram.
-          .filter(([type]) => type !== 'db-group')
-          .map(([type, label]) => (
-            <option key={type} value={type}>
-              {label}
-            </option>
-          ))}
+        {(Object.entries(RESOURCE_LABELS) as Array<[ResourceType, string]>).map(([type, label]) => (
+          <option key={type} value={type}>
+            {label}
+          </option>
+        ))}
       </select>
 
       {selectedType && (
