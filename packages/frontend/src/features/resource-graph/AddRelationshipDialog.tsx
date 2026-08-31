@@ -1,12 +1,13 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 
 import { Button } from '../../shared/components/Button';
 import { ErrorMessage } from '../../shared/components/ErrorMessage';
 import { Modal } from '../../shared/components/Modal';
-import { ResourceSelector } from './ResourceSelector';
-import { RELATION_TYPES, RESOURCE_TYPES, type ResourceType } from './relationship-types';
+import { useDatabaseGroups } from '../database-groups/use-database-groups';
 
-import type { CreateRelationshipInput } from './use-resource-graph';
+import { RELATION_TYPES, RESOURCE_TYPES, type ResourceType } from './relationship-types';
+import { ResourceSelector } from './ResourceSelector';
+import type { CreateRelationshipInput, GraphEdge } from './use-resource-graph';
 import { useCreateRelationship } from './use-resource-graph';
 
 const inputClass =
@@ -56,14 +57,32 @@ export function AddRelationshipDialog({
   // Called with the newly created relationship, right before onClose — lets a
   // caller (e.g. a relationship map's detail page) chain a follow-up action such
   // as tagging the new relationship into a curated set.
-  onCreated?: (edge: import('./use-resource-graph').GraphEdge) => void;
+  onCreated?: (edge: GraphEdge) => void;
 }) {
   const createRelationship = useCreateRelationship();
+  const { data: databaseGroups } = useDatabaseGroups();
   const [form, setForm] = useState<FormState>(emptyForm(defaultSourceType, defaultSourceId));
+
+  // Atalho "usar um Agrupador de Bancos inteiro": ativa quando o lado
+  // origem/destino é do tipo banco, trocando o ResourceSelector por um
+  // seletor de agrupador — o submit então cria um relacionamento real para
+  // cada banco do grupo, de uma vez, em vez de o usuário escolher banco por
+  // banco. Só faz sentido no lado que não está travado por defaultSourceId.
+  const [useSourceGroup, setUseSourceGroup] = useState(false);
+  const [useTargetGroup, setUseTargetGroup] = useState(false);
+  const [sourceGroupId, setSourceGroupId] = useState('');
+  const [targetGroupId, setTargetGroupId] = useState('');
+  const [bulkError, setBulkError] = useState<string | undefined>();
+  const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setForm(emptyForm(defaultSourceType, defaultSourceId));
+      setUseSourceGroup(false);
+      setUseTargetGroup(false);
+      setSourceGroupId('');
+      setTargetGroupId('');
+      setBulkError(undefined);
       createRelationship.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -73,8 +92,72 @@ export function AddRelationshipDialog({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+  // Agrupadores com pelo menos um banco — a lista oferecida pelo atalho.
+  const groupsWithMembers = useMemo(
+    () => (databaseGroups ?? []).filter((g) => g.databaseIds && g.databaseIds.length > 0),
+    [databaseGroups],
+  );
+
+  const sourceIsGroup = form.sourceType === 'database' && useSourceGroup;
+  const targetIsGroup = form.targetType === 'database' && useTargetGroup;
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    setBulkError(undefined);
+
+    if (sourceIsGroup || targetIsGroup) {
+      // Não há endpoint de criação em lote no backend — dispara um
+      // relacionamento por banco do grupo em paralelo e resolve junto, como
+      // outros atalhos "adicionar tudo de uma vez" desta base (ex:
+      // AddDatabasesDialog dos Agrupadores de Bancos).
+      const groupId = sourceIsGroup ? sourceGroupId : targetGroupId;
+      const group = groupsWithMembers.find((g) => g.id === groupId);
+      const memberIds = group?.databaseIds ?? [];
+      if (memberIds.length === 0) {
+        setBulkError('Selecione um agrupador com bancos.');
+        return;
+      }
+
+      setIsBulkSubmitting(true);
+      const results = await Promise.allSettled(
+        memberIds.map((dbId) =>
+          createRelationship.mutateAsync(
+            sourceIsGroup
+              ? {
+                  sourceType: 'database',
+                  sourceId: dbId,
+                  targetType: form.targetType,
+                  targetId: form.targetId.trim(),
+                  relationType: form.relationType,
+                  reason: form.reason.trim() || undefined,
+                }
+              : {
+                  sourceType: form.sourceType,
+                  sourceId: form.sourceId.trim(),
+                  targetType: 'database',
+                  targetId: dbId,
+                  relationType: form.relationType,
+                  reason: form.reason.trim() || undefined,
+                },
+          ),
+        ),
+      );
+      setIsBulkSubmitting(false);
+
+      for (const result of results) {
+        if (result.status === 'fulfilled') onCreated?.(result.value);
+      }
+      const failedCount = results.filter((r) => r.status === 'rejected').length;
+      if (failedCount > 0) {
+        setBulkError(
+          `${failedCount} de ${memberIds.length} relacionamento(s) não foram criados — verifique e tente novamente.`,
+        );
+        return;
+      }
+
+      onClose();
+      return;
+    }
 
     const payload: CreateRelationshipInput = {
       sourceType: form.sourceType,
@@ -94,6 +177,8 @@ export function AddRelationshipDialog({
   }
 
   const selectedRelation = RELATION_TYPES.find((r) => r.value === form.relationType);
+  const isSubmitting = createRelationship.isPending || isBulkSubmitting;
+  const canSubmit = !isSubmitting && !(sourceIsGroup && !sourceGroupId) && !(targetIsGroup && !targetGroupId);
 
   return (
     <Modal title="Adicionar Relacionamento" isOpen={isOpen} onClose={onClose}>
@@ -128,15 +213,44 @@ export function AddRelationshipDialog({
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-slate-400">Recurso *</span>
-              <ResourceSelector
-                resourceType={form.sourceType}
-                value={form.sourceId}
-                onChange={(id) => setField('sourceId', id)}
-                placeholder="Buscar recurso..."
-                disabled={Boolean(defaultSourceId)}
-              />
+              {sourceIsGroup ? (
+                <select
+                  value={sourceGroupId}
+                  onChange={(e) => setSourceGroupId(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Selecione um agrupador...</option>
+                  {groupsWithMembers.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name} ({g.databaseIds!.length} bancos)
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <ResourceSelector
+                  resourceType={form.sourceType}
+                  value={form.sourceId}
+                  onChange={(id) => setField('sourceId', id)}
+                  placeholder="Buscar recurso..."
+                  disabled={Boolean(defaultSourceId)}
+                />
+              )}
             </label>
           </div>
+          {form.sourceType === 'database' && !defaultSourceId && (
+            <label className="flex items-center gap-2 text-xs text-slate-400">
+              <input
+                type="checkbox"
+                checked={useSourceGroup}
+                onChange={(e) => {
+                  setUseSourceGroup(e.target.checked);
+                  setField('sourceId', '');
+                }}
+                className="h-3.5 w-3.5 accent-sky-500"
+              />
+              Usar um Agrupador de Bancos inteiro em vez de escolher banco por banco
+            </label>
+          )}
         </fieldset>
 
         {/* Relacao */}
@@ -196,22 +310,52 @@ export function AddRelationshipDialog({
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-slate-400">Recurso *</span>
-              <ResourceSelector
-                resourceType={form.targetType}
-                value={form.targetId}
-                onChange={(id) => setField('targetId', id)}
-                placeholder="Buscar recurso..."
-              />
+              {targetIsGroup ? (
+                <select
+                  value={targetGroupId}
+                  onChange={(e) => setTargetGroupId(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Selecione um agrupador...</option>
+                  {groupsWithMembers.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name} ({g.databaseIds!.length} bancos)
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <ResourceSelector
+                  resourceType={form.targetType}
+                  value={form.targetId}
+                  onChange={(id) => setField('targetId', id)}
+                  placeholder="Buscar recurso..."
+                />
+              )}
             </label>
           </div>
+          {form.targetType === 'database' && (
+            <label className="flex items-center gap-2 text-xs text-slate-400">
+              <input
+                type="checkbox"
+                checked={useTargetGroup}
+                onChange={(e) => {
+                  setUseTargetGroup(e.target.checked);
+                  setField('targetId', '');
+                }}
+                className="h-3.5 w-3.5 accent-sky-500"
+              />
+              Usar um Agrupador de Bancos inteiro em vez de escolher banco por banco
+            </label>
+          )}
         </fieldset>
 
-        {createRelationship.isError && (
+        {(createRelationship.isError || bulkError) && (
           <ErrorMessage
             message={
-              createRelationship.error instanceof Error
+              bulkError ??
+              (createRelationship.error instanceof Error
                 ? createRelationship.error.message
-                : 'Erro ao criar relacionamento'
+                : 'Erro ao criar relacionamento')
             }
           />
         )}
@@ -220,8 +364,8 @@ export function AddRelationshipDialog({
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={createRelationship.isPending}>
-            {createRelationship.isPending ? 'Criando...' : 'Criar Relacionamento'}
+          <Button type="submit" disabled={!canSubmit}>
+            {isSubmitting ? 'Criando...' : 'Criar Relacionamento'}
           </Button>
         </div>
       </form>
