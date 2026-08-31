@@ -302,7 +302,7 @@ export function ServerFormDialog({
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Tabs tabs={TABS} activeTab={activeTab} onChange={(key) => setActiveTab(key as TabKey)} />
 
-        <div className="flex max-h-[55vh] flex-col gap-5 overflow-y-auto pr-1">
+        <div className="flex min-w-0 max-h-[55vh] flex-col gap-5 overflow-y-auto pr-1">
           {/* ── Identificacao ─────────────────────────────────────────────── */}
           {activeTab === 'identification' && (
             <fieldset className="flex flex-col gap-3">
@@ -426,7 +426,7 @@ export function ServerFormDialog({
 
           {/* ── Hardware & SO ─────────────────────────────────────────────── */}
           {activeTab === 'hardware' && (
-            <fieldset className="flex flex-col gap-3">
+            <fieldset className="flex min-w-0 flex-col gap-3">
               <div className="grid grid-cols-2 gap-3">
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="text-slate-400">CPU (nucleos)</span>
@@ -470,8 +470,8 @@ export function ServerFormDialog({
                 </label>
               </div>
 
-              <div className="flex flex-col gap-2 rounded-md border border-slate-800 p-3">
-                <div className="flex items-center justify-between">
+              <div className="flex min-w-0 flex-col gap-2 rounded-md border border-slate-800 p-3">
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-sm text-slate-400">Discos</span>
                   <Button type="button" variant="secondary" size="sm" onClick={addDisk}>
                     + Disco
@@ -483,18 +483,18 @@ export function ServerFormDialog({
                 {disks.map((disk, index) => (
                   <div
                     key={index}
-                    className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] items-end gap-2"
+                    className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] items-end gap-2 min-w-0"
                   >
-                    <label className="flex flex-col gap-1 text-xs">
+                    <label className="flex min-w-0 flex-col gap-1 text-xs">
                       <span className="text-slate-500">Mount point</span>
                       <input
                         value={disk.mountPoint}
                         onChange={(event) => updateDisk(index, { mountPoint: event.target.value })}
                         placeholder="/data"
-                        className={`${inputClass} py-1.5 text-sm`}
+                        className={`${inputClass} w-full min-w-0 py-1.5 text-sm`}
                       />
                     </label>
-                    <label className="flex flex-col gap-1 text-xs">
+                    <label className="flex min-w-0 flex-col gap-1 text-xs">
                       <span className="text-slate-500">GB</span>
                       <input
                         type="number"
@@ -503,17 +503,17 @@ export function ServerFormDialog({
                         onChange={(event) =>
                           updateDisk(index, { capacityGb: Number(event.target.value) })
                         }
-                        className={`${inputClass} py-1.5 text-sm`}
+                        className={`${inputClass} w-full min-w-0 py-1.5 text-sm`}
                       />
                     </label>
-                    <label className="flex flex-col gap-1 text-xs">
+                    <label className="flex min-w-0 flex-col gap-1 text-xs">
                       <span className="text-slate-500">Tipo</span>
                       <select
                         value={disk.diskType}
                         onChange={(event) =>
                           updateDisk(index, { diskType: event.target.value as DiskType })
                         }
-                        className={`${inputClass} py-1.5 text-sm`}
+                        className={`${inputClass} w-full min-w-0 py-1.5 text-sm`}
                       >
                         {DISK_TYPES.map((type) => (
                           <option key={type} value={type}>
@@ -522,14 +522,14 @@ export function ServerFormDialog({
                         ))}
                       </select>
                     </label>
-                    <label className="flex flex-col gap-1 text-xs">
+                    <label className="flex min-w-0 flex-col gap-1 text-xs">
                       <span className="text-slate-500">Uso</span>
                       <select
                         value={disk.purpose}
                         onChange={(event) =>
                           updateDisk(index, { purpose: event.target.value as DiskPurpose })
                         }
-                        className={`${inputClass} py-1.5 text-sm`}
+                        className={`${inputClass} w-full min-w-0 py-1.5 text-sm`}
                       >
                         {DISK_PURPOSES.map((purpose) => (
                           <option key={purpose} value={purpose}>
@@ -542,6 +542,7 @@ export function ServerFormDialog({
                       type="button"
                       variant="ghost-danger"
                       size="sm"
+                      className="whitespace-nowrap"
                       onClick={() => removeDisk(index)}
                     >
                       Remover
