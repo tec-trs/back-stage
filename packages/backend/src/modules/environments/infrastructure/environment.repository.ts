@@ -1,7 +1,12 @@
 import type { Knex } from 'knex';
 
-import { orgContext } from '../../../shared/context/org-context.js';
 import { Environment, type EnvironmentRow } from '../domain/environment.entity.js';
+
+// Environments are a shared reference catalog — the same list for every
+// organization in this CMDB (like server_types/application_types/
+// database_engines/url_types) — not per-tenant resources. No organization_id
+// filtering here on purpose; see migration
+// 20260831_remove_organization_id_from_teams_and_environments.ts.
 
 const TABLE_NAME = 'environments';
 
@@ -34,9 +39,7 @@ export class EnvironmentRepository implements IEnvironmentRepository {
   public constructor(private readonly knex: Knex) {}
 
   private baseQuery(): Knex.QueryBuilder {
-    return this.knex(TABLE_NAME)
-      .where('organization_id', orgContext.getOrThrow())
-      .whereNull('deleted_at');
+    return this.knex(TABLE_NAME).whereNull('deleted_at');
   }
 
   public async findAll(): Promise<Environment[]> {
@@ -57,7 +60,6 @@ export class EnvironmentRepository implements IEnvironmentRepository {
   public async create(input: CreateEnvironmentInput): Promise<Environment> {
     const [row] = await this.knex(TABLE_NAME)
       .insert({
-        organization_id: orgContext.getOrThrow(),
         slug: input.slug,
         name: input.name,
         description: input.description ?? null,

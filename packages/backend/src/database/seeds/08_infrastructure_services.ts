@@ -13,7 +13,6 @@ export async function seed(knex: Knex): Promise<void> {
         name: 'Platform Engineering',
         slug: 'platform-engineering',
         description: 'Time responsavel pela Plataforma de Engenharia Interna',
-        organization_id: org.id,
       })
       .returning('*');
     team = newTeam;

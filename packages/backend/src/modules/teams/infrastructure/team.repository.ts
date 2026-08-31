@@ -2,8 +2,12 @@ import type { Knex } from 'knex';
 
 import { NotFoundError } from '@back-stage/shared';
 
-import { orgContext } from '../../../shared/context/org-context.js';
 import { Team, type TeamMemberRow, type TeamRole, type TeamRow } from '../domain/team.entity.js';
+
+// Teams (and team membership) are a shared catalog — the same list for every
+// organization in this CMDB, not per-tenant resources. No organization_id
+// filtering here on purpose; see migration
+// 20260831_remove_organization_id_from_teams_and_environments.ts.
 
 export interface CreateTeamData {
   name: string;
@@ -53,9 +57,7 @@ export class TeamRepository implements ITeamRepository {
   }
 
   private baseQuery(): Knex.QueryBuilder {
-    return this.db('teams')
-      .where('organization_id', orgContext.getOrThrow())
-      .whereNull('deleted_at');
+    return this.db('teams').whereNull('deleted_at');
   }
 
   async findAll(): Promise<Team[]> {
@@ -85,7 +87,6 @@ export class TeamRepository implements ITeamRepository {
   async create(data: CreateTeamData): Promise<Team> {
     const [row] = await this.db('teams')
       .insert({
-        organization_id: orgContext.getOrThrow(),
         name: data.name,
         slug: data.slug,
         description: data.description ?? null,
@@ -136,7 +137,6 @@ export class TeamRepository implements ITeamRepository {
   async addMember(teamId: string, userId: string, role: TeamRole): Promise<void> {
     try {
       await this.db('team_members').insert({
-        organization_id: orgContext.getOrThrow(),
         team_id: teamId,
         user_id: userId,
         role,
