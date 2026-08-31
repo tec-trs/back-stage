@@ -17,6 +17,11 @@ export function useNodeClickHandler() {
       service: `/catalog/${resourceId}`,
       database: `/databases/${resourceId}`,
       server: `/servers/${resourceId}`,
+      // Manually-added db-group nodes carry the real Agrupador de Bancos id
+      // as resourceId (see ToolBarSimple's getResourceList for 'db-group') —
+      // unlike EcosystemPage's own synthetic clustering, there's no
+      // per-aplicação flavor to worry about here.
+      'db-group': `/database-groups/${resourceId}`,
     };
 
     const route = routeMap[resourceType];

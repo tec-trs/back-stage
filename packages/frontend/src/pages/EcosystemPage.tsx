@@ -37,6 +37,18 @@ interface DbGroup {
   dbLabels: string[];
 }
 
+// Prefix for the synthetic node id of a curated-grupo cluster (see the
+// clustering memo below) — the suffix is the real Agrupador de Bancos id,
+// which is what lets Ver Detalhes / duplo-clique navigate straight to
+// /database-groups/:id. The other db-group flavor (per-aplicação
+// auto-clustering, id `db-group-${appId}`) has no single real grupo behind
+// it, so it stays non-navigable.
+const CURATED_DB_GROUP_PREFIX = 'db-group-curated-';
+
+function curatedGroupIdFromNodeId(nodeId: string): string | undefined {
+  return nodeId.startsWith(CURATED_DB_GROUP_PREFIX) ? nodeId.slice(CURATED_DB_GROUP_PREFIX.length) : undefined;
+}
+
 const NODE_COLORS: Record<string, string> = {
   server:      '#3b82f6',
   application: '#8b5cf6',
@@ -337,7 +349,7 @@ export function EcosystemPage() {
       });
       if (presentDbIds.length < 2) continue;
 
-      const groupNodeId = `db-group-curated-${group.id}`;
+      const groupNodeId = `${CURATED_DB_GROUP_PREFIX}${group.id}`;
       groupMeta.set(groupNodeId, { label: group.name, dbIds: presentDbIds });
       for (const dbId of presentDbIds) dbIdToGroupNodeId.set(dbId, groupNodeId);
     }
@@ -474,7 +486,12 @@ export function EcosystemPage() {
 
   const handleNodeNavigate = useCallback(
     (nodeId: string, resourceType: string) => {
-      if (resourceType === 'db-group' || resourceType === 'server-group') return;
+      if (resourceType === 'server-group') return;
+      if (resourceType === 'db-group') {
+        const groupId = curatedGroupIdFromNodeId(nodeId);
+        if (groupId) navigate(`/database-groups/${groupId}`);
+        return;
+      }
       const pathMap: Record<string, string> = {
         server:      'servers',
         application: 'applications',
@@ -885,7 +902,7 @@ export function EcosystemPage() {
             )}
 
             <div className="flex flex-col gap-2 border-t border-slate-600 pt-2">
-              {selectedNode.resourceType !== 'db-group' && (
+              {(selectedNode.resourceType !== 'db-group' || curatedGroupIdFromNodeId(selectedNode.id)) && (
                 <Button
                   variant="secondary"
                   size="sm"
