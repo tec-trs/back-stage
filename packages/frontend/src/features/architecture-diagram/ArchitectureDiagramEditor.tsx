@@ -55,6 +55,7 @@ const nodeTypes = {
   service: ResourceNodeWithIcon as any,
   database: ResourceNodeWithIcon as any,
   server: ResourceNodeWithIcon as any,
+  'db-group': ResourceNodeWithIcon as any,
 };
 
 type NodeResourceData = { resourceType?: ResourceType; resourceId?: string; label?: string };
