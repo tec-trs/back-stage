@@ -753,13 +753,16 @@ export class ResourceRelationshipRepository {
     targetType: ResourceType,
     targetId: string,
   ): Promise<void> {
+    const orgId = orgContext.getOrThrow();
+
     await this.db(TABLE_NAME)
-      .where({ target_type: targetType, target_id: targetId, relation_type: 'hosts' })
+      .where({ organization_id: orgId, target_type: targetType, target_id: targetId, relation_type: 'hosts' })
       .whereNull('deleted_at')
       .update({ deleted_at: this.db.fn.now() });
 
     if (serverId) {
       await this.db(TABLE_NAME).insert({
+        organization_id: orgId,
         source_type: 'server',
         source_id: serverId,
         target_type: targetType,
