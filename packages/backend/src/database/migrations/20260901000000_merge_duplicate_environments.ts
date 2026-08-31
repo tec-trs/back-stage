@@ -23,11 +23,33 @@ import type { Knex } from 'knex';
 // (there is no foreign key — see the tables below) gets any reference to a
 // duplicate's slug repointed to the canonical slug before the duplicate rows
 // are deleted.
+//
+// A few of those tables (application_deployments, at least) also have their
+// own partial-unique index that includes `environment` in its key — e.g.
+// application_deployments_unique_active on (application_id, server_id,
+// environment) WHERE deleted_at IS NULL. If the *same* application was
+// already deployed to the *same* server under both the canonical slug and
+// the duplicate slug (a direct symptom of this same bug — someone picked the
+// wrong duplicate in a dropdown), a blind UPDATE would violate that index.
+// For tables that declare `identityColumns` below, rows that would collide
+// are treated as genuine duplicate records and soft-deleted (or, if the
+// table has no deleted_at column, left untouched and logged for manual
+// review) instead of updated into a collision.
 
-const REFERENCING_TABLES: Array<{ table: string; column: string }> = [
+interface ReferencingTable {
+  table: string;
+  column: string;
+  // Columns that, together with `column`, form a uniqueness key on this
+  // table. When set, a row about to be repointed to the canonical slug is
+  // first checked against rows that already share these columns under the
+  // canonical slug — see resolveCollisions() below.
+  identityColumns?: string[];
+}
+
+const REFERENCING_TABLES: ReferencingTable[] = [
   { table: 'servers', column: 'environment' },
   { table: 'deployments', column: 'environment' },
-  { table: 'application_deployments', column: 'environment' },
+  { table: 'application_deployments', column: 'environment', identityColumns: ['application_id', 'server_id'] },
   { table: 'databases', column: 'environment' },
   { table: 'server_groups', column: 'environment' },
   { table: 'vips', column: 'environment' },
@@ -38,6 +60,52 @@ interface EnvironmentRow {
   slug: string;
   name: string;
   created_at: Date | string;
+}
+
+async function resolveCollisions(
+  knex: Knex,
+  ref: ReferencingTable,
+  duplicateSlug: string,
+  canonicalSlug: string,
+): Promise<void> {
+  if (!ref.identityColumns || ref.identityColumns.length === 0) return;
+
+  const hasDeletedAt = await knex.schema.hasColumn(ref.table, 'deleted_at');
+  const identityJoin = ref.identityColumns.map((col) => `dup.${col} = existing.${col}`).join(' AND ');
+  const deletedAtFilter = hasDeletedAt ? 'AND dup.deleted_at IS NULL AND existing.deleted_at IS NULL' : '';
+
+  const { rows: colliding } = await knex.raw(
+    `SELECT dup.id FROM ${ref.table} dup
+     JOIN ${ref.table} existing
+       ON ${identityJoin}
+      AND existing.${ref.column} = ?
+      AND existing.id <> dup.id
+     WHERE dup.${ref.column} = ?
+     ${deletedAtFilter}`,
+    [canonicalSlug, duplicateSlug],
+  );
+
+  if (colliding.length === 0) return;
+
+  const ids = colliding.map((row: { id: string }) => row.id);
+
+  if (hasDeletedAt) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[merge-duplicate-environments]   ${ref.table}: ${ids.length} row(s) already exist under the canonical ` +
+        `environment for the same ${ref.identityColumns.join('+')} — soft-deleting the duplicate row(s) instead ` +
+        'of merging (would otherwise violate a unique index).',
+    );
+    await knex(ref.table).whereIn('id', ids).update({ deleted_at: knex.fn.now() });
+  } else {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[merge-duplicate-environments]   ${ref.table}: ${ids.length} row(s) (ids: ${ids.join(', ')}) collide with ` +
+        `an existing row under the canonical environment for the same ${ref.identityColumns.join('+')}, and this ` +
+        'table has no deleted_at column to safely resolve it automatically — left on the duplicate slug for ' +
+        'manual review.',
+    );
+  }
 }
 
 export async function up(knex: Knex): Promise<void> {
@@ -73,6 +141,9 @@ export async function up(knex: Knex): Promise<void> {
         if (!hasTable) continue;
         const hasColumn = await knex.schema.hasColumn(ref.table, ref.column);
         if (!hasColumn) continue;
+
+        await resolveCollisions(knex, ref, dup.slug, canonical.slug);
+
         await knex(ref.table).where(ref.column, dup.slug).update({ [ref.column]: canonical.slug });
       }
       await knex('environments').where('id', dup.id).delete();
