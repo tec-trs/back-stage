@@ -10,6 +10,10 @@ export interface DatabaseGroup {
   createdByUserId?: string | null;
   memberCount: number;
   applicationCount: number;
+  // Only populated by useDatabaseGroups() (the list endpoint) — every member
+  // banco's id, so a caller can match a computed cluster of bancos against a
+  // curated grupo without fetching each grupo's full detail.
+  databaseIds?: string[];
   createdAt: string;
   updatedAt: string;
 }

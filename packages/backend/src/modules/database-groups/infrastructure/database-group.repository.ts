@@ -33,6 +33,10 @@ export class DatabaseGroupRepository {
       .select('database_groups.*')
       .select(this.db.raw('COUNT(DISTINCT dgm.id)::int as member_count'))
       .select(this.db.raw('COUNT(DISTINCT dga.id)::int as application_count'))
+      // Every member banco's id, for callers (the Ecosystem graph) that need
+      // to match a computed cluster of bancos against a curated grupo without
+      // an extra request per grupo — see DatabaseGroup.databaseIds.
+      .select(this.db.raw('array_agg(DISTINCT dgm.database_id) FILTER (WHERE dgm.database_id IS NOT NULL) as database_ids'))
       .leftJoin(`${MEMBERS_TABLE} as dgm`, function () {
         this.on('dgm.group_id', '=', 'database_groups.id').andOnNull('dgm.deleted_at');
       })
@@ -43,7 +47,9 @@ export class DatabaseGroupRepository {
       .groupBy('database_groups.id')
       .orderBy('database_groups.name');
 
-    return rows.map((r) => this.toDto(r, Number(r.member_count ?? 0), Number(r.application_count ?? 0)));
+    return rows.map((r) =>
+      this.toDto(r, Number(r.member_count ?? 0), Number(r.application_count ?? 0), r.database_ids ?? []),
+    );
   }
 
   async findById(groupId: string, organizationId: string): Promise<DatabaseGroup | null> {
@@ -186,7 +192,7 @@ export class DatabaseGroupRepository {
     }));
   }
 
-  private toDto(row: any, memberCount: number, applicationCount: number): DatabaseGroup {
+  private toDto(row: any, memberCount: number, applicationCount: number, databaseIds?: string[]): DatabaseGroup {
     return {
       id: row.id,
       organizationId: row.organization_id,
@@ -195,6 +201,7 @@ export class DatabaseGroupRepository {
       createdByUserId: row.created_by_user_id,
       memberCount,
       applicationCount,
+      databaseIds,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       deletedAt: row.deleted_at,

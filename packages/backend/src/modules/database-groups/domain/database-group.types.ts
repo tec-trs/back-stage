@@ -6,6 +6,11 @@ export interface DatabaseGroup {
   createdByUserId?: string | null;
   memberCount: number;
   applicationCount: number;
+  // Only populated by the list endpoint (findAll) — lets a caller match a set
+  // of database ids against every grupo without an extra request per grupo.
+  // The single-grupo endpoints omit it; use `members` on DatabaseGroupDetail
+  // there instead, which already carries the full row per banco.
+  databaseIds?: string[];
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date | null;

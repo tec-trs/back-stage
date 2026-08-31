@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
+import { useDatabaseGroups } from '../features/database-groups/use-database-groups';
 import { ImpactAnalysisPanel } from '../features/resource-graph/ImpactAnalysisPanel';
 import {
   useCreateRelationship,
@@ -163,6 +164,7 @@ const EMPTY_SET = new Set<string>();
 
 export function EcosystemPage() {
   const { data: fullGraphData, isLoading, isError, error } = useFullGraph({ page: 1, pageSize: 500 });
+  const { data: databaseGroups } = useDatabaseGroups();
   const data = useMemo(() => {
     if (!fullGraphData) return undefined;
     const nonGroupNodeIds = new Set(fullGraphData.nodes.filter(n => (n.resourceType as string) !== 'group').map(n => n.id));
@@ -305,6 +307,24 @@ export function EcosystemPage() {
   const { graphNodes, graphEdges, dbGroups } = useMemo(() => {
     if (!data) return { graphNodes: [], graphEdges: [], dbGroups: [] };
 
+    // Curated grupos (see database-groups) whose bancos are all present in a
+    // computed cluster get their real, human-chosen name on the card instead
+    // of the generic "N bancos" — e.g. "BANCOS BBF" instead of "9 bancos".
+    // Sorted smallest-grupo-first so a precise match wins over a broader
+    // grupo that happens to also contain every banco in the cluster.
+    const candidateGroups = (databaseGroups ?? [])
+      .filter((g) => g.databaseIds && g.databaseIds.length > 0)
+      .slice()
+      .sort((a, b) => (a.databaseIds!.length - b.databaseIds!.length));
+
+    function curatedLabelFor(dbIds: string[]): string | undefined {
+      for (const group of candidateGroups) {
+        const memberSet = new Set(group.databaseIds);
+        if (dbIds.every((id) => memberSet.has(id))) return group.name;
+      }
+      return undefined;
+    }
+
     const nodeById = new Map(data.nodes.map((n) => [n.id, n]));
 
     // Mapa appId → edges de banco (sourceId=app, targetId=db)
@@ -336,7 +356,7 @@ export function EcosystemPage() {
       syntheticNodes.push({
         id: groupId,
         resourceType: 'db-group',
-        label: `${dbEdges.length} bancos`,
+        label: curatedLabelFor(dbIds) ?? `${dbEdges.length} bancos`,
         dbLabels,
       });
 
@@ -420,7 +440,7 @@ export function EcosystemPage() {
       graphEdges: filteredEdges,
       dbGroups: groups,
     };
-  }, [data, visibleTypes, groupBy]);
+  }, [data, visibleTypes, groupBy, databaseGroups]);
 
   const selectedNode = graphNodes.find((n) => n.id === selectedNodeId);
 
