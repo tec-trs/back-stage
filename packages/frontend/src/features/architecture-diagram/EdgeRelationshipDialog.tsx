@@ -25,6 +25,9 @@ interface EdgeRelationshipDialogProps {
   // Only offered in 'edit' mode: delete the underlying relationship but keep
   // the arrow on the canvas as a plain visual line.
   onRemoveRealLink?: () => void;
+  // Only offered in 'edit' mode: remove the edge from the diagram entirely —
+  // if it is backed by a real relationship, that relationship is deleted too.
+  onDeleteEdge?: () => void;
 }
 
 export function EdgeRelationshipDialog({
@@ -40,6 +43,7 @@ export function EdgeRelationshipDialog({
   onConfirm,
   onCreateVisualOnly,
   onRemoveRealLink,
+  onDeleteEdge,
 }: EdgeRelationshipDialogProps) {
   const [relationType, setRelationType] = useState<RelationType>(initialRelationType);
   const [reason, setReason] = useState(initialReason);
@@ -112,10 +116,15 @@ export function EdgeRelationshipDialog({
         {errorMessage && <ErrorMessage message={errorMessage} />}
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-4">
-          <div>
+          <div className="flex flex-wrap items-center gap-2">
+            {mode === 'edit' && onDeleteEdge && (
+              <Button type="button" variant="ghost-danger" size="sm" disabled={isSubmitting} onClick={onDeleteEdge}>
+                Excluir relacionamento
+              </Button>
+            )}
             {mode === 'edit' && onRemoveRealLink && (
-              <Button type="button" variant="ghost-danger" size="sm" disabled={isSubmitting} onClick={onRemoveRealLink}>
-                Remover vinculo real
+              <Button type="button" variant="ghost" size="sm" disabled={isSubmitting} onClick={onRemoveRealLink}>
+                Manter como desenho
               </Button>
             )}
           </div>

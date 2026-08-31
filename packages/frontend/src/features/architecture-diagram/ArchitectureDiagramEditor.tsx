@@ -384,6 +384,43 @@ export function ArchitectureDiagramEditor() {
     });
   }, [pendingEdgeDialog, deleteRelationship, setEdges, diagramState, closeEdgeDialog]);
 
+  const handleDeleteEdge = useCallback(() => {
+    if (pendingEdgeDialog?.mode !== 'edit' || !pendingEdgeDialog.edge) return;
+    const edge = pendingEdgeDialog.edge;
+    const data = realEdgeData(edge);
+
+    // Plain visual edge — nothing backing it in the API, just drop it from the canvas.
+    if (!data) {
+      setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+      diagramState.setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+      closeEdgeDialog();
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Este e um relacionamento real (${relationTypeLabel(data.relationType)}). Excluir tambem tira essa ` +
+        'dependencia da Analise de Impacto e do grafo de dependencias. Continuar?',
+    );
+    if (!confirmed) return;
+
+    setIsEdgeDialogSubmitting(true);
+    deleteRelationship.mutate(data.relationshipId, {
+      onSuccess: () => {
+        setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+        diagramState.setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+        closeEdgeDialog();
+      },
+      onError: (err) => {
+        setIsEdgeDialogSubmitting(false);
+        setEdgeDialogError(
+          `Nao foi possivel excluir o relacionamento (${
+            err instanceof Error ? err.message : 'erro desconhecido'
+          }).`,
+        );
+      },
+    });
+  }, [pendingEdgeDialog, deleteRelationship, setEdges, diagramState, closeEdgeDialog]);
+
   const handleAddNode = useCallback(
     (type: ResourceType, label: string, description?: string, resourceId?: string, services?: NodeServiceSummary[]) => {
       const nodeId = resourceId || `${type}-${Date.now()}`;
@@ -593,6 +630,7 @@ export function ArchitectureDiagramEditor() {
           onRemoveRealLink={
             pendingEdgeDialog.mode === 'edit' && realEdgeData(pendingEdgeDialog.edge) ? handleRemoveRealLink : undefined
           }
+          onDeleteEdge={pendingEdgeDialog.mode === 'edit' ? handleDeleteEdge : undefined}
         />
       )}
     </div>
