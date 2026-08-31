@@ -33,6 +33,18 @@ export class EnvironmentService {
       throw new ConflictError(`Ja existe um ambiente com o slug '${input.slug}'`);
     }
 
+    // Slug uniqueness alone isn't enough: 'Producao', 'PRODUCAO' and ' producao '
+    // all pass the slug check with different slugs but mean the same thing to a
+    // person picking from the dropdown, and silently fragment servers across
+    // near-duplicate environments. Block that case/whitespace variant here.
+    const existingByName = await this.environmentRepository.findByNameCaseInsensitive(input.name);
+    if (existingByName) {
+      throw new ConflictError(
+        `Ja existe um ambiente com o nome '${existingByName.name}' (slug '${existingByName.slug}'). ` +
+          'Use o ambiente existente em vez de criar outro com grafia diferente.',
+      );
+    }
+
     const env = await this.environmentRepository.create(input);
 
     await auditLogger.record({
@@ -50,6 +62,15 @@ export class EnvironmentService {
 
   public async update(id: string, input: UpdateEnvironmentInput, audit: AuditContext): Promise<Environment> {
     await this.getById(id);
+
+    if (input.name !== undefined) {
+      const existingByName = await this.environmentRepository.findByNameCaseInsensitive(input.name, id);
+      if (existingByName) {
+        throw new ConflictError(
+          `Ja existe um ambiente com o nome '${existingByName.name}' (slug '${existingByName.slug}').`,
+        );
+      }
+    }
 
     const env = await this.environmentRepository.update(id, input);
     if (!env) throw new NotFoundError('Ambiente', id);

@@ -29,6 +29,10 @@ export interface IEnvironmentRepository {
   findAll(): Promise<Environment[]>;
   findById(id: string): Promise<Environment | undefined>;
   findBySlug(slug: string): Promise<Environment | undefined>;
+  // Case/whitespace-insensitive lookup by display name, used to stop the admin
+  // "Ambientes" screen from creating near-duplicate rows like 'Producao' vs
+  // 'PRODUCAO' vs ' producao ' — see environment.service.ts create()/update().
+  findByNameCaseInsensitive(name: string, excludeId?: string): Promise<Environment | undefined>;
   create(input: CreateEnvironmentInput): Promise<Environment>;
   update(id: string, input: UpdateEnvironmentInput): Promise<Environment | null>;
   delete(id: string): Promise<void>;
@@ -54,6 +58,15 @@ export class EnvironmentRepository implements IEnvironmentRepository {
 
   public async findBySlug(slug: string): Promise<Environment | undefined> {
     const row = await this.baseQuery().where('slug', slug).first();
+    return row ? new Environment(row) : undefined;
+  }
+
+  public async findByNameCaseInsensitive(name: string, excludeId?: string): Promise<Environment | undefined> {
+    let query = this.baseQuery().whereRaw('lower(trim(name)) = lower(trim(?))', [name]);
+    if (excludeId) {
+      query = query.andWhereNot('id', excludeId);
+    }
+    const row = await query.first();
     return row ? new Environment(row) : undefined;
   }
 
