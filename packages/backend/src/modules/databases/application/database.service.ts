@@ -3,6 +3,7 @@ import { ConflictError, NotFoundError } from '@back-stage/shared';
 import { auditLogger } from '../../../shared/audit/audit-logger.js';
 import { ResourceRelationshipRepository } from '../../resource-graph/infrastructure/resource-relationship.repository.js';
 import type { Database } from '../domain/database.entity.js';
+import type { DatabasePort } from '../domain/database-port.entity.js';
 import type {
   CreateDatabaseInput,
   DatabaseFilters,
@@ -187,5 +188,85 @@ export class DatabaseService {
     });
 
     return count;
+  }
+}
+
+  // ============ Database Ports Management ============
+
+  public async getPortsByDatabaseId(databaseId: string): Promise<DatabasePort[]> {
+    await this.getById(databaseId); // Validate database exists
+    return this.databaseRepository.getPortsByDatabaseId(databaseId);
+  }
+
+  public async addDatabasePort(
+    databaseId: string,
+    port: number,
+    parameters: string | null,
+    audit: AuditContext,
+  ): Promise<DatabasePort> {
+    await this.getById(databaseId); // Validate database exists
+
+    const newPort = await this.databaseRepository.addPort(databaseId, port, parameters);
+
+    await auditLogger.record({
+      actorUserId: audit.actorUserId,
+      action: 'database.port_added',
+      resourceType: 'database',
+      resourceId: databaseId,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+      metadata: { port },
+    });
+
+    return newPort;
+  }
+
+  public async updateDatabasePort(
+    databaseId: string,
+    portId: string,
+    parameters: string | null,
+    audit: AuditContext,
+  ): Promise<DatabasePort> {
+    await this.getById(databaseId); // Validate database exists
+
+    const updated = await this.databaseRepository.updatePort(portId, parameters);
+    if (!updated) {
+      throw new NotFoundError('Porta', portId);
+    }
+
+    await auditLogger.record({
+      actorUserId: audit.actorUserId,
+      action: 'database.port_updated',
+      resourceType: 'database',
+      resourceId: databaseId,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+      metadata: { portId },
+    });
+
+    return updated;
+  }
+
+  public async removeDatabasePort(
+    databaseId: string,
+    portId: string,
+    audit: AuditContext,
+  ): Promise<void> {
+    await this.getById(databaseId); // Validate database exists
+
+    const removed = await this.databaseRepository.removePort(portId);
+    if (!removed) {
+      throw new NotFoundError('Porta', portId);
+    }
+
+    await auditLogger.record({
+      actorUserId: audit.actorUserId,
+      action: 'database.port_removed',
+      resourceType: 'database',
+      resourceId: databaseId,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+      metadata: { portId },
+    });
   }
 }

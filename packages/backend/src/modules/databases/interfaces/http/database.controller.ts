@@ -6,9 +6,11 @@ import type { DatabaseService } from '../../application/database.service.js';
 import type {
   bulkDeleteDatabasesBodySchema,
   createDatabaseBodySchema,
+  createDatabasePortBodySchema,
   listDatabasesQuerySchema,
   setDatabaseStatusBodySchema,
   updateDatabaseBodySchema,
+  updateDatabasePortBodySchema,
 } from './database.validation.js';
 
 type CreateDatabaseBody = z.infer<typeof createDatabaseBodySchema>;
@@ -86,5 +88,39 @@ export class DatabaseController {
       userAgent: request.header('user-agent'),
     });
     response.status(200).json({ deleted: count });
+
+  public getPortsByDatabaseId = async (request: Request, response: Response): Promise<void> => {
+    const ports = await this.databaseService.getPortsByDatabaseId(request.params.id);
+    response.status(200).json(ports.map((port) => port.toJSON()));
+  };
+
+  public addDatabasePort = async (request: Request, response: Response): Promise<void> => {
+    const body = request.body as z.infer<typeof createDatabasePortBodySchema>;
+    const port = await this.databaseService.addDatabasePort(request.params.id, body.port, body.parameters ?? null, {
+      actorUserId: request.user?.id,
+      ipAddress: request.ip,
+      userAgent: request.header('user-agent'),
+    });
+    response.status(201).json(port.toJSON());
+  };
+
+  public updateDatabasePort = async (request: Request, response: Response): Promise<void> => {
+    const body = request.body as z.infer<typeof updateDatabasePortBodySchema>;
+    const port = await this.databaseService.updateDatabasePort(request.params.id, request.params.portId, body.parameters ?? null, {
+      actorUserId: request.user?.id,
+      ipAddress: request.ip,
+      userAgent: request.header('user-agent'),
+    });
+    response.status(200).json(port.toJSON());
+  };
+
+  public removeDatabasePort = async (request: Request, response: Response): Promise<void> => {
+    await this.databaseService.removeDatabasePort(request.params.id, request.params.portId, {
+      actorUserId: request.user?.id,
+      ipAddress: request.ip,
+      userAgent: request.header('user-agent'),
+    });
+    response.status(204).send();
+  };
   };
 }

@@ -9,10 +9,13 @@ import type { DatabaseController } from './database.controller.js';
 import {
   bulkDeleteDatabasesBodySchema,
   createDatabaseBodySchema,
+  createDatabasePortBodySchema,
   databaseIdParamsSchema,
   listDatabasesQuerySchema,
+  portIdParamsSchema,
   setDatabaseStatusBodySchema,
   updateDatabaseBodySchema,
+  updateDatabasePortBodySchema,
 } from './database.validation.js';
 
 const WRITE_ROLES = ['admin', 'maintainer'];
@@ -134,3 +137,62 @@ export function createDatabaseRouter(controller: DatabaseController): Router {
 
   return router;
 }
+
+  /**
+   * @openapi
+   * /databases/{id}/ports:
+   *   get:
+   *     summary: Lista as portas configuradas para um banco de dados
+   *     tags: [Databases]
+   *     responses:
+   *       200: { description: Lista de portas }
+   *   post:
+   *     summary: Adiciona uma nova porta ao banco de dados
+   *     tags: [Databases]
+   *     security: [{ bearerAuth: [] }]
+   *     responses:
+   *       201: { description: Porta adicionada }
+   *       409: { description: Ja existe uma porta com este numero }
+   */
+  router.get(
+    '/:id/ports',
+    validateMiddleware({ params: databaseIdParamsSchema }),
+    asyncHandler(controller.getPortsByDatabaseId),
+  );
+
+  router.post(
+    '/:id/ports',
+    authorizeMiddleware(...WRITE_ROLES),
+    validateMiddleware({ params: databaseIdParamsSchema, body: createDatabasePortBodySchema }),
+    asyncHandler(controller.addDatabasePort),
+  );
+
+  /**
+   * @openapi
+   * /databases/{id}/ports/{portId}:
+   *   put:
+   *     summary: Atualiza uma porta do banco de dados
+   *     tags: [Databases]
+   *     security: [{ bearerAuth: [] }]
+   *     responses:
+   *       200: { description: Porta atualizada }
+   *   delete:
+   *     summary: Remove uma porta do banco de dados
+   *     tags: [Databases]
+   *     security: [{ bearerAuth: [] }]
+   *     responses:
+   *       204: { description: Porta removida }
+   */
+  router.put(
+    '/:id/ports/:portId',
+    authorizeMiddleware(...WRITE_ROLES),
+    validateMiddleware({ params: portIdParamsSchema, body: updateDatabasePortBodySchema }),
+    asyncHandler(controller.updateDatabasePort),
+  );
+
+  router.delete(
+    '/:id/ports/:portId',
+    authorizeMiddleware(...WRITE_ROLES),
+    validateMiddleware({ params: portIdParamsSchema }),
+    asyncHandler(controller.removeDatabasePort),
+  );

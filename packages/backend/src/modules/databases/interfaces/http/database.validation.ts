@@ -95,3 +95,18 @@ export const listDatabasesQuerySchema = z.object({
 export const bulkDeleteDatabasesBodySchema = z.object({
   ids: z.array(z.string().uuid()).min(1),
 });
+
+// Port management schemas
+export const createDatabasePortBodySchema = z.object({
+  port: z.coerce.number().int().min(1).max(65535),
+  parameters: z.string().max(5000).nullable().optional(),
+});
+
+export const updateDatabasePortBodySchema = z.object({
+  parameters: z.string().max(5000).nullable().optional(),
+});
+
+export const portIdParamsSchema = z.object({
+  id: z.string().uuid(),
+  portId: z.string().uuid(),
+});
