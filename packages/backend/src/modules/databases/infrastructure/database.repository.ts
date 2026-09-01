@@ -278,8 +278,6 @@ export class DatabaseRepository implements IDatabaseRepository {
       .whereIn('id', ids)
       .update({ deleted_at: this.db.fn.now() })) as unknown as number;
     return affected;
-  }
-}
 
   // ============ Database Ports Management ============
 
@@ -362,7 +360,6 @@ export class DatabaseRepository implements IDatabaseRepository {
     const result = await this.db('database_ports').where('id', portId).del();
     return result > 0;
   }
-}
 
   public async hasGroupMemberships(databaseId: string): Promise<boolean> {
     const result = (await this.db('database_group_members')
@@ -371,4 +368,5 @@ export class DatabaseRepository implements IDatabaseRepository {
       .count<{ count: string }[]>('* as count')) as { count: string }[];
     
     return Number(result[0]?.count ?? 0) > 0;
+  }
 }

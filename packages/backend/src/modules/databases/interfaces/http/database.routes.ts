@@ -196,3 +196,6 @@ export function createDatabaseRouter(controller: DatabaseController): Router {
     validateMiddleware({ params: portIdParamsSchema }),
     asyncHandler(controller.removeDatabasePort),
   );
+
+  return router;
+}

@@ -122,5 +122,4 @@ export class DatabaseController {
     });
     response.status(204).send();
   };
-  };
 }
