@@ -17,9 +17,13 @@ export type DatabaseStatus = 'active' | 'maintenance' | 'provisioning' | 'deacti
 
 export interface DatabaseRow {
   id: string;
+  code: string;
   name: string;
   display_name: string | null;
   description: string | null;
+  physical_name: string | null;
+  logical_name: string | null;
+  path: string | null;
   engine: string;
   version: string | null;
   port: number | null;
@@ -48,9 +52,13 @@ export interface DatabaseRow {
 
 export class Database {
   public readonly id: string;
+  public readonly code: string;
   public readonly name: string;
   public readonly displayName: string | null;
   public readonly description: string | null;
+  public readonly physicalName: string | null;
+  public readonly logicalName: string | null;
+  public readonly path: string | null;
   public readonly engine: DatabaseEngine;
   public readonly version: string | null;
   public readonly port: number | null;
@@ -79,9 +87,13 @@ export class Database {
 
   public constructor(row: DatabaseRow, hostedOnServerHostname: string | null = null) {
     this.id = row.id;
+    this.code = row.code;
     this.name = row.name;
     this.displayName = row.display_name;
     this.description = row.description;
+    this.physicalName = row.physical_name;
+    this.logicalName = row.logical_name;
+    this.path = row.path;
     this.engine = row.engine as DatabaseEngine;
     this.version = row.version;
     this.port = row.port;
@@ -112,9 +124,13 @@ export class Database {
   public toJSON(): Record<string, unknown> {
     return {
       id: this.id,
+      code: this.code,
       name: this.name,
       displayName: this.displayName,
       description: this.description,
+      physicalName: this.physicalName,
+      logicalName: this.logicalName,
+      path: this.path,
       engine: this.engine,
       version: this.version,
       port: this.port,

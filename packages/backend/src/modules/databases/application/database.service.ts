@@ -22,6 +22,13 @@ export interface AuditContext {
   userAgent?: string | null;
 }
 
+
+function generateDatabaseCode(): string {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `DB-${timestamp}-${random}`;
+}
+
 export class DatabaseService {
   public constructor(
     private readonly databaseRepository: IDatabaseRepository,
@@ -53,7 +60,13 @@ export class DatabaseService {
       );
     }
 
-    const database = await this.databaseRepository.create(input);
+    // Generate code if not provided
+    const inputWithCode = {
+      ...input,
+      code: generateDatabaseCode(),
+    };
+
+    const database = await this.databaseRepository.create(inputWithCode as any);
 
     if (input.hostedOnServerId) {
       await this.graphRepository.syncHostRelationship(input.hostedOnServerId, 'database', database.id);
@@ -137,6 +150,14 @@ export class DatabaseService {
 
   public async delete(id: string, audit: AuditContext): Promise<void> {
     await this.getById(id);
+
+    // Check if database is a member of any database group
+    const hasGroupMemberships = await this.databaseRepository.hasGroupMemberships(id);
+    if (hasGroupMemberships) {
+      throw new ConflictError(
+        'Nao é possivel remover este banco de dados pois ele esta associado a um agrupador'
+      );
+    }
 
     const deleted = await this.databaseRepository.softDelete(id);
     if (!deleted) {

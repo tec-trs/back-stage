@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 
 import { orgContext } from '../../../shared/context/org-context.js';
 import { Database, type DatabaseRow } from '../domain/database.entity.js';
+import { DatabasePort, type DatabasePortRow } from '../domain/database-port.entity.js';
 
 const TABLE_NAME = 'databases';
 
@@ -20,6 +21,7 @@ export interface Pagination {
 }
 
 export interface CreateDatabaseInput {
+  code?: string;
   name: string;
   displayName?: string | null;
   description?: string | null;
@@ -58,6 +60,12 @@ export interface IDatabaseRepository {
   setStatus(id: string, status: string): Promise<Database | undefined>;
   softDelete(id: string): Promise<boolean>;
   bulkSoftDelete(ids: string[]): Promise<number>;
+  getPortsByDatabaseId(databaseId: string): Promise<DatabasePort[]>;
+  getPortByDatabaseIdAndPort(databaseId: string, port: number): Promise<DatabasePort | undefined>;
+  addPort(databaseId: string, port: number, parameters?: string | null): Promise<DatabasePort>;
+  updatePort(portId: string, parameters?: string | null): Promise<DatabasePort | undefined>;
+  removePort(portId: string): Promise<boolean>;
+  hasGroupMemberships(databaseId: string): Promise<boolean>;
 }
 
 export class DatabaseRepository implements IDatabaseRepository {
@@ -179,6 +187,7 @@ export class DatabaseRepository implements IDatabaseRepository {
     const [row] = (await this.db(TABLE_NAME)
       .insert({
         organization_id: orgContext.getOrThrow(),
+        code: input.code,
         name: input.name,
         display_name: input.displayName,
         description: input.description,
@@ -217,6 +226,7 @@ export class DatabaseRepository implements IDatabaseRepository {
   public async update(id: string, input: UpdateDatabaseInput): Promise<Database | undefined> {
     const updateData: Record<string, unknown> = {};
 
+    if (input.code !== undefined) updateData.code = input.code;
     if (input.name !== undefined) updateData.name = input.name;
     if (input.hostedOnServerId !== undefined) updateData.hosted_on_server_id = input.hostedOnServerId;
     if (input.engine !== undefined) updateData.engine = input.engine;
@@ -269,4 +279,96 @@ export class DatabaseRepository implements IDatabaseRepository {
       .update({ deleted_at: this.db.fn.now() })) as unknown as number;
     return affected;
   }
+}
+
+  // ============ Database Ports Management ============
+
+  public async getPortsByDatabaseId(databaseId: string): Promise<DatabasePort[]> {
+    const rows = (await this.db('database_ports')
+      .where('organization_id', orgContext.getOrThrow())
+      .where('database_id', databaseId)
+      .orderBy('port', 'asc')) as DatabasePortRow[];
+    
+    return rows.map((row) => new DatabasePort(row));
+  }
+
+  public async getPortByDatabaseIdAndPort(
+    databaseId: string,
+    port: number,
+  ): Promise<DatabasePort | undefined> {
+    const row = (await this.db('database_ports')
+      .where('organization_id', orgContext.getOrThrow())
+      .where('database_id', databaseId)
+      .where('port', port)
+      .first()) as DatabasePortRow | undefined;
+    
+    if (!row) {
+      return undefined;
+    }
+    return new DatabasePort(row);
+  }
+
+  public async addPort(
+    databaseId: string,
+    port: number,
+    parameters?: string | null,
+  ): Promise<DatabasePort> {
+    // Check if port already exists
+    const existing = await this.getPortByDatabaseIdAndPort(databaseId, port);
+    if (existing) {
+      throw new Error(`Ja existe uma porta ${port} para este banco de dados`);
+    }
+
+    const [row] = (await this.db('database_ports')
+      .insert({
+        id: this.db.raw('gen_random_uuid()'),
+        organization_id: orgContext.getOrThrow(),
+        database_id: databaseId,
+        port,
+        parameters: parameters ?? null,
+      })
+      .returning('*')) as DatabasePortRow[];
+
+    return new DatabasePort(row);
+  }
+
+  public async updatePort(
+    portId: string,
+    parameters?: string | null,
+  ): Promise<DatabasePort | undefined> {
+    const updateData: Record<string, unknown> = {};
+    
+    if (parameters !== undefined) {
+      updateData.parameters = parameters ?? null;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      const row = (await this.db('database_ports')
+        .where('id', portId)
+        .first()) as DatabasePortRow | undefined;
+      return row ? new DatabasePort(row) : undefined;
+    }
+
+    await this.db('database_ports').where('id', portId).update(updateData);
+    
+    const row = (await this.db('database_ports')
+      .where('id', portId)
+      .first()) as DatabasePortRow | undefined;
+    
+    return row ? new DatabasePort(row) : undefined;
+  }
+
+  public async removePort(portId: string): Promise<boolean> {
+    const result = await this.db('database_ports').where('id', portId).del();
+    return result > 0;
+  }
+}
+
+  public async hasGroupMemberships(databaseId: string): Promise<boolean> {
+    const result = (await this.db('database_group_members')
+      .where('database_id', databaseId)
+      .whereNull('deleted_at')
+      .count<{ count: string }[]>('* as count')) as { count: string }[];
+    
+    return Number(result[0]?.count ?? 0) > 0;
 }
