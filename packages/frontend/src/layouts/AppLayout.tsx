@@ -80,16 +80,16 @@ const NAV_ITEMS: NavItem[] = [
     icon: <LayersIcon />,
     children: [
       { to: '/servers', label: 'Servidores', icon: <ServerIcon /> },
+      { to: '/applications', label: 'Aplicacoes', icon: <BoxIcon /> },
+      { to: '/databases', label: 'Bancos de Dados', icon: <BoxIcon /> },
+      { to: '/database-groups', label: 'Agrupadores de Bancos', icon: <BoxIcon /> },
     ],
   },
   { kind: 'link', to: '/vips', label: 'VIPs', icon: <NetworkIcon /> },
-  { kind: 'link', to: '/applications', label: 'Aplicacoes', icon: <BoxIcon /> },
-  { kind: 'link', to: '/databases', label: 'Bancos de Dados', icon: <BoxIcon /> },
   { kind: 'link', to: '/urls', label: 'URLs', icon: <NetworkIcon /> },
   { kind: 'link', to: '/ecosystem', label: 'Ecossistema', icon: <NetworkIcon /> },
   { kind: 'link', to: '/architecture-diagram', label: 'Diagrama Arquitetura', icon: <LayersIcon /> },
   { kind: 'link', to: '/relationship-maps', label: 'Mapas', icon: <TagIcon /> },
-  { kind: 'link', to: '/database-groups', label: 'Agrupadores de Bancos', icon: <BoxIcon /> },
   { kind: 'link', to: '/settings', label: 'Configuracoes', icon: <SettingsIcon /> },
   { kind: 'link', to: '/organizations', label: 'Organizacoes', icon: <GroupIcon />, adminOnly: true },
 ];
@@ -120,8 +120,7 @@ export function AppLayout() {
       group.children.some((c) => location.pathname.startsWith(c.to)) ? [group.id] : [],
     ),
   );
-  // Always start governance expanded since it holds key items
-  initialExpanded.add('governance');
+
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(initialExpanded);
 
