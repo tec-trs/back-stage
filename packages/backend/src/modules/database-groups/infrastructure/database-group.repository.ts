@@ -32,7 +32,7 @@ export class DatabaseGroupRepository {
     const rows = await this.db(GROUPS_TABLE)
       .select('database_groups.*')
       .select(this.db.raw('COUNT(DISTINCT dgm.id)::int as member_count'))
-      .select(this.db.raw('COUNT(DISTINCT dga.id) FILTER (WHERE a.id IS NOT NULL)::int as application_count'))
+      .select(this.db.raw('COUNT(DISTINCT dga.id) FILTER (WHERE a.id IS NOT NULL AND a.deleted_at IS NULL)::int as application_count'))
       // Every member banco's id, for callers (the Ecosystem graph) that need
       // to match a computed cluster of bancos against a curated grupo without
       // an extra request per grupo — see DatabaseGroup.databaseIds.
