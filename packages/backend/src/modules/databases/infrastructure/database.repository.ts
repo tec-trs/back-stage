@@ -278,6 +278,7 @@ export class DatabaseRepository implements IDatabaseRepository {
       .whereIn('id', ids)
       .update({ deleted_at: this.db.fn.now() })) as unknown as number;
     return affected;
+  }
 
   // ============ Database Ports Management ============
 
