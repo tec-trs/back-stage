@@ -3,7 +3,11 @@ import { apiRequest } from '../../shared/api/http-client.js';
 
 export interface Database {
   id: string;
+  code: string;
   name: string;
+  physicalName: string | null;
+  logicalName: string | null;
+  path: string | null;
   displayName: string | null;
   description: string | null;
   engine: string;
@@ -124,4 +128,46 @@ export function useAllDatabases() {
       return allItems;
     },
   });
+}
+
+// Port management types and hooks
+export interface DatabasePort {
+  id: string;
+  databaseId: string;
+  port: number;
+  parameters: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function useDatabasePorts(databaseId: string | null) {
+  return useQuery({
+    queryKey: ['database-ports', databaseId],
+    queryFn: () => apiRequest<DatabasePort[]>(`/api/databases/${databaseId}/ports`, { method: 'GET' }),
+    enabled: !!databaseId,
+  });
+}
+
+export function useAddDatabasePort() {
+  return async (databaseId: string, port: number, parameters?: string | null) => {
+    return apiRequest<DatabasePort>(`/api/databases/${databaseId}/ports`, {
+      method: 'POST',
+      body: JSON.stringify({ port, parameters }),
+    });
+  };
+}
+
+export function useUpdateDatabasePort() {
+  return async (databaseId: string, portId: string, parameters?: string | null) => {
+    return apiRequest<DatabasePort>(`/api/databases/${databaseId}/ports/${portId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ parameters }),
+    });
+  };
+}
+
+export function useRemoveDatabasePort() {
+  return async (databaseId: string, portId: string) => {
+    return apiRequest<void>(`/api/databases/${databaseId}/ports/${portId}`, { method: 'DELETE' });
+  };
 }

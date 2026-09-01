@@ -189,7 +189,6 @@ export class DatabaseService {
 
     return count;
   }
-}
 
   // ============ Database Ports Management ============
 
