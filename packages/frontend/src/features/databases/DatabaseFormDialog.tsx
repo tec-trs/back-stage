@@ -98,9 +98,9 @@ function formFromDatabase(db: Database): FormState {
     name: db.name,
     displayName: db.displayName ?? '',
     description: db.description ?? '',
-    physicalName: (db as any).physicalName ?? '',
-    logicalName: (db as any).logicalName ?? '',
-    path: (db as any).path ?? '',
+    physicalName: db.physicalName ?? '',
+    logicalName: db.logicalName ?? '',
+    path: db.path ?? '',
     engine: db.engine,
     version: db.version ?? '',
     port: db.port?.toString() ?? '',
@@ -157,6 +157,7 @@ export function DatabaseFormDialog({
     
     if (database) {
       setForm(formFromDatabase(database));
+      setTags(database.tags ?? []);
       // Buscar portas existentes
       (async () => {
         try {
@@ -170,6 +171,7 @@ export function DatabaseFormDialog({
       const filledForm = formFromDatabase(prefill);
       filledForm.name = '';
       setForm(filledForm);
+      setTags(prefill.tags ?? []);
       // Buscar portas do banco que está sendo duplicado
       (async () => {
         try {
@@ -183,6 +185,7 @@ export function DatabaseFormDialog({
     } else {
       setForm(emptyForm());
       setPorts([]);
+      setTags([]);
     }
     
     setActiveTab('identification');

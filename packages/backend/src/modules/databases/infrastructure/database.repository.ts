@@ -25,6 +25,9 @@ export interface CreateDatabaseInput {
   name: string;
   displayName?: string | null;
   description?: string | null;
+  physicalName?: string | null;
+  logicalName?: string | null;
+  path?: string | null;
   engine: string;
   version?: string | null;
   port?: number | null;
@@ -191,6 +194,9 @@ export class DatabaseRepository implements IDatabaseRepository {
         name: input.name,
         display_name: input.displayName,
         description: input.description,
+        physical_name: input.physicalName,
+        logical_name: input.logicalName,
+        path: input.path,
         engine: input.engine,
         version: input.version,
         port: input.port,
@@ -232,6 +238,9 @@ export class DatabaseRepository implements IDatabaseRepository {
     if (input.engine !== undefined) updateData.engine = input.engine;
     if (input.displayName !== undefined) updateData.display_name = input.displayName;
     if (input.description !== undefined) updateData.description = input.description;
+    if (input.physicalName !== undefined) updateData.physical_name = input.physicalName;
+    if (input.logicalName !== undefined) updateData.logical_name = input.logicalName;
+    if (input.path !== undefined) updateData.path = input.path;
     if (input.version !== undefined) updateData.version = input.version;
     if (input.port !== undefined) updateData.port = input.port;
     if (input.connectionHost !== undefined) updateData.connection_host = input.connectionHost;
