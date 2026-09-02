@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Background,
@@ -6,6 +6,7 @@ import {
   Controls,
   MarkerType,
   ReactFlow,
+  useNodesState,
   type Edge as RFEdge,
   type Node as RFNode,
 } from '@xyflow/react';
@@ -122,13 +123,49 @@ function EditMapDialog({
   );
 }
 
-function MapGraph({ nodes, edges }: { nodes: RFNode[]; edges: RFEdge[] }) {
+type SavedPositions = Record<string, { x: number; y: number }>;
+
+function loadSavedPositions(key: string): SavedPositions {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as SavedPositions) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveNodePositions(key: string, nodes: RFNode[]): void {
+  try {
+    const positions = loadSavedPositions(key);
+    for (const n of nodes) positions[n.id] = n.position;
+    localStorage.setItem(key, JSON.stringify(positions));
+  } catch {
+    // ignore storage quota errors
+  }
+}
+
+function MapGraph({ mapId, nodes, edges }: { mapId: string; nodes: RFNode[]; edges: RFEdge[] }) {
+  const storageKey = `relationship-map-positions-${mapId}`;
+  // ReactFlow needs its own node state to drag freely — fed once from the
+  // dagre layout (with any manually-saved positions applied on top), not on
+  // every render, or a drag would get snapped straight back by the next
+  // recompute of `nodes` from the parent's useMemo.
+  const [rfNodes, setRfNodes, onNodesChange] = useNodesState<RFNode>([]);
+
+  useEffect(() => {
+    const saved = loadSavedPositions(storageKey);
+    setRfNodes(nodes.map((n) => (saved[n.id] ? { ...n, position: saved[n.id] } : n)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, storageKey]);
+
   return (
     <div className="h-[70vh] rounded border border-line bg-canvas">
       <ReactFlow
-        nodes={nodes}
+        nodes={rfNodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
+        onNodeDragStop={(_event, _node, draggedNodes) => saveNodePositions(storageKey, draggedNodes)}
         defaultEdgeOptions={{
           type: 'smoothstep',
           style: { stroke: '#475569', strokeWidth: 1.25 },
@@ -354,7 +391,7 @@ export function RelationshipMapDetailPage() {
       />
 
       <Modal title={`${map.name} — visão gráfica`} isOpen={isGraphOpen} onClose={() => setIsGraphOpen(false)} size="lg">
-        <MapGraph nodes={rfNodes} edges={rfEdges} />
+        <MapGraph mapId={map.id} nodes={rfNodes} edges={rfEdges} />
       </Modal>
 
       {attachRelationship.isError && (

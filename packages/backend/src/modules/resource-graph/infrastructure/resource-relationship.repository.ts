@@ -673,6 +673,45 @@ export class ResourceRelationshipRepository {
       };
     } catch (error: unknown) {
       if (error instanceof Error && (error.message.includes('violates unique constraint') || error.message.includes('viola a restrição de unicidade'))) {
+        // The exact same edge (source, target, relation type) already exists —
+        // most callers (a relationship map's "Adicionar Relacionamento", the
+        // Ecosystem graph) just want to end up with that edge in hand, not a
+        // dead-end error, so treat this as idempotent and hand back the
+        // existing row instead of failing the whole flow.
+        const existing = (await this.db(TABLE_NAME)
+          .where({
+            organization_id: orgId,
+            source_type: sourceType,
+            source_id: sourceId,
+            target_type: targetType,
+            target_id: targetId,
+            relation_type: relationType,
+          })
+          .first()) as
+          | {
+              id: string;
+              metadata: Record<string, unknown>;
+              reason: string | null;
+              created_by_user_id: string | null;
+              created_at: string;
+            }
+          | undefined;
+
+        if (existing) {
+          return {
+            id: existing.id,
+            sourceType,
+            sourceId,
+            targetType,
+            targetId,
+            relationType: relationType as any,
+            metadata: existing.metadata,
+            reason: existing.reason,
+            createdByUserId: existing.created_by_user_id,
+            createdAt: existing.created_at,
+          };
+        }
+
         throw new ConflictError('Este relacionamento já existe');
       }
       throw error;

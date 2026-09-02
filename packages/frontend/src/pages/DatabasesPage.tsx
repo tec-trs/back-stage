@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { DatabaseFormDialog } from '../features/databases/DatabaseFormDialog';
@@ -11,7 +11,7 @@ import { Button } from '../shared/components/Button';
 import { ConfirmDialog } from '../shared/components/ConfirmDialog';
 import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
-import { CopyIcon, PencilIcon, PlusIcon, TrashIcon, UploadIcon } from '../shared/components/icons';
+import { ChevronDownIcon, CopyIcon, PencilIcon, PlusIcon, TrashIcon, UploadIcon } from '../shared/components/icons';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Spinner } from '../shared/components/Spinner';
 import { CRITICALITY_LABELS } from '../shared/constants/labels';
@@ -25,6 +25,54 @@ const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'default'> 
   deprecated: 'warning',
 };
 
+type SortColumn = 'name' | 'engine' | 'server' | 'environment' | 'criticality' | 'status';
+type SortDirection = 'asc' | 'desc';
+
+// Sorting "media" before "critica" alphabetically would be backwards for a
+// risk column — rank by actual severity instead.
+const CRITICALITY_RANK: Record<string, number> = { low: 0, medium: 1, high: 2, critical: 3 };
+
+const COLUMN_ACCESSORS: Record<SortColumn, (db: Database) => string | number> = {
+  name: (db) => (db.displayName ?? db.name).toLowerCase(),
+  engine: (db) => db.engine.toLowerCase(),
+  server: (db) => (db.hostedOnServerHostname ?? '').toLowerCase(),
+  environment: (db) => db.environment.toLowerCase(),
+  criticality: (db) => CRITICALITY_RANK[db.criticality] ?? -1,
+  status: (db) => db.status.toLowerCase(),
+};
+
+function SortableHeader({
+  label,
+  column,
+  sortColumn,
+  sortDirection,
+  onSort,
+}: {
+  label: string;
+  column: SortColumn;
+  sortColumn: SortColumn;
+  sortDirection: SortDirection;
+  onSort: (column: SortColumn) => void;
+}) {
+  const isActive = sortColumn === column;
+  return (
+    <th className="px-4 py-3 text-left font-medium text-slate-400">
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        className={`flex items-center gap-1 hover:text-slate-200 ${isActive ? 'text-slate-200' : ''}`}
+      >
+        {label}
+        <ChevronDownIcon
+          className={`transition-transform ${isActive ? 'opacity-100' : 'opacity-0'} ${
+            isActive && sortDirection === 'asc' ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+    </th>
+  );
+}
+
 export function DatabasesPage() {
   const { data, isLoading, isError, error } = useDatabases({ page: 1, pageSize: 100 });
   const bulkDelete = useBulkDeleteDatabases();
@@ -35,11 +83,34 @@ export function DatabasesPage() {
   const [editing, setEditing] = useState<Database | null>(null);
   const [duplicating, setDuplicating] = useState<Database | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [sortColumn, setSortColumn] = useState<SortColumn>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const items = data?.items ?? [];
   const selectedItems = items.filter((d) => selectedIds.has(d.id));
   const singleSelected = selectedItems.length === 1 ? selectedItems[0] : null;
   const allVisible = items.length > 0 && items.every((d) => selectedIds.has(d.id));
+
+  const sortedItems = useMemo(() => {
+    const accessor = COLUMN_ACCESSORS[sortColumn];
+    const direction = sortDirection === 'asc' ? 1 : -1;
+    return [...items].sort((a, b) => {
+      const valueA = accessor(a);
+      const valueB = accessor(b);
+      if (valueA < valueB) return -1 * direction;
+      if (valueA > valueB) return 1 * direction;
+      return 0;
+    });
+  }, [items, sortColumn, sortDirection]);
+
+  function handleSort(column: SortColumn): void {
+    if (column === sortColumn) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  }
 
   function toggleAll(): void {
     if (allVisible) {
@@ -225,16 +296,16 @@ export function DatabasesPage() {
                     aria-label="Selecionar todos"
                   />
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-slate-400">Nome</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-400">Engine</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-400">Servidor</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-400">Ambiente</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-400">Criticidade</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-400">Status</th>
+                <SortableHeader label="Nome" column="name" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                <SortableHeader label="Engine" column="engine" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                <SortableHeader label="Servidor" column="server" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                <SortableHeader label="Ambiente" column="environment" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                <SortableHeader label="Criticidade" column="criticality" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                <SortableHeader label="Status" column="status" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
               </tr>
             </thead>
             <tbody>
-              {items.map((db) => {
+              {sortedItems.map((db) => {
                 const isSelected = selectedIds.has(db.id);
                 return (
                   <tr
