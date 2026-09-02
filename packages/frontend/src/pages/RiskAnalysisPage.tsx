@@ -11,7 +11,7 @@ const CRITICALITY_COLORS: Record<string, { bg: string; text: string }> = {
   critical: { bg: 'bg-red-900/40', text: 'text-red-400' },
   high: { bg: 'bg-orange-900/40', text: 'text-orange-400' },
   medium: { bg: 'bg-amber-900/40', text: 'text-amber-400' },
-  low: { bg: 'bg-slate-800', text: 'text-slate-400' },
+  low: { bg: 'bg-surface-raised', text: 'text-slate-400' },
 };
 
 export function RiskAnalysisPage() {
@@ -44,16 +44,16 @@ export function RiskAnalysisPage() {
           <Spinner />
         </div>
       ) : !critical || critical.length === 0 ? (
-        <div className="rounded-lg border border-slate-800 p-8 text-center">
+        <div className="rounded border border-line p-8 text-center">
           <p className="text-slate-400">Nenhum recurso crítico encontrado</p>
           <p className="mt-2 text-sm text-slate-500">
             Todos os recursos têm zero dependentes
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-800">
+        <div className="overflow-x-auto rounded border border-line">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900 text-slate-400">
+            <thead className="bg-surface text-slate-400">
               <tr>
                 <th className="px-4 py-3 font-medium w-12">#</th>
                 <th className="px-4 py-3 font-medium">Recurso</th>
@@ -73,7 +73,7 @@ export function RiskAnalysisPage() {
                 return (
                   <tr
                     key={`${resource.resourceType}:${resource.resourceId}`}
-                    className="border-t border-slate-800 hover:bg-slate-800/30"
+                    className="border-t border-line hover:bg-surface-raised/30"
                   >
                     <td className="px-4 py-3 text-slate-500 font-mono">
                       {String(index + 1).padStart(2, '0')}
@@ -89,7 +89,7 @@ export function RiskAnalysisPage() {
                               `/${resource.resourceType === 'url' ? 'urls' : resource.resourceType + 's'}/${resource.resourceId}`,
                             )
                           }
-                          className="text-sky-400 hover:underline font-medium"
+                          className="text-signal hover:underline font-medium"
                         >
                           {resource.label}
                         </button>
@@ -147,7 +147,7 @@ export function RiskAnalysisPage() {
         </div>
       )}
 
-      <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-4">
+      <div className="rounded border border-line bg-surface/40 p-4">
         <h3 className="font-semibold text-slate-200">ℹ️ Sobre esta análise</h3>
         <p className="mt-2 text-sm text-slate-400">
           Cada recurso é ranqueado por "impacto total": quantos outros recursos seriam

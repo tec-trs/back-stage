@@ -88,6 +88,7 @@ export class DatabaseController {
       userAgent: request.header('user-agent'),
     });
     response.status(200).json({ deleted: count });
+  };
 
   public getPortsByDatabaseId = async (request: Request, response: Response): Promise<void> => {
     const ports = await this.databaseService.getPortsByDatabaseId(request.params.id);

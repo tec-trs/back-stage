@@ -17,7 +17,7 @@ interface EnvironmentOption {
 }
 
 const inputClass =
-  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
+  'rounded border border-line bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 
 export function DeploymentEditModal({
   deployment,
@@ -124,7 +124,7 @@ export function DeploymentEditModal({
           />
         </label>
 
-        <div className="flex justify-end gap-3 border-t border-slate-800 pt-3">
+        <div className="flex justify-end gap-3 border-t border-line pt-3">
           <Button type="button" variant="secondary" onClick={onCancel}>
             Cancelar
           </Button>

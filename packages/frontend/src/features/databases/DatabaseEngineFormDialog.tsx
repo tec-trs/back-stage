@@ -8,7 +8,7 @@ import type { DatabaseEngine } from './use-database-engines';
 import { useCreateDatabaseEngine, useUpdateDatabaseEngine } from './use-database-engines';
 
 const inputClass =
-  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
+  'rounded border border-line bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 
 interface FormState {
   slug: string;
@@ -144,7 +144,7 @@ export function DatabaseEngineFormDialog({
               id="isActive"
               checked={form.isActive}
               onChange={(e) => setField('isActive', e.target.checked)}
-              className="h-4 w-4 accent-sky-500"
+              className="h-4 w-4 accent-signal"
             />
             <label htmlFor="isActive" className="text-sm text-slate-400 cursor-pointer">
               Ativo
@@ -162,7 +162,7 @@ export function DatabaseEngineFormDialog({
           />
         )}
 
-        <div className="flex justify-end gap-3 border-t border-slate-800 pt-4">
+        <div className="flex justify-end gap-3 border-t border-line pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>

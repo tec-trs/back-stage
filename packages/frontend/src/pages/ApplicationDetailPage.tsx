@@ -80,7 +80,7 @@ export function ApplicationDetailPage() {
 
           <section>
             <h2 className="mb-2 text-lg font-medium text-slate-200">Identificacao</h2>
-            <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
+            <dl className="grid grid-cols-2 gap-3 rounded border border-line p-4 text-sm">
               <Field label="Codigo" value={data.code} />
               <Field label="Tipo" value={translateAppType(data.appType)} />
               <Field label="Categoria de negocio" value={data.businessCategory} />
@@ -93,9 +93,9 @@ export function ApplicationDetailPage() {
           {data.deployments.length > 0 && (
             <section>
               <h2 className="mb-2 text-lg font-medium text-slate-200">Implantacoes</h2>
-              <div className="overflow-hidden rounded-lg border border-slate-800">
+              <div className="overflow-hidden rounded border border-line">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-900 text-slate-400">
+                  <thead className="bg-surface text-slate-400">
                     <tr>
                       <th className="px-4 py-2 font-medium">Servidor</th>
                       <th className="px-4 py-2 font-medium">Ambiente</th>
@@ -104,12 +104,12 @@ export function ApplicationDetailPage() {
                   </thead>
                   <tbody>
                     {data.deployments.map((deployment) => (
-                      <tr key={deployment.id} className="border-t border-slate-800">
+                      <tr key={deployment.id} className="border-t border-line">
                         <td className="px-4 py-2 text-slate-100">
                           {deployment.serverHostname ? (
                             <Link
                               to={`/servers/${deployment.serverId}`}
-                              className="text-sky-400 hover:underline"
+                              className="text-signal hover:underline"
                             >
                               {deployment.serverHostname}
                             </Link>
@@ -135,7 +135,7 @@ export function ApplicationDetailPage() {
             <section>
               <h2 className="mb-2 text-lg font-medium text-slate-200">Dependencias (app)</h2>
               <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-lg border border-slate-800 p-4">
+                <div className="rounded border border-line p-4">
                   <p className="mb-2 text-sm text-slate-400">Depende de</p>
                   {data.dependsOn.length === 0 && <p className="text-sm text-slate-600">-</p>}
                   <ul className="flex flex-col gap-1">
@@ -143,7 +143,7 @@ export function ApplicationDetailPage() {
                       <li key={dep.id}>
                         <Link
                           to={`/applications/${dep.id}`}
-                          className="text-sky-400 hover:underline"
+                          className="text-signal hover:underline"
                         >
                           {dep.displayName}
                         </Link>
@@ -151,7 +151,7 @@ export function ApplicationDetailPage() {
                     ))}
                   </ul>
                 </div>
-                <div className="rounded-lg border border-slate-800 p-4">
+                <div className="rounded border border-line p-4">
                   <p className="mb-2 text-sm text-slate-400">Dependentes</p>
                   {data.dependents.length === 0 && <p className="text-sm text-slate-600">-</p>}
                   <ul className="flex flex-col gap-1">
@@ -159,7 +159,7 @@ export function ApplicationDetailPage() {
                       <li key={dep.id}>
                         <Link
                           to={`/applications/${dep.id}`}
-                          className="text-sky-400 hover:underline"
+                          className="text-signal hover:underline"
                         >
                           {dep.displayName}
                         </Link>
@@ -178,7 +178,7 @@ export function ApplicationDetailPage() {
                 <Spinner />
               </div>
             ) : subgraph && subgraph.nodes.length > 0 ? (
-              <div className="h-96 overflow-hidden rounded-lg border border-slate-800">
+              <div className="h-96 overflow-hidden rounded border border-line">
                 <ResourceGraph
                   nodes={subgraph.nodes}
                   edges={subgraph.edges}
@@ -194,7 +194,7 @@ export function ApplicationDetailPage() {
                 />
               </div>
             ) : (
-              <p className="rounded-lg border border-slate-800 p-6 text-center text-sm text-slate-500">
+              <p className="rounded border border-line p-6 text-center text-sm text-slate-500">
                 Nenhuma dependencia mapeada. Use o botao "+ Relacionamento" para comecar.
               </p>
             )}
@@ -220,7 +220,7 @@ export function ApplicationDetailPage() {
 
           <section>
             <h2 className="mb-2 text-lg font-medium text-slate-200">Governanca</h2>
-            <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
+            <dl className="grid grid-cols-2 gap-3 rounded border border-line p-4 text-sm">
               <Field label="Time responsavel" value={data.ownerTeam} />
               <Field label="Centro de custo" value={data.costCenter} />
               <Field label="SLA" value={data.sla} />

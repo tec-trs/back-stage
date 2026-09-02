@@ -174,7 +174,7 @@ export function ResourceSelector({
         type="button"
         disabled={disabled || isLoading}
         onClick={() => setIsOpen((open) => !open)}
-        className="w-full rounded-md border border-slate-700 bg-canvas px-3 py-2 text-left text-slate-100 outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-between"
+        className="w-full rounded border border-line bg-canvas px-3 py-2 text-left text-slate-100 outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-between"
       >
         <span className="truncate">{isLoading ? 'Carregando...' : selectedLabel || placeholder}</span>
         <span className="text-slate-500">▼</span>
@@ -193,16 +193,16 @@ export function ResourceSelector({
               top: panelPosition.top,
               bottom: panelPosition.bottom,
             }}
-            className="z-[60] rounded-md border border-slate-700 bg-canvas shadow-2xl ring-1 ring-white/10"
+            className="z-[60] rounded border border-line bg-canvas shadow-2xl ring-1 ring-white/10"
           >
-            <div className="p-2 border-b border-slate-800">
+            <div className="p-2 border-b border-line">
               <input
                 type="text"
                 placeholder={placeholder}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 autoFocus
-                className="w-full rounded px-2 py-1 border border-slate-700 bg-slate-900 text-sm text-slate-100 outline-none focus:border-slate-500"
+                className="w-full rounded px-2 py-1 border border-line bg-surface text-sm text-slate-100 outline-none focus:border-slate-500"
               />
             </div>
 
@@ -221,8 +221,8 @@ export function ResourceSelector({
                     key={option.id}
                     type="button"
                     onClick={() => handleSelect(option.id)}
-                    className={`w-full px-3 py-2 text-left text-sm text-slate-100 hover:bg-slate-800 ${
-                      value === option.id ? 'bg-slate-800 border-l-2 border-sky-400' : ''
+                    className={`w-full px-3 py-2 text-left text-sm text-slate-100 hover:bg-surface-raised ${
+                      value === option.id ? 'bg-surface-raised border-l-2 border-signal' : ''
                     }`}
                   >
                     {option.label}

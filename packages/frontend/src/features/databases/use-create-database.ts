@@ -6,8 +6,12 @@ import type { Database } from './use-databases';
 
 export interface CreateDatabaseInput {
   name: string;
+  code?: string;
   displayName?: string | null;
   description?: string | null;
+  physicalName?: string | null;
+  logicalName?: string | null;
+  path?: string | null;
   engine: string;
   version?: string | null;
   port?: number | null;

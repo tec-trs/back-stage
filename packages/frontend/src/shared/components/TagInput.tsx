@@ -35,11 +35,11 @@ export function TagInput({
   }
 
   return (
-    <div className="flex flex-wrap gap-1.5 rounded-md border border-slate-700 bg-canvas px-2 py-1.5 focus-within:border-slate-500">
+    <div className="flex flex-wrap gap-1.5 rounded border border-line bg-canvas px-2 py-1.5 focus-within:border-slate-500">
       {tags.map((tag) => (
         <span
           key={tag}
-          className="flex items-center gap-1 rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-300"
+          className="flex items-center gap-1 rounded-sm bg-surface-raised px-2 py-0.5 font-mono text-xs text-slate-300"
         >
           {tag}
           <button

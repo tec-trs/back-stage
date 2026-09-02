@@ -107,7 +107,7 @@ export function EnvironmentFormDialog({ isOpen, onClose, environment }: Environm
   }
 
   const inputClass =
-    'w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 focus:border-slate-500 focus:outline-none disabled:opacity-50';
+    'w-full rounded border border-line bg-surface-raised px-3 py-2 text-sm text-slate-200 focus:border-slate-500 focus:outline-none disabled:opacity-50';
 
   return (
     <Modal
@@ -190,7 +190,7 @@ export function EnvironmentFormDialog({ isOpen, onClose, environment }: Environm
                 type="checkbox"
                 checked={form.isActive}
                 onChange={(e) => setField('isActive', e.target.checked)}
-                className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500"
+                className="h-4 w-4 rounded border-slate-600 bg-surface-raised text-blue-500"
               />
               Ambiente ativo
             </label>

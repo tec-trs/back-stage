@@ -100,11 +100,11 @@ export function DatabaseGroupsPage() {
         error={bulkDelete.isError ? (bulkDelete.error?.message ?? 'Erro ao eliminar agrupador') : null}
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded border border-line bg-surface/40 p-2">
         <Button size="sm" icon={<PlusIcon />} onClick={openCreateDialog} title="Incluir um novo agrupador">
           Incluir Agrupador
         </Button>
-        <div className="mx-1 h-6 w-px bg-slate-800" />
+        <div className="mx-1 h-6 w-px bg-surface-raised" />
         <Button
           size="sm"
           variant="secondary"
@@ -146,16 +146,16 @@ export function DatabaseGroupsPage() {
       )}
 
       {data && items.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-slate-800">
+        <div className="overflow-hidden rounded border border-line">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900 text-slate-400">
+            <thead className="bg-surface text-slate-400">
               <tr>
                 <th className="w-10 px-4 py-2">
                   <input
                     type="checkbox"
                     checked={allVisible}
                     onChange={toggleAll}
-                    className="h-4 w-4 accent-sky-500"
+                    className="h-4 w-4 accent-signal"
                     aria-label="Selecionar todos"
                   />
                 </th>
@@ -171,8 +171,8 @@ export function DatabaseGroupsPage() {
                 <tr
                   key={group.id}
                   onClick={() => toggleOne(group.id)}
-                  className={`cursor-pointer border-t border-slate-800 ${
-                    selectedIds.has(group.id) ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
+                  className={`cursor-pointer border-t border-line ${
+                    selectedIds.has(group.id) ? 'bg-signal/10' : 'hover:bg-surface/50'
                   }`}
                 >
                   <td className="px-4 py-2">
@@ -182,7 +182,7 @@ export function DatabaseGroupsPage() {
                       onChange={() => toggleOne(group.id)}
                       onClick={(e) => e.stopPropagation()}
                       aria-label={`Selecionar ${group.name}`}
-                      className="h-4 w-4 accent-sky-500"
+                      className="h-4 w-4 accent-signal"
                     />
                   </td>
                   <td className="px-4 py-2">

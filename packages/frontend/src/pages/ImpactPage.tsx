@@ -34,7 +34,7 @@ export function ImpactPage() {
         <p>Tipo de recurso invalido.</p>
         <button
           onClick={() => navigate('/inventory')}
-          className="text-sm text-sky-400 hover:underline"
+          className="text-sm text-signal hover:underline"
         >
           Ir para Inventario
         </button>

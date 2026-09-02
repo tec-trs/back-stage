@@ -16,7 +16,7 @@ function StatCard({ label, value, tone }: StatCardProps) {
   const toneClass =
     tone === 'danger' ? 'text-red-400' : tone === 'warning' ? 'text-amber-400' : 'text-slate-100';
   return (
-    <div className="rounded-lg border border-slate-800 p-4">
+    <div className="rounded border border-line p-4">
       <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
       <p className={`mt-1 text-2xl font-semibold ${toneClass}`}>{value}</p>
     </div>
@@ -73,7 +73,7 @@ export function GovernancePage() {
           {violations.data.items.map((violation) => (
             <li
               key={violation.id}
-              className="flex items-center justify-between rounded-lg border border-slate-800 p-3 text-sm"
+              className="flex items-center justify-between rounded border border-line p-3 text-sm"
             >
               <div>
                 <p className="text-slate-100">{violation.policyName}</p>

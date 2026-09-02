@@ -51,7 +51,7 @@ const TABS: TabItem[] = [
 ];
 
 const inputClass =
-  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
+  'rounded border border-line bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 
 interface FormState {
   hostname: string;
@@ -470,7 +470,7 @@ export function ServerFormDialog({
                 </label>
               </div>
 
-              <div className="flex min-w-0 flex-col gap-2 rounded-md border border-slate-800 p-3">
+              <div className="flex min-w-0 flex-col gap-2 rounded border border-line p-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm text-slate-400">Discos</span>
                   <Button type="button" variant="secondary" size="sm" onClick={addDisk}>
@@ -618,7 +618,7 @@ export function ServerFormDialog({
           {activeTab === 'services' && (
             <fieldset className="flex flex-col gap-3">
               {form.osName.toLowerCase().includes('windows') && (
-                <div className="rounded-md border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-400">
+                <div className="rounded border border-line bg-surface/60 p-4 text-sm text-slate-400">
                   <span className="font-medium text-slate-300">Sistema Windows detectado.</span>{' '}
                   Os servicos sao gerenciados pelo painel de controle do Windows:{' '}
                   <span className="font-mono text-slate-300">services.msc</span>
@@ -637,7 +637,7 @@ export function ServerFormDialog({
                   {services.map((svc, index) => (
                     <div
                       key={svc.seq}
-                      className="flex items-center gap-3 rounded-md border border-slate-800 px-3 py-2"
+                      className="flex items-center gap-3 rounded border border-line px-3 py-2"
                     >
                       <span className="font-mono text-xs text-slate-500 shrink-0">
                         #{String(svc.seq).padStart(3, '0')}
@@ -652,7 +652,7 @@ export function ServerFormDialog({
                         className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                           svc.status === 'active'
                             ? 'bg-green-900/50 text-green-400'
-                            : 'bg-slate-800 text-slate-400'
+                            : 'bg-surface-raised text-slate-400'
                         }`}
                       >
                         {svc.status === 'active' ? 'Ativo' : 'Inativo'}
@@ -712,7 +712,7 @@ export function ServerFormDialog({
                   {teams.map((team) => {
                     const checked = form.ownerTeamSlugs.includes(team.slug);
                     return (
-                      <label key={team.slug} className="flex cursor-pointer items-center gap-3 rounded-md border border-slate-800 px-3 py-2 hover:bg-slate-900/60">
+                      <label key={team.slug} className="flex cursor-pointer items-center gap-3 rounded border border-line px-3 py-2 hover:bg-surface/60">
                         <input
                           type="checkbox"
                           checked={checked}
@@ -724,7 +724,7 @@ export function ServerFormDialog({
                                 : [...form.ownerTeamSlugs, team.slug],
                             );
                           }}
-                          className="h-4 w-4 accent-sky-500"
+                          className="h-4 w-4 accent-signal"
                         />
                         <span className="text-sm text-slate-200">{team.name}</span>
                         {team.description && (
@@ -747,7 +747,7 @@ export function ServerFormDialog({
           />
         )}
 
-        <div className="flex justify-end gap-3 border-t border-slate-800 pt-4">
+        <div className="flex justify-end gap-3 border-t border-line pt-4">
           <Button type="button" variant="secondary" onClick={handleClose}>
             Cancelar
           </Button>

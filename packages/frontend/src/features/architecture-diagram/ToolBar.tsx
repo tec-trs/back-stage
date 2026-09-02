@@ -30,7 +30,7 @@ export function ToolBar({ onAddNode, onClear, onExport, onImport }: ToolBarProps
 
   return (
     <>
-      <div className="flex gap-2 p-4 bg-slate-900 border-b border-slate-700 flex-wrap">
+      <div className="flex gap-2 p-4 bg-surface border-b border-line flex-wrap">
         <Button size="sm" onClick={() => setIsOpen(true)}>
           + Adicionar Nó
         </Button>
@@ -60,7 +60,7 @@ export function ToolBar({ onAddNode, onClear, onExport, onImport }: ToolBarProps
                   onClick={() => setSelectedType(type)}
                   className={`px-3 py-2 rounded text-sm transition ${
                     selectedType === type
-                      ? 'bg-sky-600 text-white'
+                      ? 'bg-signal text-[#1a1204]'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
                 >
@@ -77,7 +77,7 @@ export function ToolBar({ onAddNode, onClear, onExport, onImport }: ToolBarProps
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="Ex: PostgreSQL Users"
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+              className="w-full px-3 py-2 bg-surface-raised border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-signal"
             />
           </div>
 
@@ -88,7 +88,7 @@ export function ToolBar({ onAddNode, onClear, onExport, onImport }: ToolBarProps
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Ex: Banco de usuários"
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+              className="w-full px-3 py-2 bg-surface-raised border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-signal"
             />
           </div>
 

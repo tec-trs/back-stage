@@ -35,14 +35,14 @@ export function OrgPickerDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="w-full max-w-sm rounded-lg border border-slate-800 bg-canvas p-6 shadow-xl">
-        <h2 className="mb-1 text-lg font-semibold text-slate-100">Selecione a organizacao</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85">
+      <div className="w-full max-w-sm rounded border border-line bg-surface p-6 shadow-2xl shadow-black/60">
+        <h2 className="mb-1 font-mono text-base font-bold text-slate-100">Trocar organizacao</h2>
         <p className="mb-4 text-sm text-slate-400">
-          Sua conta pertence a mais de uma organizacao. Escolha com qual deseja continuar.
+          Sua conta tem acesso a mais de uma organizacao. A troca e imediata — sem novo login.
         </p>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           {organizations.map((org) => {
             const isCurrent = org.id === currentOrgId;
             return (
@@ -52,19 +52,19 @@ export function OrgPickerDialog({
                 disabled={isPending || isCurrent}
                 onClick={() => handleSelect(org.id)}
                 className={[
-                  'flex items-center justify-between rounded-md border px-4 py-3 text-left text-sm transition-colors',
+                  'flex items-center justify-between rounded border border-l-2 px-4 py-3 text-left text-sm transition-colors',
                   isCurrent
-                    ? 'border-slate-600 bg-slate-800 text-slate-300 cursor-default'
-                    : 'border-slate-700 text-slate-100 hover:border-slate-500 hover:bg-slate-900',
+                    ? 'border-line border-l-signal bg-surface-raised text-slate-300 cursor-default'
+                    : 'border-line border-l-slate-600 text-slate-100 hover:border-slate-600 hover:bg-surface-raised',
                   isPending && !isCurrent ? 'opacity-50 cursor-not-allowed' : '',
                 ].join(' ')}
               >
                 <span>
                   <span className="block font-medium">{org.name}</span>
-                  <span className="text-xs text-slate-500">{org.slug}</span>
+                  <span className="font-mono text-xs text-slate-500">{org.slug}</span>
                 </span>
                 {isCurrent && (
-                  <span className="rounded bg-slate-700 px-2 py-0.5 text-xs text-slate-400">
+                  <span className="font-mono text-[11px] uppercase tracking-wide text-signal">
                     Atual
                   </span>
                 )}

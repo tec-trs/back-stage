@@ -22,7 +22,7 @@ import type { Url } from './use-urls';
 import { useUpdateUrl } from './use-update-url';
 
 const inputClass =
-  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
+  'rounded border border-line bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 
 const URL_TYPES = ['api', 'frontend', 'monitoring', 'docs', 'webhook', 'cdn', 'download', 'api_external', 'internal'];
 const HTTP_METHODS: UrlHttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
@@ -418,14 +418,14 @@ export function UrlFormDialog({
               </select>
             </label>
 
-            <div className="flex flex-col gap-3 rounded-md border border-slate-800 p-3">
+            <div className="flex flex-col gap-3 rounded border border-line p-3">
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   id="authRequired"
                   checked={form.authRequired}
                   onChange={(e) => setField('authRequired', e.target.checked)}
-                  className="h-4 w-4 accent-sky-500"
+                  className="h-4 w-4 accent-signal"
                 />
                 <label htmlFor="authRequired" className="cursor-pointer text-sm text-slate-300">
                   Requer autenticacao
@@ -444,13 +444,13 @@ export function UrlFormDialog({
               )}
             </div>
 
-            <div className="flex items-center gap-2 rounded-md border border-slate-800 p-3">
+            <div className="flex items-center gap-2 rounded border border-line p-3">
               <input
                 type="checkbox"
                 id="healthcheckEnabled"
                 checked={form.healthcheckEnabled}
                 onChange={(e) => setField('healthcheckEnabled', e.target.checked)}
-                className="h-4 w-4 accent-sky-500"
+                className="h-4 w-4 accent-signal"
               />
               <label htmlFor="healthcheckEnabled" className="cursor-pointer text-sm text-slate-300">
                 Habilitar healthcheck automatico
@@ -473,11 +473,11 @@ export function UrlFormDialog({
               {(serversData?.items ?? []).length === 0 ? (
                 <p className="text-xs text-slate-600">Nenhum servidor cadastrado.</p>
               ) : (
-                <div className="flex max-h-48 flex-col gap-0.5 overflow-y-auto rounded-md border border-slate-800 p-2">
+                <div className="flex max-h-48 flex-col gap-0.5 overflow-y-auto rounded border border-line p-2">
                   {(serversData?.items ?? []).map((server) => (
                     <label
                       key={server.id}
-                      className="flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 hover:bg-slate-900/60"
+                      className="flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 hover:bg-surface/60"
                     >
                       <input
                         type="checkbox"
@@ -503,17 +503,17 @@ export function UrlFormDialog({
               {allApplications.length === 0 ? (
                 <p className="text-xs text-slate-600">Nenhuma aplicacao cadastrada.</p>
               ) : (
-                <div className="flex max-h-48 flex-col gap-0.5 overflow-y-auto rounded-md border border-slate-800 p-2">
+                <div className="flex max-h-48 flex-col gap-0.5 overflow-y-auto rounded border border-line p-2">
                   {allApplications.map((app) => (
                     <label
                       key={app.id}
-                      className="flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 hover:bg-slate-900/60"
+                      className="flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 hover:bg-surface/60"
                     >
                       <input
                         type="checkbox"
                         checked={dependsOnAppIds.includes(app.id)}
                         onChange={() => toggleDependency(app.id)}
-                        className="h-4 w-4 accent-sky-500"
+                        className="h-4 w-4 accent-signal"
                       />
                       <span className="text-sm text-slate-200">{app.label}</span>
                     </label>
@@ -533,11 +533,11 @@ export function UrlFormDialog({
               {allUrls.length === 0 ? (
                 <p className="text-xs text-slate-600">Nenhuma outra URL cadastrada.</p>
               ) : (
-                <div className="flex max-h-48 flex-col gap-0.5 overflow-y-auto rounded-md border border-slate-800 p-2">
+                <div className="flex max-h-48 flex-col gap-0.5 overflow-y-auto rounded border border-line p-2">
                   {allUrls.map((u) => (
                     <label
                       key={u.id}
-                      className="flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 hover:bg-slate-900/60"
+                      className="flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 hover:bg-surface/60"
                     >
                       <input
                         type="checkbox"
@@ -565,7 +565,7 @@ export function UrlFormDialog({
           />
         )}
 
-        <div className="flex justify-end gap-3 border-t border-slate-800 pt-4">
+        <div className="flex justify-end gap-3 border-t border-line pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>

@@ -98,7 +98,7 @@ export function ToolBarWithData({
 
   return (
     <>
-      <div className="flex gap-2 p-4 bg-slate-900 border-b border-slate-700 flex-wrap">
+      <div className="flex gap-2 p-4 bg-surface border-b border-line flex-wrap">
         <Button size="sm" onClick={() => setIsOpen(true)}>
           + Adicionar Nó
         </Button>
@@ -143,7 +143,7 @@ export function ToolBarWithData({
                   }}
                   className={`px-3 py-2 rounded text-sm transition ${
                     selectedType === type
-                      ? 'bg-sky-600 text-white'
+                      ? 'bg-signal text-[#1a1204]'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
                 >
@@ -164,11 +164,11 @@ export function ToolBarWithData({
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder={`Pesquise por ${RESOURCE_LABELS[selectedType].toLowerCase()}...`}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                  className="w-full px-3 py-2 bg-surface-raised border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-signal"
                 />
               </div>
 
-              <div className="bg-slate-800 p-2 rounded text-xs text-slate-400 mb-2">
+              <div className="bg-surface-raised p-2 rounded text-xs text-slate-400 mb-2">
                 📊 Total disponível: {selectedType === 'url' ? urls.length : selectedType === 'application' ? apps.length : selectedType === 'service' ? services.length : selectedType === 'database' ? databases.length : selectedType === 'server' ? servers.length : 0}
               </div>
 
@@ -182,7 +182,7 @@ export function ToolBarWithData({
                     <button
                       key={resource.id}
                       onClick={() => handleSelectResource(resource)}
-                      className="w-full text-left px-3 py-2 rounded bg-slate-800 text-slate-100 hover:bg-slate-700 transition flex flex-col"
+                      className="w-full text-left px-3 py-2 rounded bg-surface-raised text-slate-100 hover:bg-slate-700 transition flex flex-col"
                     >
                       <span className="font-semibold">{resource.label || resource.name}</span>
                       {(resource.url || resource.hostname || resource.description) && (
@@ -204,7 +204,7 @@ export function ToolBarWithData({
             </>
           )}
 
-          <div className="flex gap-2 justify-end pt-4 border-t border-slate-700">
+          <div className="flex gap-2 justify-end pt-4 border-t border-line">
             <Button variant="secondary" size="sm" onClick={() => setIsOpen(false)}>
               Cancelar
             </Button>

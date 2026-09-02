@@ -11,7 +11,7 @@ import { Spinner } from '../shared/components/Spinner';
 import { useCreateRelationshipMap, useRelationshipMaps } from '../features/relationship-maps/use-relationship-maps';
 
 const inputClass =
-  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
+  'rounded border border-line bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 
 function CreateMapDialog({ isOpen, onClose }: { isOpen: boolean; onClose: (createdId?: string) => void }) {
   const [name, setName] = useState('');
@@ -77,7 +77,7 @@ function CreateMapDialog({ isOpen, onClose }: { isOpen: boolean; onClose: (creat
           />
         )}
 
-        <div className="flex justify-end gap-3 border-t border-slate-800 pt-4">
+        <div className="flex justify-end gap-3 border-t border-line pt-4">
           <Button type="button" variant="secondary" onClick={handleClose}>
             Cancelar
           </Button>
@@ -127,9 +127,9 @@ export function RelationshipMapsPage() {
       )}
 
       {data && data.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-slate-800">
+        <div className="overflow-hidden rounded border border-line">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900 text-slate-400">
+            <thead className="bg-surface text-slate-400">
               <tr>
                 <th className="px-4 py-2 font-medium">Nome</th>
                 <th className="px-4 py-2 font-medium">Descrição</th>
@@ -139,7 +139,7 @@ export function RelationshipMapsPage() {
             </thead>
             <tbody>
               {data.map((map) => (
-                <tr key={map.id} className="border-t border-slate-800 hover:bg-slate-900/50">
+                <tr key={map.id} className="border-t border-line hover:bg-surface/50">
                   <td className="px-4 py-2">
                     <Link to={`/relationship-maps/${map.id}`} className="font-medium text-slate-100 hover:underline">
                       {map.name}

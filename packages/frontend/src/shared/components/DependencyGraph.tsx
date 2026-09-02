@@ -234,7 +234,7 @@ export function DependencyGraph({
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       role="img"
       aria-label={ariaLabel}
-      className="h-[520px] w-full rounded-lg border border-slate-800 bg-canvas"
+      className="h-[520px] w-full rounded border border-line bg-canvas"
     />
   );
 }

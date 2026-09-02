@@ -212,7 +212,7 @@ function DeletableEdge({
               </button>
             ) : (
               <span
-                className="rounded border border-slate-800 bg-slate-900/80 px-1 py-0.5 text-[9px] text-slate-600"
+                className="rounded border border-line bg-surface/80 px-1 py-0.5 text-[9px] text-slate-600"
                 title={d.isImplicit ? `Relação implícita (ID: ${id}) — não pode ser deletada. Deletar a origem/destino.` : d.edgeLabel}
               >
                 {d.edgeLabel}
@@ -251,6 +251,7 @@ const TYPE_ICON: Record<string, IconComponent> = {
 
 function ResourceNode({ data, selected, id }: NodeProps) {
   const d = data as NodeData;
+  const label = d.label ?? 'Sem nome';
   const updateNodeInternals = useUpdateNodeInternals();
   useEffect(() => { updateNodeInternals(id); }, [id, updateNodeInternals, d.editMode, d.compactMode]);
 
@@ -287,12 +288,12 @@ function ResourceNode({ data, selected, id }: NodeProps) {
         cursor:       d.editMode ? 'default' : 'pointer',
         position:     'relative',
       }}
-      className="rounded-lg border shadow-lg"
+      className="rounded border shadow-lg"
     >
       {isOffline && (
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 rounded-lg animate-radar-ping"
+          className="pointer-events-none absolute inset-0 -z-10 rounded animate-radar-ping"
           style={{ border: `2px solid ${IMPACT_STYLE.source.border}` }}
         />
       )}
@@ -321,9 +322,9 @@ function ResourceNode({ data, selected, id }: NodeProps) {
           <p
             className="font-mono text-[9px] font-bold uppercase tracking-wider text-center"
             style={{ color: palette.text, maxWidth: NODE_W - 12 }}
-            title={d.label}
+            title={label}
           >
-            {d.label.length > 12 ? d.label.substring(0, 10) + '…' : d.label}
+            {label.length > 12 ? label.substring(0, 10) + '…' : label}
           </p>
         </div>
       ) : (
@@ -357,7 +358,7 @@ function ResourceNode({ data, selected, id }: NodeProps) {
             className="text-sm font-semibold leading-snug"
             style={{ color: palette.text, maxWidth: NODE_W - 28 }}
           >
-            {d.label}
+            {label}
           </p>
 
           {d.resourceType === 'db-group' && d.dbLabels && (
@@ -406,6 +407,7 @@ function ResourceNode({ data, selected, id }: NodeProps) {
 
 function ServerContainerNode({ data }: NodeProps) {
   const d = data as NodeData;
+  const label = d.label ?? 'Sem nome';
   const palette = TYPE_STYLE.server;
   const appPalette = TYPE_STYLE.application;
 
@@ -455,7 +457,7 @@ function ServerContainerNode({ data }: NodeProps) {
           </span>
         </div>
         <p style={{ fontSize: 13, fontWeight: 600, color: palette.text, marginTop: 2, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {d.label}
+          {label}
         </p>
         {d.status && (
           <p style={{ fontSize: 10, color: '#64748b', marginTop: 1, textTransform: 'capitalize' }}>
@@ -518,6 +520,7 @@ function ServerContainerNode({ data }: NodeProps) {
 
 function ServerGroupNode({ data }: NodeProps) {
   const d = data as NodeData;
+  const label = d.label ?? 'Sem nome';
   return (
     <div
       style={{
@@ -545,7 +548,7 @@ function ServerGroupNode({ data }: NodeProps) {
           whiteSpace:    'nowrap',
         }}
       >
-        {d.label}
+        {label}
       </span>
     </div>
   );

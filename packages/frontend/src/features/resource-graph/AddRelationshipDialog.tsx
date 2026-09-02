@@ -11,7 +11,7 @@ import type { CreateRelationshipInput, GraphEdge } from './use-resource-graph';
 import { useCreateRelationship } from './use-resource-graph';
 
 const inputClass =
-  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
+  'rounded border border-line bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 
 // Re-exported for callers that only need the resource-type union (e.g. ResourceSelector).
 // The actual list of types/relation types now lives in ./relationship-types so the
@@ -188,7 +188,7 @@ export function AddRelationshipDialog({
         </p>
 
         {/* Origem */}
-        <fieldset className="flex flex-col gap-3 rounded-md border border-slate-800 p-3">
+        <fieldset className="flex flex-col gap-3 rounded border border-line p-3">
           <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
             Recurso Origem
           </legend>
@@ -246,7 +246,7 @@ export function AddRelationshipDialog({
                   setUseSourceGroup(e.target.checked);
                   setField('sourceId', '');
                 }}
-                className="h-3.5 w-3.5 accent-sky-500"
+                className="h-3.5 w-3.5 accent-signal"
               />
               Usar um Agrupador de Bancos inteiro em vez de escolher banco por banco
             </label>
@@ -289,7 +289,7 @@ export function AddRelationshipDialog({
         </div>
 
         {/* Destino */}
-        <fieldset className="flex flex-col gap-3 rounded-md border border-slate-800 p-3">
+        <fieldset className="flex flex-col gap-3 rounded border border-line p-3">
           <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
             Recurso Destino
           </legend>
@@ -342,7 +342,7 @@ export function AddRelationshipDialog({
                   setUseTargetGroup(e.target.checked);
                   setField('targetId', '');
                 }}
-                className="h-3.5 w-3.5 accent-sky-500"
+                className="h-3.5 w-3.5 accent-signal"
               />
               Usar um Agrupador de Bancos inteiro em vez de escolher banco por banco
             </label>
@@ -360,7 +360,7 @@ export function AddRelationshipDialog({
           />
         )}
 
-        <div className="flex justify-end gap-3 border-t border-slate-800 pt-4">
+        <div className="flex justify-end gap-3 border-t border-line pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>

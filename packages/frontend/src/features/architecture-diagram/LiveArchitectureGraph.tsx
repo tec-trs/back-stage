@@ -229,9 +229,9 @@ export function LiveArchitectureGraph() {
           proOptions={{ hideAttribution: true }}
         >
           <Background color="#1e293b" variant={BackgroundVariant.Dots} gap={20} size={1.5} />
-          <Controls className="!rounded-md !border !border-line !bg-surface !shadow-lg [&>button]:!border-line [&>button]:!bg-surface [&>button]:!text-slate-300 [&>button:hover]:!bg-surface-raised [&_svg]:!fill-slate-300" />
+          <Controls className="!rounded !border !border-line !bg-surface !shadow-lg [&>button]:!border-line [&>button]:!bg-surface [&>button]:!text-slate-300 [&>button:hover]:!bg-surface-raised [&_svg]:!fill-slate-300" />
           <MiniMap
-            className="!rounded-md !border !border-line !bg-surface"
+            className="!rounded !border !border-line !bg-surface"
             maskColor="rgba(11,15,25,0.65)"
             nodeColor={(n) => RESOURCE_COLORS[(n.data as { resourceType?: ResourceType })?.resourceType ?? 'service']}
             nodeBorderRadius={4}

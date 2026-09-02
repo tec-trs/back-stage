@@ -64,7 +64,7 @@ export function SaveDiagramDialog({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ex: Arquitetura Produção"
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+            className="w-full px-3 py-2 bg-surface-raised border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-signal"
           />
         </div>
 
@@ -77,16 +77,16 @@ export function SaveDiagramDialog({
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Ex: Diagrama da arquitetura de produção com todos os serviços..."
             rows={3}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+            className="w-full px-3 py-2 bg-surface-raised border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-signal"
           />
         </div>
 
-        <div className="bg-slate-800/50 p-3 rounded text-sm text-slate-400">
+        <div className="bg-surface-raised/50 p-3 rounded text-sm text-slate-400">
           <div>📊 Nós: {nodes.length}</div>
           <div>🔗 Conexões: {edges.length}</div>
         </div>
 
-        <div className="flex gap-2 justify-end pt-4 border-t border-slate-700">
+        <div className="flex gap-2 justify-end pt-4 border-t border-line">
           <Button variant="secondary" size="sm" onClick={onClose} disabled={isLoading}>
             Cancelar
           </Button>

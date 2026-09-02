@@ -8,7 +8,7 @@ export interface NotFoundErrorProps {
 
 export function NotFoundError({ resourceType, backLink, backLabel }: NotFoundErrorProps) {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-red-900/30 bg-red-950/20 p-8 text-center">
+    <div className="flex flex-col items-center justify-center gap-4 rounded border border-red-900/30 bg-red-950/20 p-8 text-center">
       <div className="text-4xl">⚠️</div>
       <div>
         <h2 className="text-lg font-semibold text-red-400">{resourceType} não encontrado</h2>
@@ -18,7 +18,7 @@ export function NotFoundError({ resourceType, backLink, backLabel }: NotFoundErr
       </div>
       <Link
         to={backLink}
-        className="mt-4 inline-block rounded-md bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+        className="mt-4 inline-block rounded bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
       >
         ← {backLabel}
       </Link>

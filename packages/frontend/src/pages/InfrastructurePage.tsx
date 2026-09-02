@@ -31,7 +31,7 @@ export function InfrastructurePage() {
       {data && data.items.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.items.map((resource) => (
-            <div key={resource.id} className="rounded-lg border border-slate-800 p-4">
+            <div key={resource.id} className="rounded border border-line p-4">
               <div className="flex items-center justify-between">
                 <p className="font-medium text-slate-100">{resource.title ?? resource.name}</p>
                 <Badge>{resource.type}</Badge>

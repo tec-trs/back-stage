@@ -69,18 +69,18 @@ export function AuditTimeline({
       )}
 
       {!isLoading && !isError && entries.length === 0 && (
-        <p className="rounded-lg border border-slate-800 p-4 text-center text-sm text-slate-500">
+        <p className="rounded border border-line p-4 text-center text-sm text-slate-500">
           Nenhuma mudanca registrada para este recurso.
         </p>
       )}
 
       {!isLoading && !isError && entries.length > 0 && (
-        <div className="relative flex flex-col gap-0 rounded-lg border border-slate-800 overflow-hidden">
+        <div className="relative flex flex-col gap-0 rounded border border-line overflow-hidden">
           {entries.map((entry, idx) => (
             <div
               key={entry.id}
               className={`flex items-start gap-4 px-4 py-3 text-sm ${
-                idx < entries.length - 1 ? 'border-b border-slate-800/60' : ''
+                idx < entries.length - 1 ? 'border-b border-line/60' : ''
               }`}
             >
               <div className="mt-0.5 flex-none">

@@ -46,7 +46,7 @@ export function LoadDiagramDialog({ isOpen, onClose, onLoad }: LoadDiagramDialog
             {diagrams.map((diagram) => (
               <div
                 key={diagram.id}
-                className="flex gap-2 items-stretch px-4 py-3 rounded bg-slate-800 hover:bg-slate-700 transition group"
+                className="flex gap-2 items-stretch px-4 py-3 rounded bg-surface-raised hover:bg-slate-700 transition group"
               >
                 <button
                   onClick={() => onLoad(diagram)}
@@ -73,7 +73,7 @@ export function LoadDiagramDialog({ isOpen, onClose, onLoad }: LoadDiagramDialog
           </div>
         )}
 
-        <div className="flex gap-2 justify-end pt-4 border-t border-slate-700">
+        <div className="flex gap-2 justify-end pt-4 border-t border-line">
           <Button variant="secondary" size="sm" onClick={onClose}>
             Fechar
           </Button>

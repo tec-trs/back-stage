@@ -18,7 +18,7 @@ import { useUpdateDatabase } from './use-update-database';
 import { apiRequest } from '../../shared/api/http-client';
 
 const inputClass =
-  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
+  'rounded border border-line bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 const CRITICALITIES = Object.keys(CRITICALITY_LABELS) as Array<keyof typeof CRITICALITY_LABELS>;
 const DB_STATUSES: Array<{ value: string; label: string }> = [
   { value: 'active',        label: 'Ativo' },
@@ -170,7 +170,16 @@ export function DatabaseFormDialog({
       const filledForm = formFromDatabase(prefill);
       filledForm.name = '';
       setForm(filledForm);
-      setPorts([]);
+      // Buscar portas do banco que está sendo duplicado
+      (async () => {
+        try {
+          const response = await apiRequest<PortItem[]>(`/api/databases/${prefill.id}/ports`);
+          setPorts(response.map((p) => ({ ...p, isNew: true, id: undefined })));
+        } catch {
+          console.error('Erro ao buscar portas');
+          setPorts([]);
+        }
+      })();
     } else {
       setForm(emptyForm());
       setPorts([]);
@@ -403,14 +412,14 @@ export function DatabaseFormDialog({
               <div className="text-sm text-slate-400">Configurar portas e parametros</div>
               
               {ports.length > 0 && (
-                <div className="rounded-md border border-slate-700 overflow-hidden">
-                  <div className="bg-slate-800/50 px-4 py-2 grid grid-cols-3 gap-4 text-sm font-medium text-slate-400">
+                <div className="rounded border border-line overflow-hidden">
+                  <div className="bg-surface-raised/50 px-4 py-2 grid grid-cols-3 gap-4 text-sm font-medium text-slate-400">
                     <div>Porta</div>
                     <div>Parametros</div>
                     <div className="text-right">Acao</div>
                   </div>
                   {ports.map((p) => (
-                    <div key={p.id} className="px-4 py-2 border-t border-slate-700 grid grid-cols-3 gap-4 items-center">
+                    <div key={p.id} className="px-4 py-2 border-t border-line grid grid-cols-3 gap-4 items-center">
                       <div className="text-slate-200 font-mono">{p.port}</div>
                       <div className="text-slate-300 text-sm truncate">{p.parameters || '—'}</div>
                       <div className="text-right">
@@ -427,7 +436,7 @@ export function DatabaseFormDialog({
                 </div>
               )}
 
-              <div className="rounded-md border border-slate-700 bg-slate-900/30 p-4 flex flex-col gap-3">
+              <div className="rounded border border-line bg-surface/30 p-4 flex flex-col gap-3">
                 <div className="text-sm font-medium text-slate-300">Adicionar Nova Porta</div>
                 <div className="grid grid-cols-3 gap-3">
                   <label className="flex flex-col gap-1 text-sm">
@@ -455,7 +464,7 @@ export function DatabaseFormDialog({
                 <button
                   type="button"
                   onClick={addPort}
-                  className="rounded-md bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-500"
+                  className="rounded bg-signal px-3 py-2 text-sm font-medium text-[#1a1204] hover:bg-[#e8a552]"
                 >
                   + Adicionar Porta
                 </button>
@@ -497,7 +506,7 @@ export function DatabaseFormDialog({
                   id="isManagedService"
                   checked={form.isManagedService}
                   onChange={(e) => setField('isManagedService', e.target.checked)}
-                  className="h-4 w-4 accent-sky-500"
+                  className="h-4 w-4 accent-signal"
                 />
                 <label htmlFor="isManagedService" className="text-sm text-slate-400 cursor-pointer">
                   Servico gerenciado (RDS, Cloud SQL, etc.)
@@ -526,7 +535,7 @@ export function DatabaseFormDialog({
                   id="hasBackup"
                   checked={form.hasBackup}
                   onChange={(e) => setField('hasBackup', e.target.checked)}
-                  className="h-4 w-4 accent-sky-500"
+                  className="h-4 w-4 accent-signal"
                 />
                 <label htmlFor="hasBackup" className="text-sm text-slate-400 cursor-pointer">
                   Possui backup configurado
@@ -544,7 +553,7 @@ export function DatabaseFormDialog({
                 </label>
               )}
               {!form.hasBackup && (
-                <p className="text-sm text-slate-500 rounded-md border border-amber-900/40 bg-amber-950/20 px-4 py-3">
+                <p className="text-sm text-slate-500 rounded border border-amber-900/40 bg-amber-950/20 px-4 py-3">
                   Este banco nao possui backup configurado. Considere habilitar para ambientes de producao.
                 </p>
               )}
@@ -558,14 +567,14 @@ export function DatabaseFormDialog({
                 {teams.length === 0 ? (
                   <p className="text-sm text-slate-500">Nenhum time cadastrado.</p>
                 ) : (
-                  <div className="flex flex-col gap-1 rounded-md border border-slate-700 bg-canvas p-3 max-h-48 overflow-y-auto">
+                  <div className="flex flex-col gap-1 rounded border border-line bg-canvas p-3 max-h-48 overflow-y-auto">
                     {teams.map((team) => (
                       <label key={team.slug} className="flex items-center gap-2 cursor-pointer py-1 hover:text-slate-100">
                         <input
                           type="checkbox"
                           checked={form.ownerTeamSlugs.includes(team.slug)}
                           onChange={() => setField('ownerTeamSlugs', toggleSlug(form.ownerTeamSlugs, team.slug))}
-                          className="h-4 w-4 accent-sky-500"
+                          className="h-4 w-4 accent-signal"
                         />
                         <span className="text-sm text-slate-300">{team.name}</span>
                         {team.description && (
@@ -600,7 +609,7 @@ export function DatabaseFormDialog({
           />
         )}
 
-        <div className="flex justify-end gap-3 border-t border-slate-800 pt-4">
+        <div className="flex justify-end gap-3 border-t border-line pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>

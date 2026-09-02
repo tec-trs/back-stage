@@ -38,7 +38,7 @@ interface ToolBarSimpleProps {
 }
 
 const SELECT_CLASS =
-  'rounded-md border border-line bg-surface px-3 py-2 text-sm text-slate-100 cursor-pointer ' +
+  'rounded border border-line bg-surface px-3 py-2 text-sm text-slate-100 cursor-pointer ' +
   'focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-signal/50';
 
 export function ToolBarSimple({
@@ -175,9 +175,9 @@ export function ToolBarSimple({
           </button>
 
           {isResourceDropdownOpen && (
-            <div className="absolute top-full left-0 z-50 mt-1 max-h-48 w-52 overflow-y-auto rounded-md border border-line bg-surface-raised shadow-xl">
+            <div className="absolute top-full left-0 z-50 mt-1 max-h-48 w-52 overflow-y-auto rounded border border-line bg-surface-raised shadow-xl">
               <div
-                className="cursor-pointer px-3 py-2 text-sm text-slate-400 hover:bg-slate-800"
+                className="cursor-pointer px-3 py-2 text-sm text-slate-400 hover:bg-surface-raised"
                 onClick={() => {
                   setSelectedResourceId('');
                   setIsResourceDropdownOpen(false);
@@ -193,7 +193,7 @@ export function ToolBarSimple({
                     className={`cursor-pointer px-3 py-2 text-sm ${
                       selectedResourceId === resource.id
                         ? 'bg-signal/20 text-slate-100'
-                        : 'text-slate-200 hover:bg-slate-800'
+                        : 'text-slate-200 hover:bg-surface-raised'
                     }`}
                     onClick={() => {
                       setSelectedResourceId(resource.id);

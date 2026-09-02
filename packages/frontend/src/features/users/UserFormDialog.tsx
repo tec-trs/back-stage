@@ -162,7 +162,7 @@ export function UserFormDialog({
   const saveError = mutation.error ?? setUserOrgs.error;
 
   const inputClass =
-    'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:text-slate-500 disabled:opacity-70';
+    'rounded border border-line bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:text-slate-500 disabled:opacity-70';
 
   return (
     <Modal
@@ -232,7 +232,7 @@ export function UserFormDialog({
                   type="checkbox"
                   checked={roles.includes(role)}
                   onChange={() => toggleRole(role)}
-                  className="rounded border-slate-700 bg-canvas"
+                  className="rounded border-line bg-canvas"
                 />
                 {translateRole(role)}
               </label>
@@ -246,7 +246,7 @@ export function UserFormDialog({
           <legend className="mb-1 text-slate-400">Organizacoes *</legend>
           {orgsLoading && <Spinner />}
           {!orgsLoading && (
-            <div className="flex flex-col gap-2 rounded-md border border-slate-800 bg-slate-900/40 p-3">
+            <div className="flex flex-col gap-2 rounded border border-line bg-surface/40 p-3">
               {(allOrgs ?? []).map((org) => {
                 const checked = isOrgChecked(org.id);
                 return (
@@ -256,7 +256,7 @@ export function UserFormDialog({
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleOrg(org.id)}
-                        className="rounded border-slate-700 bg-canvas"
+                        className="rounded border-line bg-canvas"
                       />
                       <span className="font-medium">{org.name}</span>
                       <span className="font-mono text-xs text-slate-500">{org.slug}</span>
@@ -265,7 +265,7 @@ export function UserFormDialog({
                       <select
                         value={getOrgRole(org.id)}
                         onChange={(e) => setOrgRole(org.id, e.target.value)}
-                        className="rounded border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-200 outline-none focus:border-slate-500"
+                        className="rounded border border-line bg-surface-raised px-2 py-1 text-xs text-slate-200 outline-none focus:border-slate-500"
                       >
                         {ORG_ROLE_OPTIONS.map((opt) => (
                           <option key={opt.value} value={opt.value}>

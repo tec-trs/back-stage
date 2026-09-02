@@ -11,7 +11,7 @@ export function SettingsPage() {
       <PageHeader title="Configuracoes" description="Informacoes da conta autenticada" />
 
       {user && (
-        <dl className="grid max-w-lg grid-cols-2 gap-4 rounded-lg border border-slate-800 p-4 text-sm">
+        <dl className="grid max-w-lg grid-cols-2 gap-4 rounded border border-line p-4 text-sm">
           <dt className="text-slate-500">Nome</dt>
           <dd>{user.fullName}</dd>
           <dt className="text-slate-500">Codigo de usuario</dt>

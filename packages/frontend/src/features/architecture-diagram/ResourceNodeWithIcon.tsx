@@ -35,7 +35,7 @@ export function ResourceNodeWithIcon(props: NodeProps) {
       <Handle type="target" position={Position.Left} className={HANDLE_CLASS} />
 
       <div
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border transition-shadow [&_svg]:h-5 [&_svg]:w-5 ${
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded border transition-shadow [&_svg]:h-5 [&_svg]:w-5 ${
           props.selected ? 'ring-2 ring-signal ring-offset-2 ring-offset-canvas' : ''
         }`}
         style={{ backgroundColor: `${color}1a`, borderColor: `${color}66`, color }}
@@ -54,7 +54,7 @@ export function ResourceNodeWithIcon(props: NodeProps) {
 
       {services.length > 0 && (
         <div
-          className="w-full rounded-md border border-dashed px-1.5 py-1.5"
+          className="w-full rounded border border-dashed px-1.5 py-1.5"
           style={{ borderColor: `${color}55`, backgroundColor: `${color}0d` }}
         >
           <div className="flex flex-col gap-1">

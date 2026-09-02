@@ -19,17 +19,17 @@ interface StatCardProps {
 function StatCard({ label, value, tone, href }: StatCardProps) {
   const toneClass =
     tone === 'danger'
-      ? 'text-red-400'
+      ? 'text-impact-source'
       : tone === 'warning'
-        ? 'text-amber-400'
+        ? 'text-signal'
         : tone === 'success'
           ? 'text-emerald-400'
           : 'text-slate-100';
 
   const content = (
-    <div className="rounded-lg border border-slate-800 p-4 transition-colors hover:border-slate-700">
-      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold ${toneClass}`}>{value}</p>
+    <div className="rounded border border-line bg-surface/50 p-4 transition-colors hover:border-slate-600 hover:bg-surface">
+      <p className="font-mono text-[11px] uppercase tracking-wide text-slate-500">{label}</p>
+      <p className={`mt-1.5 font-mono text-2xl font-bold ${toneClass}`}>{value}</p>
     </div>
   );
 
@@ -37,6 +37,15 @@ function StatCard({ label, value, tone, href }: StatCardProps) {
     return <Link to={href}>{content}</Link>;
   }
   return content;
+}
+
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <h2 className="mb-3 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-slate-500">
+      <span className="text-signal">▸</span>
+      {children}
+    </h2>
+  );
 }
 
 export function DashboardPage() {
@@ -70,9 +79,7 @@ export function DashboardPage() {
 
       {/* CMDB Inventory */}
       <section className="mb-6">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">
-          Inventario
-        </h2>
+        <SectionLabel>Inventario</SectionLabel>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <StatCard
             label="Servidores"
@@ -99,9 +106,7 @@ export function DashboardPage() {
 
       {/* Health Highlights */}
       <section className="mb-6">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">
-          Saude
-        </h2>
+        <SectionLabel>Saude</SectionLabel>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <StatCard
             label="Servidores ativos"
@@ -135,9 +140,7 @@ export function DashboardPage() {
 
       {/* Quick links */}
       <section className="mb-6">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">
-          Acesso rapido
-        </h2>
+        <SectionLabel>Acesso rapido</SectionLabel>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {[
             { label: 'Inventario CMDB', href: '/inventory', desc: 'Todos os recursos em uma tela' },
@@ -150,7 +153,7 @@ export function DashboardPage() {
             <Link
               key={link.href}
               to={link.href}
-              className="rounded-lg border border-slate-800 p-4 transition-colors hover:border-slate-600"
+              className="rounded border border-line p-4 transition-colors hover:border-slate-600 hover:bg-surface/50"
             >
               <p className="font-medium text-slate-200">{link.label}</p>
               <p className="mt-0.5 text-xs text-slate-500">{link.desc}</p>
@@ -160,7 +163,7 @@ export function DashboardPage() {
       </section>
 
       {health.data && (
-        <div className="rounded-lg border border-slate-800 p-4 text-sm text-slate-400">
+        <div className="rounded border border-line p-4 font-mono text-xs text-slate-500">
           <p>Uptime do backend: {health.data.uptimeSeconds.toFixed(0)}s</p>
           <p>Versao: {health.data.version}</p>
         </div>

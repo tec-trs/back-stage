@@ -14,7 +14,7 @@ import {
 } from './use-team-members';
 
 const inputClass =
-  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
+  'rounded border border-line bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 
 export function TeamMembersDialog({
   isOpen,
@@ -73,7 +73,7 @@ export function TeamMembersDialog({
     >
       <div className="flex flex-col gap-5">
         {/* Adicionar membro */}
-        <div className="rounded-md border border-slate-700 bg-slate-900/40 p-4">
+        <div className="rounded border border-line bg-surface/40 p-4">
           <p className="mb-3 text-sm font-medium text-slate-300">Adicionar membro</p>
           <div className="flex items-end gap-2">
             <label className="flex flex-1 flex-col gap-1 text-xs">
@@ -139,10 +139,10 @@ export function TeamMembersDialog({
               Nenhum membro adicionado ainda.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-md border border-slate-800">
+            <div className="overflow-x-auto rounded border border-line">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-800 bg-slate-900/60">
+                  <tr className="border-b border-line bg-surface/60">
                     <th className="px-4 py-2 text-left font-medium text-slate-400">Nome</th>
                     <th className="px-4 py-2 text-left font-medium text-slate-400">Codigo</th>
                     <th className="px-4 py-2 text-left font-medium text-slate-400">Email</th>
@@ -154,7 +154,7 @@ export function TeamMembersDialog({
                   {members.map((member) => (
                     <tr
                       key={member.userId}
-                      className="border-b border-slate-800/50 last:border-0"
+                      className="border-b border-line/50 last:border-0"
                     >
                       <td className="px-4 py-2 text-slate-100">{member.fullName}</td>
                       <td className="px-4 py-2 font-mono text-xs text-slate-400">{member.code}</td>
@@ -164,7 +164,7 @@ export function TeamMembersDialog({
                           value={member.role}
                           onChange={(e) => handleRoleChange(member, e.target.value as TeamRole)}
                           disabled={anyPending}
-                          className="rounded border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-200 outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded border border-line bg-surface-raised px-2 py-1 text-xs text-slate-200 outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <option value="member">Membro</option>
                           <option value="owner">Responsavel</option>
@@ -200,7 +200,7 @@ export function TeamMembersDialog({
           )}
         </div>
 
-        <div className="flex justify-end border-t border-slate-800 pt-3">
+        <div className="flex justify-end border-t border-line pt-3">
           <Button variant="secondary" onClick={onClose}>
             Fechar
           </Button>

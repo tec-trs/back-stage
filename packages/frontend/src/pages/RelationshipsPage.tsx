@@ -111,7 +111,7 @@ export function RelationshipsPage() {
       <AddRelationshipDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} />
 
       {/* Filtros */}
-      <div className="flex flex-col gap-3 rounded-lg border border-slate-800 bg-slate-900/30 p-4 sm:flex-row sm:items-end">
+      <div className="flex flex-col gap-3 rounded border border-line bg-surface/30 p-4 sm:flex-row sm:items-end">
         <div className="flex-1">
           <label className="text-xs font-medium text-slate-400">Buscar por nome</label>
           <input
@@ -119,7 +119,7 @@ export function RelationshipsPage() {
             placeholder="Procurar origem ou destino..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-slate-600 focus:outline-none"
+            className="mt-1 w-full rounded border border-line bg-surface-raised px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-slate-600 focus:outline-none"
           />
         </div>
         <div className="flex-1">
@@ -127,7 +127,7 @@ export function RelationshipsPage() {
           <select
             value={relTypeFilter}
             onChange={(e) => setRelTypeFilter(e.target.value)}
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-slate-600 focus:outline-none"
+            className="mt-1 w-full rounded border border-line bg-surface-raised px-3 py-2 text-sm text-slate-100 focus:border-slate-600 focus:outline-none"
           >
             <option value="">Todos os tipos</option>
             {Object.entries(RELATION_TYPE_LABELS).map(([value, { label }]) => (
@@ -145,13 +145,13 @@ export function RelationshipsPage() {
           <Spinner />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-lg border border-slate-800 p-8 text-center">
+        <div className="rounded border border-line p-8 text-center">
           <p className="text-slate-400">Nenhum relacionamento encontrado</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-800">
+        <div className="overflow-x-auto rounded border border-line">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900 text-slate-400">
+            <thead className="bg-surface text-slate-400">
               <tr>
                 <th className="px-4 py-3 font-medium">Origem</th>
                 <th className="w-12 px-4 py-3 text-center">→</th>
@@ -173,7 +173,7 @@ export function RelationshipsPage() {
                 const relLabel = RELATION_TYPE_LABELS[rel.relationType]?.label ?? rel.relationType;
 
                 return (
-                  <tr key={rel.id} className="border-t border-slate-800 hover:bg-slate-800/30">
+                  <tr key={rel.id} className="border-t border-line hover:bg-surface-raised/30">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Badge tone="default" className="text-xs capitalize">
@@ -185,7 +185,7 @@ export function RelationshipsPage() {
                               `/${rel.sourceType === 'url' ? 'urls' : rel.sourceType + 's'}/${rel.sourceId}`,
                             )
                           }
-                          className="text-sky-400 hover:underline truncate"
+                          className="text-signal hover:underline truncate"
                           title={srcDisplay.title}
                         >
                           {srcDisplay.name}
@@ -204,7 +204,7 @@ export function RelationshipsPage() {
                               `/${rel.targetType === 'url' ? 'urls' : rel.targetType + 's'}/${rel.targetId}`,
                             )
                           }
-                          className="text-sky-400 hover:underline truncate"
+                          className="text-signal hover:underline truncate"
                           title={tgtDisplay.title}
                         >
                           {tgtDisplay.name}

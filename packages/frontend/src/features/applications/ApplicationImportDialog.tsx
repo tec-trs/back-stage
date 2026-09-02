@@ -267,10 +267,10 @@ export function ApplicationImportDialog({ isOpen, onClose }: ApplicationImportDi
           <div
             role="button"
             tabIndex={0}
-            className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 transition-colors ${
+            className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded border-2 border-dashed p-8 transition-colors ${
               isDragOver
                 ? 'border-blue-500 bg-blue-950/20'
-                : 'border-slate-700 hover:border-slate-500 hover:bg-slate-800/30'
+                : 'border-line hover:border-slate-500 hover:bg-surface-raised/30'
             }`}
             onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
             onDragLeave={() => setIsDragOver(false)}
@@ -293,11 +293,11 @@ export function ApplicationImportDialog({ isOpen, onClose }: ApplicationImportDi
               onChange={(e) => setCsvText(e.target.value)}
               rows={6}
               placeholder={'code,displayName,appType,...\ncrm,CRM Comercial,web_app,...'}
-              className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-xs text-slate-200 placeholder-slate-600 focus:border-slate-500 focus:outline-none"
+              className="w-full rounded border border-line bg-surface-raised px-3 py-2 font-mono text-xs text-slate-200 placeholder-slate-600 focus:border-slate-500 focus:outline-none"
             />
           </div>
 
-          <div className="rounded-md border border-slate-800 bg-slate-800/40 px-3 py-3 text-xs text-slate-400">
+          <div className="rounded border border-line bg-surface-raised/40 px-3 py-3 text-xs text-slate-400">
             <p className="mb-1 font-semibold text-slate-300">Colunas obrigatorias:</p>
             <p className="font-mono">code, displayName, appType</p>
             <div className="mt-2 space-y-0.5">
@@ -337,10 +337,10 @@ export function ApplicationImportDialog({ isOpen, onClose }: ApplicationImportDi
                 <span className="text-green-400">{validCount} valido(s)</span>
                 {errorCount > 0 && <span className="text-red-400">{errorCount} com erro(s)</span>}
               </div>
-              <div className="max-h-72 overflow-y-auto rounded-md border border-slate-800">
+              <div className="max-h-72 overflow-y-auto rounded border border-line">
                 <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-slate-900">
-                    <tr className="border-b border-slate-800">
+                  <thead className="sticky top-0 bg-surface">
+                    <tr className="border-b border-line">
                       <th className="px-3 py-2 text-left font-medium text-slate-400">#</th>
                       <th className="px-3 py-2 text-left font-medium text-slate-400">Code</th>
                       <th className="px-3 py-2 text-left font-medium text-slate-400">Nome</th>
@@ -350,7 +350,7 @@ export function ApplicationImportDialog({ isOpen, onClose }: ApplicationImportDi
                   </thead>
                   <tbody>
                     {parsedRows.map((row) => (
-                      <tr key={row.lineNumber} className="border-b border-slate-800/50 last:border-0">
+                      <tr key={row.lineNumber} className="border-b border-line/50 last:border-0">
                         <td className="px-3 py-1.5 text-slate-500">{row.lineNumber}</td>
                         <td className="px-3 py-1.5 font-mono text-slate-200">{row.code || '—'}</td>
                         <td className="px-3 py-1.5 text-slate-300">{row.displayName || '—'}</td>
@@ -384,7 +384,7 @@ export function ApplicationImportDialog({ isOpen, onClose }: ApplicationImportDi
       {step === 'importing' && (
         <div className="space-y-4 py-2">
           <p className="text-sm text-slate-300">Importando {importedCount} de {totalToImport}...</p>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-surface-raised">
             <div
               className="h-full bg-blue-500 transition-all duration-300"
               style={{ width: totalToImport > 0 ? `${(importedCount / totalToImport) * 100}%` : '0%' }}
@@ -401,10 +401,10 @@ export function ApplicationImportDialog({ isOpen, onClose }: ApplicationImportDi
             <span className="text-green-400">{successCount} importado(s) com sucesso</span>
             {failCount > 0 && <span className="text-red-400">{failCount} com erro(s)</span>}
           </div>
-          <div className="max-h-72 overflow-y-auto rounded-md border border-slate-800">
+          <div className="max-h-72 overflow-y-auto rounded border border-line">
             <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-slate-900">
-                <tr className="border-b border-slate-800">
+              <thead className="sticky top-0 bg-surface">
+                <tr className="border-b border-line">
                   <th className="px-3 py-2 text-left font-medium text-slate-400">#</th>
                   <th className="px-3 py-2 text-left font-medium text-slate-400">Code</th>
                   <th className="px-3 py-2 text-left font-medium text-slate-400">Resultado</th>
@@ -412,7 +412,7 @@ export function ApplicationImportDialog({ isOpen, onClose }: ApplicationImportDi
               </thead>
               <tbody>
                 {results.map((r) => (
-                  <tr key={r.lineNumber} className="border-b border-slate-800/50 last:border-0">
+                  <tr key={r.lineNumber} className="border-b border-line/50 last:border-0">
                     <td className="px-3 py-1.5 text-slate-500">{r.lineNumber}</td>
                     <td className="px-3 py-1.5 font-mono text-slate-200">{r.code || '—'}</td>
                     <td className="px-3 py-1.5">

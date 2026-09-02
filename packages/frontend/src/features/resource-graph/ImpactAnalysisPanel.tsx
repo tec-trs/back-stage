@@ -32,7 +32,7 @@ const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'default'> 
 function ImpactSummary({ result }: { result: ImpactResult }) {
   if (result.totalImpacted === 0) {
     return (
-      <div className="rounded-md border border-emerald-900/50 bg-emerald-950/20 p-4 text-center">
+      <div className="rounded border border-emerald-900/50 bg-emerald-950/20 p-4 text-center">
         <p className="text-sm font-medium text-emerald-400">Nenhum recurso afetado</p>
         <p className="mt-1 text-xs text-slate-500">
           Este recurso nao possui dependentes diretos ou indiretos.
@@ -50,7 +50,7 @@ function ImpactSummary({ result }: { result: ImpactResult }) {
           .map(([type, count]) => (
             <div
               key={type}
-              className="flex flex-col items-center rounded-md border border-slate-800 bg-slate-900/40 p-3"
+              className="flex flex-col items-center rounded border border-line bg-surface/40 p-3"
             >
               <span className="text-2xl font-bold text-amber-400">{count}</span>
               <span className="mt-1 text-center text-xs text-slate-400">
@@ -77,9 +77,9 @@ function ImpactSummary({ result }: { result: ImpactResult }) {
                 {nodes.map((node) => (
                   <div
                     key={`${node.resourceType}:${node.resourceId}`}
-                    className="flex items-center gap-3 rounded-md border border-slate-800 bg-slate-900/30 px-3 py-2"
+                    className="flex items-center gap-3 rounded border border-line bg-surface/30 px-3 py-2"
                   >
-                    <span className="shrink-0 rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs capitalize text-slate-400">
+                    <span className="shrink-0 rounded bg-surface-raised px-1.5 py-0.5 font-mono text-xs capitalize text-slate-400">
                       {node.resourceType}
                     </span>
                     <span className="flex-1 truncate text-sm text-slate-100">{node.label}</span>
@@ -141,7 +141,7 @@ export function ImpactAnalysisPanel({
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-slate-800 bg-slate-900/40 p-4">
+    <div className="flex flex-col gap-4 rounded border border-line bg-surface/40 p-4">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-slate-200">Analise de Impacto</h3>

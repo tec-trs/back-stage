@@ -4,10 +4,10 @@ import { RESOURCE_COLORS } from './types';
 
 const shapeClasses: Record<string, string> = {
   url: 'rounded-full',
-  application: 'rounded-lg',
+  application: 'rounded',
   service: 'rounded',
   database: 'rounded-sm',
-  server: 'rounded-md',
+  server: 'rounded',
 };
 
 export function ResourceNode(props: NodeProps) {
@@ -21,7 +21,7 @@ export function ResourceNode(props: NodeProps) {
       className={`
         px-4 py-3 shadow-lg border-2 transition-all
         ${(shapeClasses as any)[resourceType] || 'rounded'}
-        ${props.selected ? 'border-sky-400 shadow-sky-500/50' : 'border-opacity-50'}
+        ${props.selected ? 'border-signal shadow-signal/50' : 'border-opacity-50'}
         opacity-100
       `}
       style={{

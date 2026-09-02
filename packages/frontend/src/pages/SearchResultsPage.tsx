@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { apiRequest } from '../shared/api/http-client';
 import { Badge } from '../shared/components/Badge';
 import { Button } from '../shared/components/Button';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
@@ -48,16 +49,18 @@ export function SearchResultsPage() {
       setIsLoading(true);
       setError(null);
       try {
-        let url = `/api/search/unified-search?q=${encodeURIComponent(query)}&page=${page}&pageSize=${pageSize}`;
-        if (selectedTags.length > 0) {
-          url += `&tags=${selectedTags.join(',')}`;
-        }
-        if (selectedType) {
-          url += `&type=${encodeURIComponent(selectedType)}`;
-        }
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Erro ao buscar');
-        const data = await response.json();
+        const data = await apiRequest<{ items: SearchResult[]; pagination?: { total: number } }>(
+          '/api/unified-search',
+          {
+            query: {
+              q: query,
+              page,
+              pageSize,
+              tags: selectedTags.length > 0 ? selectedTags.join(',') : undefined,
+              type: selectedType ?? undefined,
+            },
+          },
+        );
         setResults(data.items || []);
         setTotal(data.pagination?.total || 0);
       } catch (err) {
@@ -149,7 +152,7 @@ export function SearchResultsPage() {
       {isLoading ? (
         <Spinner />
       ) : results.length === 0 ? (
-        <div className="rounded-lg border border-slate-800 p-8 text-center text-slate-400">
+        <div className="rounded border border-line p-8 text-center text-slate-400">
           Nenhum resultado encontrado
         </div>
       ) : (
@@ -160,7 +163,7 @@ export function SearchResultsPage() {
                 key={`${result.resourceType}-${result.id}`}
                 data-testid="search-result"
                 onClick={() => handleResultClick(result)}
-                className="w-full text-left p-4 rounded-lg border border-slate-800 hover:border-slate-600 hover:bg-slate-900/50 transition-colors"
+                className="w-full text-left p-4 rounded border border-line hover:border-slate-600 hover:bg-surface/50 transition-colors"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">

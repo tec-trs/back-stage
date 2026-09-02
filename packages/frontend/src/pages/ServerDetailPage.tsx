@@ -128,7 +128,7 @@ export function ServerDetailPage() {
 
           <section>
             <h2 className="mb-2 text-lg font-medium text-slate-200">Identificacao</h2>
-            <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
+            <dl className="grid grid-cols-2 gap-3 rounded border border-line p-4 text-sm">
               <Field label="Hostname" value={data.hostname} />
               <Field label="Tipo" value={translateServerType(data.serverType)} />
               <Field label="Provedor" value={translateProvider(data.provider)} />
@@ -138,7 +138,7 @@ export function ServerDetailPage() {
 
           <section>
             <h2 className="mb-2 text-lg font-medium text-slate-200">Hardware</h2>
-            <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
+            <dl className="grid grid-cols-2 gap-3 rounded border border-line p-4 text-sm">
               <Field label="CPU (nucleos)" value={data.cpuCores} />
               <Field label="RAM (GB)" value={data.ramGb} />
               <Field label="Hypervisor" value={data.hypervisor} />
@@ -152,9 +152,9 @@ export function ServerDetailPage() {
           {data.disks.length > 0 && (
             <section>
               <h2 className="mb-2 text-lg font-medium text-slate-200">Discos</h2>
-              <div className="overflow-hidden rounded-lg border border-slate-800">
+              <div className="overflow-hidden rounded border border-line">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-900 text-slate-400">
+                  <thead className="bg-surface text-slate-400">
                     <tr>
                       <th className="px-4 py-2 font-medium">Mount point</th>
                       <th className="px-4 py-2 font-medium">Capacidade</th>
@@ -164,7 +164,7 @@ export function ServerDetailPage() {
                   </thead>
                   <tbody>
                     {data.disks.map((disk) => (
-                      <tr key={disk.id} className="border-t border-slate-800">
+                      <tr key={disk.id} className="border-t border-line">
                         <td className="px-4 py-2 text-slate-100">{disk.mountPoint}</td>
                         <td className="px-4 py-2 text-slate-400">{disk.capacityGb} GB</td>
                         <td className="px-4 py-2 text-slate-400">
@@ -183,7 +183,7 @@ export function ServerDetailPage() {
 
           <section>
             <h2 className="mb-2 text-lg font-medium text-slate-200">Redes</h2>
-            <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
+            <dl className="grid grid-cols-2 gap-3 rounded border border-line p-4 text-sm">
               <Field label="IPs privados" value={data.privateIps.join(', ') || null} />
               <Field label="IP publico" value={data.publicIp} />
               <Field label="Dominio" value={data.domain} />
@@ -210,14 +210,14 @@ export function ServerDetailPage() {
             )}
 
             {data.services.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
+              <p className="rounded border border-dashed border-line p-6 text-center text-sm text-slate-500">
                 Nenhum servico cadastrado. Use &quot;Servico&quot; para registrar o que roda neste servidor (ex:
                 tomcat, nginx).
               </p>
             ) : (
               <div className="flex flex-col gap-2">
                 {data.services.map((svc, index) => (
-                  <div key={svc.seq} className="rounded-lg border border-slate-800 text-sm">
+                  <div key={svc.seq} className="rounded border border-line text-sm">
                     <div className="flex items-center gap-3 px-4 py-3">
                       <span className="font-mono text-xs text-slate-500">
                         #{String(svc.seq).padStart(3, '0')}
@@ -227,7 +227,7 @@ export function ServerDetailPage() {
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                           svc.status === 'active'
                             ? 'bg-green-900/50 text-green-400'
-                            : 'bg-slate-800 text-slate-400'
+                            : 'bg-surface-raised text-slate-400'
                         }`}
                       >
                         {svc.status === 'active' ? 'Ativo' : 'Inativo'}
@@ -249,7 +249,7 @@ export function ServerDetailPage() {
                         <TrashIcon className="h-4 w-4" />
                       </button>
                     </div>
-                    <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 border-t border-slate-800 px-4 py-3">
+                    <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 border-t border-line px-4 py-3">
                       <dt className="text-slate-500">Portas</dt>
                       <dd className="text-slate-300">
                         {svc.ports.length > 0 ? svc.ports.join(', ') : '-'}
@@ -262,7 +262,7 @@ export function ServerDetailPage() {
                       <dd className="font-mono text-slate-300">{svc.commandStatus ?? '-'}</dd>
                     </dl>
                     {svc.observations && (
-                      <p className="border-t border-slate-800 px-4 py-2 text-xs text-slate-400">
+                      <p className="border-t border-line px-4 py-2 text-xs text-slate-400">
                         {svc.observations}
                       </p>
                     )}
@@ -313,14 +313,14 @@ export function ServerDetailPage() {
                     return (
                       <div
                         key={node.id}
-                        className="flex items-center gap-3 rounded-md border border-slate-800 bg-slate-900/30 px-4 py-2 text-sm"
+                        className="flex items-center gap-3 rounded border border-line bg-surface/30 px-4 py-2 text-sm"
                       >
-                        <span className="shrink-0 rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs capitalize text-slate-400">
+                        <span className="shrink-0 rounded bg-surface-raised px-1.5 py-0.5 font-mono text-xs capitalize text-slate-400">
                           {node.resourceType}
                         </span>
                         <Link
                           to={`/${path}/${node.id}`}
-                          className="flex-1 text-sky-400 hover:underline"
+                          className="flex-1 text-signal hover:underline"
                         >
                           {node.label}
                         </Link>
@@ -342,11 +342,11 @@ export function ServerDetailPage() {
                 <Spinner />
               </div>
             ) : isSubgraphError ? (
-              <p className="rounded-lg border border-red-900/50 bg-red-950/20 p-6 text-center text-sm text-red-400">
+              <p className="rounded border border-red-900/50 bg-red-950/20 p-6 text-center text-sm text-red-400">
                 Erro ao carregar dependencias{subgraphError instanceof Error ? `: ${subgraphError.message}` : ''}.
               </p>
             ) : subgraph && subgraph.nodes.length > 0 ? (
-              <div className="h-96 overflow-hidden rounded-lg border border-slate-800">
+              <div className="h-96 overflow-hidden rounded border border-line">
                 <ResourceGraph
                   nodes={subgraph.nodes}
                   edges={subgraph.edges}
@@ -362,7 +362,7 @@ export function ServerDetailPage() {
                 />
               </div>
             ) : (
-              <p className="rounded-lg border border-slate-800 p-6 text-center text-sm text-slate-500">
+              <p className="rounded border border-line p-6 text-center text-sm text-slate-500">
                 Nenhuma dependencia mapeada. Use o botao "+ Relacionamento" para comecar.
               </p>
             )}
@@ -386,7 +386,7 @@ export function ServerDetailPage() {
 
           <section>
             <h2 className="mb-2 text-lg font-medium text-slate-200">Responsabilidade</h2>
-            <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
+            <dl className="grid grid-cols-2 gap-3 rounded border border-line p-4 text-sm">
               <Field label="Time responsavel" value={data.ownerTeam} />
             </dl>
           </section>

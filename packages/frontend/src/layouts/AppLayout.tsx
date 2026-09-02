@@ -94,10 +94,10 @@ const NAV_ITEMS: NavItem[] = [
   { kind: 'link', to: '/organizations', label: 'Organizacoes', icon: <GroupIcon />, adminOnly: true },
 ];
 
-const LINK_CLASS = 'flex items-center gap-2 rounded-md px-3 py-2 text-sm';
-const LINK_ACTIVE = 'bg-slate-800 text-slate-100';
-const LINK_IDLE = 'text-slate-400 hover:bg-slate-900';
-const CHILD_LINK_CLASS = 'flex items-center gap-2 rounded-md py-1.5 pl-7 pr-3 text-sm';
+const LINK_CLASS = 'flex items-center gap-2 rounded px-3 py-2 text-sm border-l-2 border-transparent';
+const LINK_ACTIVE = 'border-l-signal bg-surface text-slate-100';
+const LINK_IDLE = 'text-slate-400 hover:bg-surface hover:text-slate-200';
+const CHILD_LINK_CLASS = 'flex items-center gap-2 rounded py-1.5 pl-7 pr-3 text-sm border-l-2 border-transparent';
 
 // --- Component ---
 
@@ -138,13 +138,28 @@ export function AppLayout() {
   return (
     <div className="flex min-h-screen bg-canvas text-slate-100">
       {isSidebarOpen && (
-        <aside className="w-60 shrink-0 border-r border-slate-800 p-4">
-          <div className="mb-6">
-            <p className="text-lg font-semibold">Platform Engineering Center</p>
+        <aside className="w-60 shrink-0 border-r border-line p-4">
+          <div className="rack-ticks mb-6 pb-3">
+            <p className="font-mono text-base font-bold leading-tight text-slate-100">
+              BACK<span className="text-signal">·</span>STAGE
+            </p>
+            <p className="mt-0.5 text-[11px] text-slate-500">Platform Engineering Center</p>
             {organizationName && (
-              <p className="mt-0.5 truncate text-xs text-slate-500" title={organizationName}>
-                {organizationName}
-              </p>
+              canSwitchOrg ? (
+                <button
+                  type="button"
+                  onClick={() => setShowOrgPicker(true)}
+                  className="group mt-1.5 flex w-full items-center justify-between gap-1 truncate font-mono text-[11px] uppercase tracking-wide text-slate-600 hover:text-signal"
+                  title={`${organizationName} — trocar organizacao`}
+                >
+                  <span className="truncate">{organizationName}</span>
+                  <ChevronDownIcon className="shrink-0 opacity-0 group-hover:opacity-100" />
+                </button>
+              ) : (
+                <p className="mt-1.5 truncate font-mono text-[11px] uppercase tracking-wide text-slate-600" title={organizationName}>
+                  {organizationName}
+                </p>
+              )
             )}
           </div>
           <nav className="flex flex-col gap-0.5">
@@ -245,7 +260,7 @@ export function AppLayout() {
       )}
 
       <div className="flex flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-slate-800 px-6 py-3 gap-4">
+        <header className="flex items-center justify-between border-b border-line px-6 py-3 gap-4">
           <Button variant="secondary" size="sm" onClick={toggleSidebar}>
             {isSidebarOpen ? 'Ocultar menu' : 'Exibir menu'}
           </Button>

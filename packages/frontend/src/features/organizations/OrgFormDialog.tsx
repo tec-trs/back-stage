@@ -77,7 +77,7 @@ export function OrgFormDialog({ isOpen, onClose, organization }: OrgFormDialogPr
   }
 
   const inputClass =
-    'w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 focus:border-slate-500 focus:outline-none disabled:opacity-50';
+    'w-full rounded border border-line bg-surface-raised px-3 py-2 text-sm text-slate-200 focus:border-slate-500 focus:outline-none disabled:opacity-50';
 
   return (
     <Modal

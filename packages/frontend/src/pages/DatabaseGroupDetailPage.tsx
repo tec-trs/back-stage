@@ -122,7 +122,7 @@ function AddDatabasesDialog({
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar banco..."
           autoFocus
-          className="rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500"
+          className="rounded border border-line bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500"
         />
 
         {isLoading ? (
@@ -134,13 +134,13 @@ function AddDatabasesDialog({
             {search ? 'Nenhum banco encontrado' : 'Todos os bancos do inventário já estão neste agrupador'}
           </p>
         ) : (
-          <div className="flex flex-col rounded-md border border-slate-800">
-            <label className="flex cursor-pointer items-center gap-2 border-b border-slate-800 bg-slate-900/60 px-3 py-2 text-xs font-medium text-slate-400">
+          <div className="flex flex-col rounded border border-line">
+            <label className="flex cursor-pointer items-center gap-2 border-b border-line bg-surface/60 px-3 py-2 text-xs font-medium text-slate-400">
               <input
                 type="checkbox"
                 checked={allFilteredSelected}
                 onChange={toggleAllFiltered}
-                className="h-4 w-4 accent-sky-500"
+                className="h-4 w-4 accent-signal"
               />
               Selecionar todos ({availableDatabases.length})
             </label>
@@ -151,8 +151,8 @@ function AddDatabasesDialog({
                   <div
                     key={db.id}
                     onClick={() => toggleOne(db.id)}
-                    className={`flex cursor-pointer items-center gap-2 border-b border-slate-800/50 px-3 py-2 text-sm last:border-0 ${
-                      isSelected ? 'bg-sky-950/40' : 'hover:bg-slate-900/60'
+                    className={`flex cursor-pointer items-center gap-2 border-b border-line/50 px-3 py-2 text-sm last:border-0 ${
+                      isSelected ? 'bg-signal/10' : 'hover:bg-surface/60'
                     }`}
                   >
                     <input
@@ -161,7 +161,7 @@ function AddDatabasesDialog({
                       onChange={() => toggleOne(db.id)}
                       onClick={(e) => e.stopPropagation()}
                       aria-label={`Selecionar ${db.displayName || db.name}`}
-                      className="h-4 w-4 accent-sky-500"
+                      className="h-4 w-4 accent-signal"
                     />
                     <span className="font-medium text-slate-200">{db.displayName || db.name}</span>
                     {db.hostedOnServerHostname && (
@@ -176,7 +176,7 @@ function AddDatabasesDialog({
 
         {submitError && <ErrorMessage message={submitError} />}
 
-        <div className="flex items-center justify-between border-t border-slate-800 pt-4">
+        <div className="flex items-center justify-between border-t border-line pt-4">
           <span className="text-xs text-slate-500">
             {selectedIds.size > 0 ? `${selectedIds.size} selecionado(s)` : ''}
           </span>
@@ -239,7 +239,7 @@ function AddApplicationDialog({
             message={addApplication.error instanceof Error ? addApplication.error.message : 'Erro ao documentar aplicação'}
           />
         )}
-        <div className="flex justify-end gap-3 border-t border-slate-800 pt-4">
+        <div className="flex justify-end gap-3 border-t border-line pt-4">
           <Button type="button" variant="secondary" onClick={handleClose}>
             Cancelar
           </Button>
@@ -346,14 +346,14 @@ export function DatabaseGroupDetailPage() {
       </div>
 
       {group.members.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-800 p-10 text-center">
+        <div className="flex flex-col items-center justify-center gap-1 rounded border border-dashed border-line p-10 text-center">
           <p className="font-medium text-slate-200">Este agrupador ainda não tem bancos</p>
           <p className="text-sm text-slate-500">Use &quot;Adicionar Banco&quot; para começar a documentar este conjunto.</p>
         </div>
       ) : (
-        <div className="mb-8 overflow-hidden rounded-lg border border-slate-800">
+        <div className="mb-8 overflow-hidden rounded border border-line">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900 text-slate-400">
+            <thead className="bg-surface text-slate-400">
               <tr>
                 <th className="px-4 py-2 font-medium">Nome</th>
                 <th className="px-4 py-2 font-medium">Status</th>
@@ -364,7 +364,7 @@ export function DatabaseGroupDetailPage() {
             </thead>
             <tbody>
               {group.members.map((member) => (
-                <tr key={member.id} className="border-t border-slate-800">
+                <tr key={member.id} className="border-t border-line">
                   <td className="px-4 py-2 font-medium text-slate-200">{member.displayName || member.name}</td>
                   <td className="px-4 py-2 text-slate-400 capitalize">{member.status || '—'}</td>
                   <td className="px-4 py-2 text-slate-400">
@@ -395,16 +395,16 @@ export function DatabaseGroupDetailPage() {
       </div>
 
       {group.applications.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-800 p-10 text-center">
+        <div className="flex flex-col items-center justify-center gap-1 rounded border border-dashed border-line p-10 text-center">
           <p className="font-medium text-slate-200">Nenhuma aplicação documentada ainda</p>
           <p className="text-sm text-slate-500">
             Use &quot;+ Relacionamento&quot;, no topo da página, para registrar quem usa este agrupador.
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-slate-800">
+        <div className="overflow-hidden rounded border border-line">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900 text-slate-400">
+            <thead className="bg-surface text-slate-400">
               <tr>
                 <th className="px-4 py-2 font-medium">Nome</th>
                 <th className="px-4 py-2 font-medium">Status</th>
@@ -413,7 +413,7 @@ export function DatabaseGroupDetailPage() {
             </thead>
             <tbody>
               {group.applications.map((link) => (
-                <tr key={link.id} className="border-t border-slate-800">
+                <tr key={link.id} className="border-t border-line">
                   <td className="px-4 py-2 font-medium text-slate-200">{link.displayName || link.applicationId}</td>
                   <td className="px-4 py-2 text-slate-400 capitalize">{link.status || '—'}</td>
                   <td className="px-4 py-2">

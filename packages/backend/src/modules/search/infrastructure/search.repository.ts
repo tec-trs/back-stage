@@ -1,5 +1,7 @@
 import type { Knex } from 'knex';
 
+import { orgContext } from '../../../shared/context/org-context.js';
+
 const TABLE_NAME = 'catalog_entities';
 const TS_CONFIG = 'portuguese';
 
@@ -70,7 +72,12 @@ export interface ISearchRepository {
     pagination: Pagination,
   ): Promise<{ items: SearchResultRow[]; total: number; facets: SearchFacets }>;
   suggest(query: string, limit: number): Promise<SuggestionRow[]>;
-  unifiedSearch(query: string, tags?: string[], pagination?: Pagination): Promise<{ items: UnifiedSearchResultRow[]; total: number }>;
+  unifiedSearch(
+    query: string,
+    tags?: string[],
+    pagination?: Pagination,
+    resourceType?: string,
+  ): Promise<{ items: UnifiedSearchResultRow[]; total: number }>;
 }
 
 export class SearchRepository implements ISearchRepository {
@@ -78,6 +85,7 @@ export class SearchRepository implements ISearchRepository {
 
   private matchingRows(tsQuery: string): Knex.QueryBuilder {
     return this.db(TABLE_NAME)
+      .where('organization_id', orgContext.getOrThrow())
       .whereNull('deleted_at')
       .whereRaw(`search_vector @@ to_tsquery('${TS_CONFIG}', ?)`, [tsQuery]);
   }
@@ -156,22 +164,24 @@ export class SearchRepository implements ISearchRepository {
       return [];
     }
 
+    const orgId = orgContext.getOrThrow();
+
     const [servers, applications, databases, urls] = await Promise.all([
       this.db.raw<{ rows: SuggestionRow[] }>(
-        `SELECT id, 'server' AS kind, coalesce(display_name, hostname) AS label, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) AS rank FROM servers WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ORDER BY rank DESC LIMIT ?`,
-        [tsQuery, tsQuery, limit],
+        `SELECT id, 'server' AS kind, coalesce(display_name, hostname) AS label, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) AS rank FROM servers WHERE deleted_at IS NULL AND organization_id = ? AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ORDER BY rank DESC LIMIT ?`,
+        [tsQuery, orgId, tsQuery, limit],
       ),
       this.db.raw<{ rows: SuggestionRow[] }>(
-        `SELECT id, 'application' AS kind, display_name AS label, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) AS rank FROM applications WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ORDER BY rank DESC LIMIT ?`,
-        [tsQuery, tsQuery, limit],
+        `SELECT id, 'application' AS kind, display_name AS label, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) AS rank FROM applications WHERE deleted_at IS NULL AND organization_id = ? AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ORDER BY rank DESC LIMIT ?`,
+        [tsQuery, orgId, tsQuery, limit],
       ),
       this.db.raw<{ rows: SuggestionRow[] }>(
-        `SELECT id, 'database' AS kind, coalesce(display_name, name) AS label, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) AS rank FROM databases WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ORDER BY rank DESC LIMIT ?`,
-        [tsQuery, tsQuery, limit],
+        `SELECT id, 'database' AS kind, coalesce(display_name, name) AS label, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) AS rank FROM databases WHERE deleted_at IS NULL AND organization_id = ? AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ORDER BY rank DESC LIMIT ?`,
+        [tsQuery, orgId, tsQuery, limit],
       ),
       this.db.raw<{ rows: SuggestionRow[] }>(
-        `SELECT id, 'url' AS kind, label, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) AS rank FROM urls WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ORDER BY rank DESC LIMIT ?`,
-        [tsQuery, tsQuery, limit],
+        `SELECT id, 'url' AS kind, label, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) AS rank FROM urls WHERE deleted_at IS NULL AND organization_id = ? AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ORDER BY rank DESC LIMIT ?`,
+        [tsQuery, orgId, tsQuery, limit],
       ),
     ]);
 
@@ -189,6 +199,7 @@ export class SearchRepository implements ISearchRepository {
     query: string,
     tags?: string[],
     pagination?: Pagination,
+    resourceType?: string,
   ): Promise<{ items: UnifiedSearchResultRow[]; total: number }> {
     const tsQuery = buildPrefixTsQuery(query);
     if (!tsQuery) {
@@ -197,33 +208,42 @@ export class SearchRepository implements ISearchRepository {
 
     const pageSize = pagination?.pageSize ?? 20;
     const page = pagination?.page ?? 1;
+    const orgId = orgContext.getOrThrow();
 
-    const tagsFilter = tags?.length ? `AND tags && ARRAY[${tags.map((t) => `'${t}'`).join(',')}]` : '';
+    // Bind the tag list as a real array parameter instead of splicing it into
+    // the SQL string — the previous version built `ARRAY['a','b']` by string
+    // concatenation, which let a tag value break out of the literal.
+    const tagsFilter = tags?.length ? 'AND tags && ?::text[]' : '';
+    const tagsParam = tags?.length ? [tags] : [];
 
     const searchResults = await Promise.all([
       this.db.raw<{ rows: UnifiedSearchResultRow[] }>(
-        `SELECT id, 'server' as resource_type, coalesce(display_name, hostname) as label, description, environment, status, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank FROM servers WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ${tagsFilter} ORDER BY rank DESC`,
-        [tsQuery, tsQuery],
+        `SELECT id, 'server' as "resourceType", coalesce(display_name, hostname) as label, description, environment, status, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank FROM servers WHERE deleted_at IS NULL AND organization_id = ? AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ${tagsFilter} ORDER BY rank DESC`,
+        [tsQuery, orgId, tsQuery, ...tagsParam],
       ),
       this.db.raw<{ rows: UnifiedSearchResultRow[] }>(
-        `SELECT id, 'application' as resource_type, display_name as label, description, null::text as environment, status, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank FROM applications WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ${tagsFilter} ORDER BY rank DESC`,
-        [tsQuery, tsQuery],
+        `SELECT id, 'application' as "resourceType", display_name as label, description, null::text as environment, status, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank FROM applications WHERE deleted_at IS NULL AND organization_id = ? AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ${tagsFilter} ORDER BY rank DESC`,
+        [tsQuery, orgId, tsQuery, ...tagsParam],
       ),
       this.db.raw<{ rows: UnifiedSearchResultRow[] }>(
-        `SELECT id, 'database' as resource_type, display_name as label, description, environment, status, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank FROM databases WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ${tagsFilter} ORDER BY rank DESC`,
-        [tsQuery, tsQuery],
+        `SELECT id, 'database' as "resourceType", display_name as label, description, environment, status, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank FROM databases WHERE deleted_at IS NULL AND organization_id = ? AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ${tagsFilter} ORDER BY rank DESC`,
+        [tsQuery, orgId, tsQuery, ...tagsParam],
       ),
       this.db.raw<{ rows: UnifiedSearchResultRow[] }>(
-        `SELECT id, 'url' as resource_type, label, description, null::text as environment, status, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank FROM urls WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ${tagsFilter} ORDER BY rank DESC`,
-        [tsQuery, tsQuery],
+        `SELECT id, 'url' as "resourceType", label, description, null::text as environment, status, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank FROM urls WHERE deleted_at IS NULL AND organization_id = ? AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ${tagsFilter} ORDER BY rank DESC`,
+        [tsQuery, orgId, tsQuery, ...tagsParam],
       ),
       this.db.raw<{ rows: UnifiedSearchResultRow[] }>(
-        `SELECT id, 'catalog_entity' as resource_type, coalesce(title, name) as label, description, null::text as environment, null::text as status, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank FROM catalog_entities WHERE deleted_at IS NULL AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ${tagsFilter} ORDER BY rank DESC`,
-        [tsQuery, tsQuery],
+        `SELECT id, 'catalog_entity' as "resourceType", coalesce(title, name) as label, description, null::text as environment, null::text as status, ts_rank(search_vector, to_tsquery('${TS_CONFIG}', ?)) as rank FROM catalog_entities WHERE deleted_at IS NULL AND organization_id = ? AND search_vector @@ to_tsquery('${TS_CONFIG}', ?) ${tagsFilter} ORDER BY rank DESC`,
+        [tsQuery, orgId, tsQuery, ...tagsParam],
       ),
     ]);
 
-    const allItems = searchResults.flatMap(r => (Array.isArray(r) ? r : r.rows ?? [])).sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
+    let allItems = searchResults.flatMap(r => (Array.isArray(r) ? r : r.rows ?? [])).sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
+
+    if (resourceType) {
+      allItems = allItems.filter((item) => item.resourceType === resourceType);
+    }
 
     const startIdx = (page - 1) * pageSize;
     const items = allItems.slice(startIdx, startIdx + pageSize);

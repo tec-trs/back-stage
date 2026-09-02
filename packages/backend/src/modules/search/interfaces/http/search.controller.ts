@@ -33,13 +33,18 @@ export class SearchController {
   };
 
   public unifiedSearch = async (request: Request, response: Response): Promise<void> => {
-    const { q, tags, page = 1, pageSize = 20 } = request.query as any;
+    const { q, tags, type, page = 1, pageSize = 20 } = request.query as any;
     if (!q) {
       response.status(400).json({ error: 'Query param "q" is required' });
       return;
     }
     const tagArray = typeof tags === 'string' ? tags.split(',') : tags ? (Array.isArray(tags) ? tags : [tags]) : undefined;
-    const result = await this.searchService.unifiedSearch(q, tagArray, { page: Number(page), pageSize: Number(pageSize) });
+    const result = await this.searchService.unifiedSearch(
+      q,
+      tagArray,
+      { page: Number(page), pageSize: Number(pageSize) },
+      typeof type === 'string' ? type : undefined,
+    );
     response.status(200).json(result);
   };
 }

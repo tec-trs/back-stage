@@ -37,5 +37,11 @@
     "eslint-plugin-react-refresh": "^0.4.14",
     "prettier": "^3.3.3",
     "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@opentelemetry/instrumentation-host-metrics": "^0.5.0",
+    "@opentelemetry/propagator-aws-xray": "^2.2.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "vite": "^8.2.2"
   }
 }

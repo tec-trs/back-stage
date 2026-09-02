@@ -1,9 +1,9 @@
-@import '@fontsource/inter/400.css';
-@import '@fontsource/inter/500.css';
-@import '@fontsource/inter/600.css';
-@import '@fontsource/inter/700.css';
-@import '@fontsource/jetbrains-mono/500.css';
-@import '@fontsource/jetbrains-mono/600.css';
+@import '@fontsource/public-sans/400.css';
+@import '@fontsource/public-sans/500.css';
+@import '@fontsource/public-sans/600.css';
+@import '@fontsource/public-sans/700.css';
+@import '@fontsource/space-mono/400.css';
+@import '@fontsource/space-mono/700.css';
 
 @tailwind base;
 @tailwind components;
@@ -12,5 +12,28 @@
 @layer base {
   body {
     @apply bg-canvas font-sans text-slate-100 antialiased;
+  }
+
+  h1, h2, h3 {
+    @apply font-mono;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer utilities {
+  /* Rack-label rhythm: a repeating tick every 8px, used as a single hairline
+     accent under section headers — evokes a patch-panel edge, not a divider
+     you'd get for free from a border utility. */
+  .rack-ticks {
+    background-image: repeating-linear-gradient(
+      to right,
+      theme('colors.line') 0,
+      theme('colors.line') 1px,
+      transparent 1px,
+      transparent 8px
+    );
+    background-position: bottom;
+    background-size: 100% 1px;
+    background-repeat: repeat-x;
   }
 }

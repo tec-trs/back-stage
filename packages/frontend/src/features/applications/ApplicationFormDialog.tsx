@@ -33,7 +33,7 @@ const TABS: TabItem[] = [
 ];
 
 const inputClass =
-  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
+  'rounded border border-line bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 
 interface FormState {
   code: string;
@@ -482,7 +482,7 @@ export function ApplicationFormDialog({
                       return (
                         <div
                           key={index}
-                          className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/40 px-3 py-2"
+                          className="flex items-center gap-2 rounded border border-line bg-surface/40 px-3 py-2"
                         >
                           <span className="font-mono text-xs text-slate-500">
                             #{index + 1}
@@ -490,7 +490,7 @@ export function ApplicationFormDialog({
                           <span className="flex-1 truncate text-sm font-medium text-slate-200">
                             {serverName}
                           </span>
-                          <span className="shrink-0 rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
+                          <span className="shrink-0 rounded-full bg-surface-raised px-2 py-0.5 text-xs text-slate-400">
                             {envName}
                           </span>
                           {deployment.deployedVersion && (
@@ -526,20 +526,20 @@ export function ApplicationFormDialog({
                 <legend className="mb-1 text-sm font-medium text-slate-300">
                   Dependencias (aplicacoes das quais esta depende)
                 </legend>
-                <div className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-md border border-slate-800 p-3">
+                <div className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded border border-line p-3">
                   {availableApplications.length === 0 ? (
                     <p className="text-xs text-slate-500">Nenhuma outra aplicacao cadastrada.</p>
                   ) : (
                     availableApplications.map((item) => (
                       <label
                         key={item.id}
-                        className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm text-slate-200 hover:bg-slate-900/60"
+                        className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm text-slate-200 hover:bg-surface/60"
                       >
                         <input
                           type="checkbox"
                           checked={dependsOnIds.includes(item.id)}
                           onChange={() => toggleDependency(item.id)}
-                          className="h-4 w-4 rounded border-slate-700 bg-canvas accent-sky-500"
+                          className="h-4 w-4 rounded border-line bg-canvas accent-signal"
                         />
                         <span className="font-medium">{item.displayName}</span>
                         <span className="font-mono text-xs text-slate-500">({item.code})</span>
@@ -642,7 +642,7 @@ export function ApplicationFormDialog({
           />
         )}
 
-        <div className="flex justify-end gap-3 border-t border-slate-800 pt-4">
+        <div className="flex justify-end gap-3 border-t border-line pt-4">
           <Button type="button" variant="secondary" onClick={handleClose}>
             Cancelar
           </Button>

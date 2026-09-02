@@ -206,7 +206,7 @@ export function VIPsPage() {
               type="text"
               value={formData.hostname}
               onChange={e => setFormData({ ...formData, hostname: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full rounded border border-line bg-surface px-3 py-2 text-sm text-white"
               placeholder="ex: vip-app-01"
             />
           </div>
@@ -216,7 +216,7 @@ export function VIPsPage() {
               type="text"
               value={formData.displayName || ''}
               onChange={e => setFormData({ ...formData, displayName: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full rounded border border-line bg-surface px-3 py-2 text-sm text-white"
               placeholder="ex: App Balance"
             />
           </div>
@@ -225,7 +225,7 @@ export function VIPsPage() {
             <textarea
               value={formData.description || ''}
               onChange={e => setFormData({ ...formData, description: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full rounded border border-line bg-surface px-3 py-2 text-sm text-white"
               rows={2}
             />
           </div>
@@ -235,7 +235,7 @@ export function VIPsPage() {
               type="text"
               value={formData.vipAddress || ''}
               onChange={e => setFormData({ ...formData, vipAddress: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full rounded border border-line bg-surface px-3 py-2 text-sm text-white"
               placeholder="ex: 192.168.1.100"
             />
           </div>
@@ -245,7 +245,7 @@ export function VIPsPage() {
               type="text"
               value={formData.loadBalancerType || ''}
               onChange={e => setFormData({ ...formData, loadBalancerType: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full rounded border border-line bg-surface px-3 py-2 text-sm text-white"
               placeholder="ex: Layer 4, Layer 7"
             />
           </div>
@@ -254,7 +254,7 @@ export function VIPsPage() {
             <select
               value={formData.environment || ''}
               onChange={e => setFormData({ ...formData, environment: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full rounded border border-line bg-surface px-3 py-2 text-sm text-white"
             >
               <option value="">Selecionar ambiente...</option>
               {environments.map(env => (
@@ -270,7 +270,7 @@ export function VIPsPage() {
               type="text"
               value={formData.criticality || ''}
               onChange={e => setFormData({ ...formData, criticality: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full rounded border border-line bg-surface px-3 py-2 text-sm text-white"
               placeholder="ex: Crítico, Alto, Médio"
             />
           </div>
@@ -279,7 +279,7 @@ export function VIPsPage() {
             <select
               value={formData.ownerTeam || ''}
               onChange={e => setFormData({ ...formData, ownerTeam: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full rounded border border-line bg-surface px-3 py-2 text-sm text-white"
             >
               <option value="">Selecionar time...</option>
               {teams.map(team => (
@@ -294,7 +294,7 @@ export function VIPsPage() {
             <select
               value={formData.status || 'active'}
               onChange={e => setFormData({ ...formData, status: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full rounded border border-line bg-surface px-3 py-2 text-sm text-white"
             >
               <option value="active">Ativo</option>
               <option value="maintenance">Manutenção</option>
@@ -320,11 +320,11 @@ export function VIPsPage() {
         </div>
       </Modal>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded border border-line bg-surface/40 p-2">
         <Button size="sm" icon={<PlusIcon />} onClick={handleCreate} title="Incluir um novo VIP">
           Incluir VIP
         </Button>
-        <div className="mx-1 h-6 w-px bg-slate-800" />
+        <div className="mx-1 h-6 w-px bg-surface-raised" />
         <Button
           size="sm"
           variant="secondary"
@@ -383,16 +383,16 @@ export function VIPsPage() {
       )}
 
       {!isLoading && vips.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-slate-800">
+        <div className="overflow-hidden rounded border border-line">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900 text-slate-400">
+            <thead className="bg-surface text-slate-400">
               <tr>
                 <th className="w-10 px-4 py-2">
                   <input
                     type="checkbox"
                     checked={allVisible}
                     onChange={toggleAll}
-                    className="h-4 w-4 accent-sky-500"
+                    className="h-4 w-4 accent-signal"
                     aria-label="Selecionar todos"
                   />
                 </th>
@@ -409,8 +409,8 @@ export function VIPsPage() {
                 <tr
                   key={vip.id}
                   onClick={() => toggleOne(vip.id)}
-                  className={`border-t border-slate-800 ${
-                    selectedIds.has(vip.id) ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
+                  className={`border-t border-line ${
+                    selectedIds.has(vip.id) ? 'bg-signal/10' : 'hover:bg-surface/50'
                   }`}
                 >
                   <td className="cursor-pointer px-4 py-2">
@@ -420,7 +420,7 @@ export function VIPsPage() {
                       onChange={() => toggleOne(vip.id)}
                       onClick={e => e.stopPropagation()}
                       aria-label={`Selecionar ${vip.hostname}`}
-                      className="h-4 w-4 accent-sky-500"
+                      className="h-4 w-4 accent-signal"
                     />
                   </td>
                   <td className="cursor-pointer px-4 py-2 font-mono text-white">{vip.hostname}</td>
@@ -456,7 +456,7 @@ export function VIPsPage() {
           <div>
             <h3 className="mb-3 text-sm font-semibold text-white">Servidores Vinculados</h3>
             {servers.length === 0 ? (
-              <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 text-center">
+              <div className="rounded border border-line bg-surface/40 p-4 text-center">
                 <p className="text-sm text-slate-400">Nenhum servidor associado a este VIP</p>
               </div>
             ) : (
@@ -464,7 +464,7 @@ export function VIPsPage() {
                 {(servers as any[]).map(server => (
                   <div
                     key={server.id}
-                    className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/30 px-3 py-2"
+                    className="flex items-center justify-between rounded border border-line bg-surface/30 px-3 py-2"
                   >
                     <div>
                       <p className="font-mono text-sm text-white">{server.hostname}</p>
@@ -485,10 +485,10 @@ export function VIPsPage() {
             )}
           </div>
 
-          <div className="border-t border-slate-700 pt-4">
+          <div className="border-t border-line pt-4">
             <h3 className="mb-3 text-sm font-semibold text-white">Adicionar Servidor</h3>
             {availableServers.length === 0 ? (
-              <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 text-center">
+              <div className="rounded border border-line bg-surface/40 p-4 text-center">
                 <p className="text-sm text-slate-400">
                   Nenhum servidor disponível. Todos já estão vinculados ou não existem servidores criados.
                 </p>
@@ -498,7 +498,7 @@ export function VIPsPage() {
                 <select
                   value={selectedServerId}
                   onChange={e => setSelectedServerId(e.target.value)}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                  className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-white"
                 >
                   <option value="">Selecionar servidor...</option>
                   {availableServers.map(server => (

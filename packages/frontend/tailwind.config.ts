@@ -4,43 +4,49 @@ import type { Config } from 'tailwindcss';
  * Design tokens for the Platform Engineering Center.
  *
  * This is an operations console, not a marketing surface: engineers read it
- * during incidents. The palette stays dark and low-glare on purpose; what
- * makes it *this* product's own is the signal grammar layered on top of it —
- * a single teal accent for the system's own chrome, a fixed five-hue key for
- * resource types, and a red -> orange -> amber gradient for blast-radius
- * depth that reads the same way in every graph, table and badge.
+ * during incidents. The reference point is physical infrastructure labeling —
+ * patch-panel port tags, rack-unit stencils, punch-down block numbering —
+ * not a generic SaaS dashboard. That's where the amber signal color comes
+ * from (hazard-tape/rack-label amber, not a trendy brand teal), and why
+ * headings and labels are set in a monospace built for stenciled, fixed-width
+ * text rather than a general-purpose UI sans.
+ *
+ * A fixed five-hue key marks resource types everywhere (graphs, tables,
+ * badges); a red -> orange -> amber gradient marks blast-radius depth the
+ * same way in every view. Every hex below was chosen and re-checked by hand —
+ * none of them are stock Tailwind palette stops.
  */
 const config: Config = {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        canvas: '#0b0f19', // page background — deep, low-glare
+        canvas: '#0a0c10', // page background — graphite, not blue-black
         surface: {
-          DEFAULT: '#121a2b', // panels, toolbars, cards
-          raised: '#19233a', // popovers, modals, floating panels
+          DEFAULT: '#15181e', // panels, toolbars, cards
+          raised: '#1d212a', // popovers, modals, floating panels
         },
-        line: '#232c40', // hairlines / borders
+        line: '#272b34', // hairlines / borders
         signal: {
-          DEFAULT: '#2dd4bf', // brand accent — focus rings, primary actions, console text
-          dim: '#0f766e',
+          DEFAULT: '#e0993d', // brand accent — rack-label amber, used sparingly
+          dim: '#7a5522',
         },
         resource: {
-          server: '#3b82f6',
-          application: '#8b5cf6',
-          database: '#ec4899',
-          url: '#f59e0b',
-          vip: '#06b6d4',
+          server: '#4c86c9', // slate blue — steel chassis
+          application: '#9873d1', // muted violet
+          database: '#cf5a83', // muted rose
+          url: '#39a394', // teal — the console's old accent, now a resource hue
+          vip: '#7a9e42', // olive lime
         },
         impact: {
-          source: '#ef4444', // the thing that went down
-          direct: '#f97316', // one hop away
-          indirect: '#f59e0b', // two+ hops away
+          source: '#c8452e', // the thing that went down
+          direct: '#d3792c', // one hop away
+          indirect: '#cf9f3d', // two+ hops away
         },
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        sans: ['"Public Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['"Space Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       keyframes: {
         'radar-ping': {

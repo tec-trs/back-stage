@@ -115,11 +115,11 @@ export function OrganizationsPage() {
       />
 
       {/* Toolbar */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded border border-line bg-surface/40 p-2">
         <Button size="sm" icon={<PlusIcon />} onClick={openCreate}>
           Incluir Organizacao
         </Button>
-        <div className="mx-1 h-6 w-px bg-slate-800" />
+        <div className="mx-1 h-6 w-px bg-surface-raised" />
         <Button
           size="sm"
           variant="secondary"
@@ -168,16 +168,16 @@ export function OrganizationsPage() {
       )}
 
       {!isLoading && !isError && items.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-slate-800">
+        <div className="overflow-x-auto rounded border border-line">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-900/60">
+              <tr className="border-b border-line bg-surface/60">
                 <th className="w-10 px-4 py-3">
                   <input
                     type="checkbox"
                     checked={allVisible}
                     onChange={toggleAll}
-                    className="h-4 w-4 accent-sky-500"
+                    className="h-4 w-4 accent-signal"
                     aria-label="Selecionar todos"
                   />
                 </th>
@@ -194,8 +194,8 @@ export function OrganizationsPage() {
                   <tr
                     key={org.id}
                     onClick={() => toggleOne(org.id)}
-                    className={`cursor-pointer border-b border-slate-800/50 transition-colors last:border-0 ${
-                      isSelected ? 'bg-sky-950/40' : 'hover:bg-slate-900/60'
+                    className={`cursor-pointer border-b border-line/50 transition-colors last:border-0 ${
+                      isSelected ? 'bg-signal/10' : 'hover:bg-surface/60'
                     }`}
                   >
                     <td className="px-4 py-3">
@@ -205,7 +205,7 @@ export function OrganizationsPage() {
                         onChange={() => toggleOne(org.id)}
                         onClick={(e) => e.stopPropagation()}
                         aria-label={`Selecionar ${org.name}`}
-                        className="h-4 w-4 accent-sky-500"
+                        className="h-4 w-4 accent-signal"
                       />
                     </td>
                     <td className="px-4 py-3 font-mono text-slate-300">{org.slug}</td>

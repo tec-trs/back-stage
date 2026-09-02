@@ -29,9 +29,9 @@ export function Sidebar({
   };
 
   return (
-    <div className="w-80 bg-slate-900 border-l border-slate-700 flex flex-col">
+    <div className="w-80 bg-surface border-l border-line flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-slate-700">
+      <div className="p-4 border-b border-line">
         <div className="flex items-center gap-2">
           {isEditingName ? (
             <input
@@ -41,12 +41,12 @@ export function Sidebar({
               onBlur={handleSaveName}
               onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
               autoFocus
-              className="flex-1 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-sm text-white"
+              className="flex-1 px-2 py-1 bg-surface-raised border border-slate-600 rounded text-sm text-white"
             />
           ) : (
             <h2
               onClick={() => setIsEditingName(true)}
-              className="flex-1 text-lg font-bold text-slate-100 cursor-pointer hover:text-sky-400"
+              className="flex-1 text-lg font-bold text-slate-100 cursor-pointer hover:text-signal"
             >
               {diagramName}
             </h2>
@@ -56,19 +56,19 @@ export function Sidebar({
       </div>
 
       {/* Stats */}
-      <div className="p-4 space-y-3 border-b border-slate-700">
+      <div className="p-4 space-y-3 border-b border-line">
         <div className="flex justify-between items-center">
           <span className="text-sm text-slate-400">Nós</span>
-          <span className="text-2xl font-bold text-sky-400">{nodeCount}</span>
+          <span className="text-2xl font-bold text-signal">{nodeCount}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm text-slate-400">Conexões</span>
-          <span className="text-2xl font-bold text-sky-400">{edgeCount}</span>
+          <span className="text-2xl font-bold text-signal">{edgeCount}</span>
         </div>
       </div>
 
       {/* Legenda */}
-      <div className="p-4 border-b border-slate-700">
+      <div className="p-4 border-b border-line">
         <h3 className="text-sm font-semibold text-slate-300 mb-3">Legenda</h3>
         <div className="space-y-2">
           {(Object.entries(RESOURCE_LABELS) as Array<[keyof typeof RESOURCE_COLORS, string]>).map(
@@ -102,7 +102,7 @@ export function Sidebar({
 
       {/* Selected Node Info */}
       {selectedNodeId && (
-        <div className="p-4 border-t border-slate-700 bg-slate-800">
+        <div className="p-4 border-t border-line bg-surface-raised">
           <div className="text-sm text-slate-300 mb-3">Nó Selecionado: {selectedNodeId}</div>
           <button
             onClick={() => onDeleteNode(selectedNodeId)}

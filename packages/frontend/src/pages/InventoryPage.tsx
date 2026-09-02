@@ -176,7 +176,7 @@ export function InventoryPage() {
             className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors ${
               kind === tab.key
                 ? 'bg-slate-700 text-slate-100'
-                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                : 'text-slate-400 hover:bg-surface-raised hover:text-slate-200'
             }`}
           >
             {tab.label}
@@ -194,7 +194,7 @@ export function InventoryPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Filtrar por nome..."
-          className="w-full rounded-md border border-slate-700 bg-canvas px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-slate-500"
+          className="w-full rounded border border-line bg-canvas px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-slate-500"
         />
       </div>
 
@@ -213,10 +213,10 @@ export function InventoryPage() {
       )}
 
       {!isLoading && !isError && filtered.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-slate-800">
+        <div className="overflow-x-auto rounded border border-line">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-900/60">
+              <tr className="border-b border-line bg-surface/60">
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Tipo</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Nome</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-400">Ambiente</th>
@@ -229,10 +229,10 @@ export function InventoryPage() {
               {filtered.map((row) => (
                 <tr
                   key={`${row.kind}:${row.id}`}
-                  className="border-b border-slate-800/50 transition-colors last:border-0 hover:bg-slate-900/60"
+                  className="border-b border-line/50 transition-colors last:border-0 hover:bg-surface/60"
                 >
                   <td className="px-4 py-3">
-                    <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs text-slate-400">
+                    <span className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-xs text-slate-400">
                       {KIND_LABELS[row.kind]}
                     </span>
                   </td>

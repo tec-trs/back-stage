@@ -1,4 +1,4 @@
-import './observability/tracing.js';
+//import './observability/tracing.js';
 
 import { startServer } from './server.js';
 

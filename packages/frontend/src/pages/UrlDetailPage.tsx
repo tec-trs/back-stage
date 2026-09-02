@@ -87,7 +87,7 @@ export function UrlDetailPage() {
 
         <section>
           <h2 className="mb-2 text-lg font-medium text-slate-200">URL e Configuracao</h2>
-          <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
+          <dl className="grid grid-cols-2 gap-3 rounded border border-line p-4 text-sm">
             <div className="col-span-2">
               <dt className="text-slate-500">URL</dt>
               <dd>
@@ -116,7 +116,7 @@ export function UrlDetailPage() {
 
         <section>
           <h2 className="mb-2 text-lg font-medium text-slate-200">Seguranca</h2>
-          <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
+          <dl className="grid grid-cols-2 gap-3 rounded border border-line p-4 text-sm">
             <Field label="Autenticacao Requerida" value={url.authRequired ? 'Sim' : 'Nao'} />
             <Field label="Metodo de Auth" value={url.authMethod} />
           </dl>
@@ -124,7 +124,7 @@ export function UrlDetailPage() {
 
         <section>
           <h2 className="mb-2 text-lg font-medium text-slate-200">Monitoramento</h2>
-          <dl className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 p-4 text-sm">
+          <dl className="grid grid-cols-2 gap-3 rounded border border-line p-4 text-sm">
             <Field
               label="Healthcheck Habilitado"
               value={url.healthcheckEnabled ? 'Sim' : 'Nao'}
@@ -159,7 +159,7 @@ export function UrlDetailPage() {
               <Spinner />
             </div>
           ) : subgraph && subgraph.nodes.length > 0 ? (
-            <div className="h-96 overflow-hidden rounded-lg border border-slate-800">
+            <div className="h-96 overflow-hidden rounded border border-line">
               <ResourceGraph
                 nodes={subgraph.nodes}
                 edges={subgraph.edges}
@@ -175,7 +175,7 @@ export function UrlDetailPage() {
               />
             </div>
           ) : (
-            <p className="rounded-lg border border-slate-800 p-6 text-center text-sm text-slate-500">
+            <p className="rounded border border-line p-6 text-center text-sm text-slate-500">
               Nenhuma dependencia mapeada. Use o botao "+ Relacionamento" para comecar.
             </p>
           )}

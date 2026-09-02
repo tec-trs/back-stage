@@ -105,7 +105,7 @@ function ConnectionModal({
     <Modal title="Criar relacao" isOpen onClose={onCancel}>
       <div className="flex flex-col gap-4">
         {error && <ErrorMessage message={error} />}
-        <div className="rounded-md border border-slate-600 bg-slate-700/60 p-3">
+        <div className="rounded border border-slate-600 bg-slate-700/60 p-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">Relacionamento</p>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm">
@@ -130,7 +130,7 @@ function ConnectionModal({
           {RELATION_OPTIONS.map((opt) => (
             <label
               key={opt.value}
-              className="flex cursor-pointer items-start gap-3 rounded-md p-2 hover:bg-slate-800"
+              className="flex cursor-pointer items-start gap-3 rounded p-2 hover:bg-surface-raised"
             >
               <input
                 type="radio"
@@ -138,7 +138,7 @@ function ConnectionModal({
                 value={opt.value}
                 checked={relationType === opt.value}
                 onChange={() => setRelationType(opt.value)}
-                className="mt-0.5 accent-sky-500"
+                className="mt-0.5 accent-signal"
               />
               <div>
                 <p className="text-sm font-medium text-slate-200">{opt.label}</p>
@@ -154,7 +154,7 @@ function ConnectionModal({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Ex: X precisa acessar Y para autenticação"
-            className="rounded-md border border-slate-600 bg-canvas px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:border-slate-500 focus:outline-none resize-none"
+            className="rounded border border-slate-600 bg-canvas px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:border-slate-500 focus:outline-none resize-none"
             rows={2}
           />
         </div>
@@ -605,7 +605,7 @@ export function EcosystemPage() {
   return (
     <div className="-mx-6 -mt-6 flex flex-col" style={{ height: 'calc(100vh - 61px)' }}>
       {/* ── Toolbar refinada: seções com divisores ──────────────── */}
-      <div className="border-b border-slate-600 bg-slate-900/90 px-4 py-3">
+      <div className="border-b border-slate-600 bg-surface/90 px-4 py-3">
         {/* Header com titulo */}
         <div className="mb-3 pb-3 border-b border-slate-600/50">
           <h1 className="text-base font-semibold text-slate-50">Ecossistema</h1>
@@ -622,13 +622,13 @@ export function EcosystemPage() {
           <div className="flex gap-2">
             <a
               href="/relationships"
-              className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium rounded border border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70 transition-colors"
             >
               Ver relações
             </a>
             <a
               href="/risk-analysis"
-              className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium rounded border border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70 transition-colors"
             >
               Análise de risco
             </a>
@@ -642,7 +642,7 @@ export function EcosystemPage() {
             <button
               type="button"
               onClick={() => setVisualizationMode((prev) => (prev === 'graph' ? 'flow' : 'graph'))}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
+              className={`px-3 py-1.5 text-xs font-medium rounded border transition-all ${
                 visualizationMode === 'flow'
                   ? 'border-blue-600/50 bg-blue-900/30 text-blue-200'
                   : 'border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70'
@@ -656,7 +656,7 @@ export function EcosystemPage() {
               <button
                 type="button"
                 onClick={() => setCompactMode((prev: boolean) => !prev)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
+                className={`px-3 py-1.5 text-xs font-medium rounded border transition-all ${
                   compactMode
                     ? 'border-slate-600 bg-slate-700/40 text-slate-100'
                     : 'border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70'
@@ -678,7 +678,7 @@ export function EcosystemPage() {
                 if (!prev) setSelectedNodeId(null);
                 return !prev;
               })}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
+              className={`px-3 py-1.5 text-xs font-medium rounded border transition-all ${
                 editMode
                   ? 'border-amber-600/50 bg-amber-900/30 text-amber-200'
                   : 'border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70'
@@ -691,14 +691,14 @@ export function EcosystemPage() {
               <button
                 type="button"
                 onClick={() => setShowExportMenu(!showExportMenu)}
-                className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded border border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70 transition-colors"
                 title="Exportar gráfico"
               >
                 Exportar
               </button>
 
               {showExportMenu && (
-                <div className="absolute top-full mt-1 left-0 rounded-md border border-slate-600 bg-slate-800 shadow-lg z-50 min-w-max">
+                <div className="absolute top-full mt-1 left-0 rounded border border-slate-600 bg-surface-raised shadow-lg z-50 min-w-max">
                   <button
                     type="button"
                     onClick={() => {
@@ -726,7 +726,7 @@ export function EcosystemPage() {
             <button
               type="button"
               onClick={() => setResetLayoutKey((k) => k + 1)}
-              className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium rounded border border-slate-600 bg-slate-700/60 text-slate-100 hover:bg-slate-600/70 transition-colors"
               title="Resetar layout automático"
             >
               Reset
@@ -742,7 +742,7 @@ export function EcosystemPage() {
             placeholder="Procurar recurso..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-700/60 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-400 focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
+            className="rounded border border-slate-600 bg-slate-700/60 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-400 focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
           />
 
           {/* Divider */}
@@ -757,7 +757,7 @@ export function EcosystemPage() {
                   key={type}
                   type="button"
                   onClick={() => toggleTypeFilter(type)}
-                  className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all ${
+                  className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition-all ${
                     visibleTypes.has(type)
                       ? 'bg-slate-700/50 text-slate-200'
                       : 'opacity-40 text-slate-300 hover:opacity-60'
@@ -777,7 +777,7 @@ export function EcosystemPage() {
           <select
             value={groupBy}
             onChange={(e) => setGroupBy(e.target.value as 'none' | 'environment' | 'tag')}
-            className="rounded-md border border-slate-600 bg-slate-700/60 px-2.5 py-1.5 text-xs text-slate-100 font-medium hover:bg-slate-600/70 focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
+            className="rounded border border-slate-600 bg-slate-700/60 px-2.5 py-1.5 text-xs text-slate-100 font-medium hover:bg-slate-600/70 focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
           >
             <option value="none">Sem agrupar</option>
             <option value="environment">Por ambiente</option>
@@ -803,7 +803,7 @@ export function EcosystemPage() {
                 <span className="text-amber-400">impacto indireto</span>
               </div>
             </div>
-            <div className="ml-auto flex animate-console-in items-center gap-3 rounded-md border border-red-900/50 bg-red-950/40 px-3 py-1.5 font-mono">
+            <div className="ml-auto flex animate-console-in items-center gap-3 rounded border border-red-900/50 bg-red-950/40 px-3 py-1.5 font-mono">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
@@ -859,7 +859,7 @@ export function EcosystemPage() {
 
         {/* Painel flutuante do nó selecionado — canto direito */}
         {selectedNode && (
-          <div className="absolute right-3 top-3 z-10 flex w-64 flex-col gap-3 rounded-lg border border-slate-600 bg-slate-900/95 p-4 shadow-xl backdrop-blur">
+          <div className="absolute right-3 top-3 z-10 flex w-64 flex-col gap-3 rounded border border-slate-600 bg-surface/95 p-4 shadow-xl backdrop-blur">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <h3 className="font-semibold text-slate-100 text-sm leading-tight">{selectedNode.label}</h3>

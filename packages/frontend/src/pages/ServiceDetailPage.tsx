@@ -46,7 +46,7 @@ export function ServiceDetailPage() {
           </div>
           <p className="mt-2 text-slate-400">{data.description ?? 'Sem descrição.'}</p>
 
-          <dl className="mt-6 grid grid-cols-2 gap-4 rounded-lg border border-slate-800 p-4 text-sm">
+          <dl className="mt-6 grid grid-cols-2 gap-4 rounded border border-line p-4 text-sm">
             <dt className="text-slate-500">Nome</dt>
             <dd>{data.name}</dd>
             <dt className="text-slate-500">Tipo</dt>
@@ -60,7 +60,7 @@ export function ServiceDetailPage() {
                   href={data.repositoryUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-sky-400 hover:underline"
+                  className="text-signal hover:underline"
                 >
                   {data.repositoryUrl}
                 </a>

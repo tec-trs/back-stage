@@ -46,32 +46,34 @@ export function LoginPage() {
     <>
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col gap-4 rounded-lg border border-slate-800 p-6"
+        className="rack-ticks flex w-full max-w-sm flex-col gap-4 rounded border border-line bg-surface/50 p-6 pb-7"
       >
         <div>
-          <h1 className="text-xl font-semibold text-slate-100">Platform Engineering Center</h1>
+          <h1 className="font-mono text-lg font-bold leading-tight text-slate-100">
+            BACK<span className="text-signal">·</span>STAGE
+          </h1>
           <p className="mt-1 text-sm text-slate-400">Entre com suas credenciais para continuar</p>
         </div>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-400">Codigo de usuario</span>
+          <span className="font-mono text-xs uppercase tracking-wide text-slate-500">Codigo de usuario</span>
           <input
             type="text"
             required
             value={code}
             onChange={(event) => setCode(event.target.value)}
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-slate-500"
+            className="rounded border border-line bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-signal"
           />
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-400">Senha</span>
+          <span className="font-mono text-xs uppercase tracking-wide text-slate-500">Senha</span>
           <input
             type="password"
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-slate-500"
+            className="rounded border border-line bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-signal"
           />
         </label>
 

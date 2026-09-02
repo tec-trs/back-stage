@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { DatabaseFormDialog } from '../features/databases/DatabaseFormDialog';
+import { DatabaseImportDialog } from '../features/databases/DatabaseImportDialog';
 import { useBulkDeleteDatabases } from '../features/databases/use-bulk-delete-databases';
 import { useDatabases } from '../features/databases/use-databases';
 import type { Database } from '../features/databases/use-databases';
@@ -10,7 +11,7 @@ import { Button } from '../shared/components/Button';
 import { ConfirmDialog } from '../shared/components/ConfirmDialog';
 import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorMessage } from '../shared/components/ErrorMessage';
-import { CopyIcon, PencilIcon, PlusIcon, TrashIcon } from '../shared/components/icons';
+import { CopyIcon, PencilIcon, PlusIcon, TrashIcon, UploadIcon } from '../shared/components/icons';
 import { PageHeader } from '../shared/components/PageHeader';
 import { Spinner } from '../shared/components/Spinner';
 import { CRITICALITY_LABELS } from '../shared/constants/labels';
@@ -30,6 +31,7 @@ export function DatabasesPage() {
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editing, setEditing] = useState<Database | null>(null);
   const [duplicating, setDuplicating] = useState<Database | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -107,6 +109,7 @@ export function DatabasesPage() {
       />
 
       <DatabaseFormDialog isOpen={isFormOpen} onClose={closeForm} database={editing} prefill={duplicating} />
+      <DatabaseImportDialog isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
 
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
@@ -120,11 +123,20 @@ export function DatabasesPage() {
       />
 
       {/* Toolbar */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded border border-line bg-surface/40 p-2">
         <Button size="sm" icon={<PlusIcon />} onClick={openCreate}>
           Incluir Banco
         </Button>
-        <div className="mx-1 h-6 w-px bg-slate-800" />
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<UploadIcon />}
+          onClick={() => setIsImportOpen(true)}
+          title="Importar bancos de dados em massa a partir de arquivo CSV"
+        >
+          Importar
+        </Button>
+        <div className="mx-1 h-6 w-px bg-surface-raised" />
         <Button
           size="sm"
           variant="secondary"
@@ -200,16 +212,16 @@ export function DatabasesPage() {
       )}
 
       {!isLoading && !isError && items.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-slate-800">
+        <div className="overflow-x-auto rounded border border-line">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-900/60">
+              <tr className="border-b border-line bg-surface/60">
                 <th className="w-10 px-4 py-3">
                   <input
                     type="checkbox"
                     checked={allVisible}
                     onChange={toggleAll}
-                    className="h-4 w-4 accent-sky-500"
+                    className="h-4 w-4 accent-signal"
                     aria-label="Selecionar todos"
                   />
                 </th>
@@ -228,8 +240,8 @@ export function DatabasesPage() {
                   <tr
                     key={db.id}
                     onClick={() => toggleOne(db.id)}
-                    className={`cursor-pointer border-b border-slate-800/50 transition-colors last:border-0 ${
-                      isSelected ? 'bg-sky-950/40' : 'hover:bg-slate-900/60'
+                    className={`cursor-pointer border-b border-line/50 transition-colors last:border-0 ${
+                      isSelected ? 'bg-signal/10' : 'hover:bg-surface/60'
                     }`}
                   >
                     <td className="px-4 py-3">
@@ -239,7 +251,7 @@ export function DatabasesPage() {
                         onChange={() => toggleOne(db.id)}
                         onClick={(e) => e.stopPropagation()}
                         aria-label={`Selecionar ${db.displayName ?? db.name}`}
-                        className="h-4 w-4 accent-sky-500"
+                        className="h-4 w-4 accent-signal"
                       />
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-100">

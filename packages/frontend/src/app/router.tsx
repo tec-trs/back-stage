@@ -108,6 +108,12 @@ const DatabaseGroupsPage = lazy(() =>
 const DatabaseGroupDetailPage = lazy(() =>
   import('../pages/DatabaseGroupDetailPage').then((m) => ({ default: m.DatabaseGroupDetailPage })),
 );
+const RelationshipRegistrationsPage = lazy(() =>
+  import('../pages/RelationshipRegistrationsPage').then((m) => ({ default: m.RelationshipRegistrationsPage })),
+);
+const RelationshipRegistrationDetailPage = lazy(() =>
+  import('../pages/RelationshipRegistrationDetailPage').then((m) => ({ default: m.RelationshipRegistrationDetailPage })),
+);
 
 function withSuspense(element: ReactNode) {
   return <Suspense fallback={<Spinner />}>{element}</Suspense>;
@@ -158,6 +164,8 @@ export const router = createBrowserRouter([
           { path: '/relationship-maps/:id', element: withSuspense(<RelationshipMapDetailPage />) },
           { path: '/database-groups', element: withSuspense(<DatabaseGroupsPage />) },
           { path: '/database-groups/:id', element: withSuspense(<DatabaseGroupDetailPage />) },
+          { path: '/relationship-registrations', element: withSuspense(<RelationshipRegistrationsPage />) },
+          { path: '/relationship-registrations/:id', element: withSuspense(<RelationshipRegistrationDetailPage />) },
           { path: '/settings', element: withSuspense(<SettingsPage />) },
         ],
       },

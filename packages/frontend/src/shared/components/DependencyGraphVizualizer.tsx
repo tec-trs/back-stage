@@ -119,7 +119,7 @@ export function DependencyGraphVizualizer({ nodes, edges, rootNodeId }: Props) {
 
   return (
     <div className="w-full h-full flex flex-col bg-canvas">
-      <div className="flex gap-4 items-center p-4 bg-slate-900 border-b border-slate-800">
+      <div className="flex gap-4 items-center p-4 bg-surface border-b border-line">
         <div className="flex items-center gap-2">
           <label className="text-sm text-slate-400">Nós: {nodes.length}</label>
           <label className="text-sm text-slate-400 ml-4">Relações: {edges.length}</label>

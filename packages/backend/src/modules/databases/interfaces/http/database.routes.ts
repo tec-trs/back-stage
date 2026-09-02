@@ -135,9 +135,6 @@ export function createDatabaseRouter(controller: DatabaseController): Router {
     asyncHandler(controller.remove),
   );
 
-  return router;
-}
-
   /**
    * @openapi
    * /databases/{id}/ports:

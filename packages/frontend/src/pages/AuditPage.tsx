@@ -70,7 +70,7 @@ export function AuditPage() {
   }
 
   const inputClass =
-    'rounded-md border border-slate-700 bg-canvas px-3 py-1.5 text-sm text-slate-100 outline-none focus:border-slate-500';
+    'rounded border border-line bg-canvas px-3 py-1.5 text-sm text-slate-100 outline-none focus:border-slate-500';
 
   return (
     <div>
@@ -90,7 +90,7 @@ export function AuditPage() {
       />
 
       {/* Filtros */}
-      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-slate-800 bg-slate-900/40 p-3">
+      <div className="mb-4 flex flex-wrap items-end gap-3 rounded border border-line bg-surface/40 p-3">
         <label className="flex flex-col gap-1 text-xs text-slate-400">
           Acao (contém)
           <input
@@ -146,16 +146,16 @@ export function AuditPage() {
       )}
 
       {items.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-slate-800">
+        <div className="overflow-hidden rounded border border-line">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900 text-slate-400">
+            <thead className="bg-surface text-slate-400">
               <tr>
                 <th className="w-10 px-4 py-2">
                   <input
                     type="checkbox"
                     checked={allSelected}
                     onChange={toggleAll}
-                    className="h-4 w-4 accent-sky-500"
+                    className="h-4 w-4 accent-signal"
                     aria-label="Selecionar todos"
                   />
                 </th>
@@ -169,8 +169,8 @@ export function AuditPage() {
                 <tr
                   key={entry.id}
                   onClick={() => toggleOne(entry.id)}
-                  className={`cursor-pointer border-t border-slate-800 ${
-                    selectedIds.has(entry.id) ? 'bg-sky-950/40' : 'hover:bg-slate-900/50'
+                  className={`cursor-pointer border-t border-line ${
+                    selectedIds.has(entry.id) ? 'bg-signal/10' : 'hover:bg-surface/50'
                   }`}
                 >
                   <td className="px-4 py-2">
@@ -179,7 +179,7 @@ export function AuditPage() {
                       checked={selectedIds.has(entry.id)}
                       onChange={() => toggleOne(entry.id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="h-4 w-4 accent-sky-500"
+                      className="h-4 w-4 accent-signal"
                     />
                   </td>
                   <td className="px-4 py-2 text-slate-100">{entry.action}</td>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { AuditTimeline } from '../features/audit/AuditTimeline';
@@ -180,7 +180,7 @@ export function DatabaseDetailPage() {
       />
 
       {/* Tabs */}
-      <div className="border-b border-slate-800">
+      <div className="border-b border-line">
         <div className="flex gap-8">
           <button
             onClick={() => setActiveTab('identificacao')}
@@ -211,7 +211,7 @@ export function DatabaseDetailPage() {
           {/* Informacoes Gerais */}
           <section>
             <h2 className="mb-3 text-base font-semibold text-slate-200">Informacoes Gerais</h2>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-lg border border-slate-800 p-4 text-sm sm:grid-cols-3">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 rounded border border-line p-4 text-sm sm:grid-cols-3">
               <Field label="Engine" value={database.engine} />
               <Field label="Nome Físico" value={database.physicalName || database.name} />
               <Field label="Nome Lógico" value={database.logicalName} />
@@ -224,7 +224,7 @@ export function DatabaseDetailPage() {
           {/* Backup */}
           <section>
             <h2 className="mb-3 text-base font-semibold text-slate-200">Backup</h2>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-lg border border-slate-800 p-4 text-sm sm:grid-cols-3">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 rounded border border-line p-4 text-sm sm:grid-cols-3">
               <Field label="Backup configurado" value={database.hasBackup ? 'Sim' : 'Nao'} />
               <Field label="Politica" value={database.backupPolicy} />
               <Field
@@ -246,7 +246,7 @@ export function DatabaseDetailPage() {
                 <Spinner />
               </div>
             ) : subgraph && subgraph.nodes.length > 0 ? (
-              <div className="h-80 overflow-hidden rounded-lg border border-slate-800">
+              <div className="h-80 overflow-hidden rounded border border-line">
                 <ResourceGraph
                   nodes={subgraph.nodes}
                   edges={subgraph.edges}
@@ -266,7 +266,7 @@ export function DatabaseDetailPage() {
                 />
               </div>
             ) : (
-              <p className="rounded-lg border border-slate-800 p-6 text-center text-sm text-slate-500">
+              <p className="rounded border border-line p-6 text-center text-sm text-slate-500">
                 Nenhuma dependencia mapeada. Use o botao "+ Relacionamento" para comecar.
               </p>
             )}
@@ -299,14 +299,14 @@ export function DatabaseDetailPage() {
           </div>
 
           {error && (
-            <div className="mb-4 rounded-lg border border-red-900 bg-red-950 p-3 text-sm text-red-200">
+            <div className="mb-4 rounded border border-red-900 bg-red-950 p-3 text-sm text-red-200">
               {error}
             </div>
           )}
 
           {/* Add Port Form */}
           {isAddingPort && (
-            <div className="mb-6 flex flex-col gap-4 rounded-lg border border-slate-800 p-4">
+            <div className="mb-6 flex flex-col gap-4 rounded border border-line p-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-sm text-slate-400">Porta</label>
@@ -316,7 +316,7 @@ export function DatabaseDetailPage() {
                     max="65535"
                     value={newPortForm.port}
                     onChange={(e) => setNewPortForm({ ...newPortForm, port: e.target.value })}
-                    className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded border border-line bg-surface px-3 py-2 text-slate-100 focus:border-blue-500 focus:outline-none"
                     placeholder="Ex: 5432"
                   />
                 </div>
@@ -326,7 +326,7 @@ export function DatabaseDetailPage() {
                     type="text"
                     value={newPortForm.parameters}
                     onChange={(e) => setNewPortForm({ ...newPortForm, parameters: e.target.value })}
-                    className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded border border-line bg-surface px-3 py-2 text-slate-100 focus:border-blue-500 focus:outline-none"
                     placeholder="Ex: max_connections=100"
                   />
                 </div>
@@ -354,10 +354,10 @@ export function DatabaseDetailPage() {
 
           {/* Ports Table */}
           {ports && ports.length > 0 ? (
-            <div className="overflow-x-auto rounded-lg border border-slate-800">
+            <div className="overflow-x-auto rounded border border-line">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-800 bg-slate-900">
+                  <tr className="border-b border-line bg-surface">
                     <th className="px-4 py-3 text-left text-slate-400">Porta</th>
                     <th className="px-4 py-3 text-left text-slate-400">Parâmetros</th>
                     <th className="px-4 py-3 text-left text-slate-400">Ações</th>
@@ -365,7 +365,7 @@ export function DatabaseDetailPage() {
                 </thead>
                 <tbody>
                   {ports.map((port) => (
-                    <tr key={port.id} className="border-b border-slate-800 hover:bg-slate-900">
+                    <tr key={port.id} className="border-b border-line hover:bg-surface">
                       <td className="px-4 py-3 text-slate-100">{port.port}</td>
                       <td className="px-4 py-3 text-slate-300">
                         {editingPortId?.id === port.id ? (
@@ -373,7 +373,7 @@ export function DatabaseDetailPage() {
                             type="text"
                             value={editingParameters}
                             onChange={(e) => setEditingParameters(e.target.value)}
-                            className="w-full rounded border border-slate-700 bg-slate-800 px-2 py-1 text-slate-100 focus:border-blue-500 focus:outline-none"
+                            className="w-full rounded border border-line bg-surface-raised px-2 py-1 text-slate-100 focus:border-blue-500 focus:outline-none"
                           />
                         ) : (
                           <span className="text-slate-400">{port.parameters || '—'}</span>
@@ -420,7 +420,7 @@ export function DatabaseDetailPage() {
               </table>
             </div>
           ) : (
-            <p className="rounded-lg border border-slate-800 p-6 text-center text-sm text-slate-500">
+            <p className="rounded border border-line p-6 text-center text-sm text-slate-500">
               Nenhuma porta configurada. Clique no botão "+ Adicionar Porta" para começar.
             </p>
           )}

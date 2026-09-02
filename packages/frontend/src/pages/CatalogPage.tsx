@@ -48,9 +48,9 @@ export function CatalogPage() {
       )}
 
       {data && data.items.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-slate-800">
+        <div className="overflow-hidden rounded border border-line">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900 text-slate-400">
+            <thead className="bg-surface text-slate-400">
               <tr>
                 <th className="px-4 py-2 font-medium">Nome</th>
                 <th className="px-4 py-2 font-medium">Tipo</th>
@@ -60,7 +60,7 @@ export function CatalogPage() {
             </thead>
             <tbody>
               {data.items.map((service) => (
-                <tr key={service.id} className="border-t border-slate-800 hover:bg-slate-900/50">
+                <tr key={service.id} className="border-t border-line hover:bg-surface/50">
                   <td className="px-4 py-2">
                     <Link to={`/catalog/${service.id}`} className="text-slate-100 hover:underline">
                       {service.title ?? service.name}

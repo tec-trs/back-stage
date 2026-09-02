@@ -79,7 +79,7 @@ export function ExportImageDialog({ isOpen, onClose, diagramName }: ExportImageD
               onClick={() => setFormat('png')}
               className={`flex-1 px-4 py-2 rounded transition ${
                 format === 'png'
-                  ? 'bg-sky-600 text-white'
+                  ? 'bg-signal text-[#1a1204]'
                   : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
               }`}
             >
@@ -89,7 +89,7 @@ export function ExportImageDialog({ isOpen, onClose, diagramName }: ExportImageD
               onClick={() => setFormat('pdf')}
               className={`flex-1 px-4 py-2 rounded transition ${
                 format === 'pdf'
-                  ? 'bg-sky-600 text-white'
+                  ? 'bg-signal text-[#1a1204]'
                   : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
               }`}
             >
@@ -98,7 +98,7 @@ export function ExportImageDialog({ isOpen, onClose, diagramName }: ExportImageD
           </div>
         </div>
 
-        <div className="bg-slate-800/50 p-3 rounded text-sm text-slate-400">
+        <div className="bg-surface-raised/50 p-3 rounded text-sm text-slate-400">
           <div className="font-semibold text-slate-300 mb-2">ℹ️ Informações</div>
           <ul className="space-y-1">
             <li>✓ Exporta o diagrama atual em alta resolução</li>
@@ -107,7 +107,7 @@ export function ExportImageDialog({ isOpen, onClose, diagramName }: ExportImageD
           </ul>
         </div>
 
-        <div className="flex gap-2 justify-end pt-4 border-t border-slate-700">
+        <div className="flex gap-2 justify-end pt-4 border-t border-line">
           <Button variant="secondary" size="sm" onClick={onClose} disabled={isExporting}>
             Cancelar
           </Button>

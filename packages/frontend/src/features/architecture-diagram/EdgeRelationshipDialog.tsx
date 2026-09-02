@@ -6,7 +6,7 @@ import { Modal } from '../../shared/components/Modal';
 import { RELATION_TYPES, type RelationType } from '../resource-graph/relationship-types';
 
 const inputClass =
-  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
+  'rounded border border-line bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 
 interface EdgeRelationshipDialogProps {
   isOpen: boolean;
@@ -115,7 +115,7 @@ export function EdgeRelationshipDialog({
 
         {errorMessage && <ErrorMessage message={errorMessage} />}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
           <div className="flex flex-wrap items-center gap-2">
             {mode === 'edit' && onDeleteEdge && (
               <Button type="button" variant="ghost-danger" size="sm" disabled={isSubmitting} onClick={onDeleteEdge}>

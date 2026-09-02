@@ -35,7 +35,7 @@ import { layoutWithDagre } from '../features/architecture-diagram/dagreLayout';
 import type { ResourceType } from '../features/architecture-diagram/types';
 
 const inputClass =
-  'rounded-md border border-slate-700 bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
+  'rounded border border-line bg-canvas px-3 py-2 text-slate-100 outline-none focus:border-slate-500';
 
 // Some relationship types are derived by the CMDB rather than stored as a
 // standalone row in resource_relationships (e.g. "hospeda" between servidor e
@@ -109,7 +109,7 @@ function EditMapDialog({
             message={updateMap.error instanceof Error ? updateMap.error.message : 'Erro ao salvar mapa'}
           />
         )}
-        <div className="flex justify-end gap-3 border-t border-slate-800 pt-4">
+        <div className="flex justify-end gap-3 border-t border-line pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
@@ -124,7 +124,7 @@ function EditMapDialog({
 
 function MapGraph({ nodes, edges }: { nodes: RFNode[]; edges: RFEdge[] }) {
   return (
-    <div className="h-[70vh] rounded-lg border border-line bg-canvas">
+    <div className="h-[70vh] rounded border border-line bg-canvas">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -141,7 +141,7 @@ function MapGraph({ nodes, edges }: { nodes: RFNode[]; edges: RFEdge[] }) {
         proOptions={{ hideAttribution: true }}
       >
         <Background color="#1e293b" variant={BackgroundVariant.Dots} gap={20} size={1.5} />
-        <Controls className="!rounded-md !border !border-line !bg-surface !shadow-lg [&>button]:!border-line [&>button]:!bg-surface [&>button]:!text-slate-300 [&>button:hover]:!bg-surface-raised [&_svg]:!fill-slate-300" />
+        <Controls className="!rounded !border !border-line !bg-surface !shadow-lg [&>button]:!border-line [&>button]:!bg-surface [&>button]:!text-slate-300 [&>button:hover]:!bg-surface-raised [&_svg]:!fill-slate-300" />
       </ReactFlow>
     </div>
   );
@@ -379,16 +379,16 @@ export function RelationshipMapDetailPage() {
       </div>
 
       {map.edges.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-800 p-10 text-center">
+        <div className="flex flex-col items-center justify-center gap-1 rounded border border-dashed border-line p-10 text-center">
           <p className="font-medium text-slate-200">Este mapa ainda não tem relacionamentos</p>
           <p className="text-sm text-slate-500">
             Use &quot;Adicionar Relacionamento&quot; para começar a documentar esta arquitetura.
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-slate-800">
+        <div className="overflow-hidden rounded border border-line">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900 text-slate-400">
+            <thead className="bg-surface text-slate-400">
               <tr>
                 <th className="px-4 py-2 font-medium">Origem</th>
                 <th className="px-4 py-2 font-medium">Relação</th>
@@ -399,7 +399,7 @@ export function RelationshipMapDetailPage() {
             </thead>
             <tbody>
               {map.edges.map((edge: RelationshipMapEdge) => (
-                <tr key={edge.id} className="border-t border-slate-800">
+                <tr key={edge.id} className="border-t border-line">
                   <td className="px-4 py-2 font-medium text-slate-200">
                     {describeNode(nodeLabelById, edge.sourceType, edge.sourceId)}
                   </td>
@@ -407,7 +407,7 @@ export function RelationshipMapDetailPage() {
                     {RELATION_LABEL[edge.relationType] ?? edge.relationType}
                     {edge.isImplicit && (
                       <span
-                        className="ml-2 rounded border border-slate-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-500"
+                        className="ml-2 rounded border border-line px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-500"
                         title="Este relacionamento e derivado automaticamente pelo CMDB (ex: deployments, dono da URL) e nao tem um registro proprio em Relacionamentos."
                       >
                         derivado

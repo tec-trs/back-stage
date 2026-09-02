@@ -32,6 +32,7 @@ import { registerServersModule } from './modules/servers/servers.module.js';
 import { registerVIPsModule } from './modules/vips/vips.module.js';
 import { registerServerGroupsModule } from './modules/server-groups/server-groups.module.js';
 import { registerRelationshipMapsModule } from './modules/relationship-maps/relationship-maps.module.js';
+import { registerRelationshipRegistrationsModule } from './modules/relationship-registrations/relationship-registrations.module.js';
 import { registerDatabaseGroupsModule } from './modules/database-groups/database-groups.module.js';
 import { registerServiceCatalogModule } from './modules/service-catalog/service-catalog.module.js';
 import { registerUsersModule } from './modules/users/users.module.js';
@@ -98,12 +99,15 @@ export function createApp(): Express {
   app.use('/api/organizations', registerOrganizationsModule());
   app.use('/api/services', registerServiceCatalogModule());
   app.use('/api/governance', registerGovernanceModule());
-  app.use('/api', registerSearchModule());
   app.use('/api/catalog-entities', registerCatalogModule());
   app.use('/api/audit-logs', registerAuditModule());
   app.use('/api/users', registerUsersModule());
   // Resource routes require authentication + organization context
   const withOrg = [authenticateMiddleware, organizationMiddleware];
+  // Search reads across servers/applications/databases/urls/catalog_entities,
+  // all organization-scoped tables, so it must run inside the same org
+  // context as everything else — not before withOrg exists.
+  app.use('/api', ...withOrg, registerSearchModule());
   app.use('/api/environments', ...withOrg, registerEnvironmentsModule());
   app.use('/api/teams', ...withOrg, registerTeamsModule());
   app.use('/api/server-types', registerServerTypesModule());
@@ -120,6 +124,7 @@ export function createApp(): Express {
   app.use('/api/resource-graph', ...withOrg, registerResourceGraphModule());
   app.use('/api/architecture-diagrams', ...withOrg, registerArchitectureModule(db).router);
   app.use('/api/relationship-maps', ...withOrg, registerRelationshipMapsModule());
+  app.use('/api/relationship-registrations', ...withOrg, registerRelationshipRegistrationsModule());
   app.use('/api/database-groups', ...withOrg, registerDatabaseGroupsModule());
   app.use(registerDeploymentsModule());
 

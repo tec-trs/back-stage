@@ -39,8 +39,9 @@ export class SearchService {
     query: string,
     tags?: string[],
     pagination?: Pagination,
+    resourceType?: string,
   ): Promise<UnifiedSearchResult> {
-    const { items, total } = await this.searchRepository.unifiedSearch(query, tags, pagination);
+    const { items, total } = await this.searchRepository.unifiedSearch(query, tags, pagination, resourceType);
     return {
       items,
       pagination: { page: pagination?.page ?? 1, pageSize: pagination?.pageSize ?? 20, total },

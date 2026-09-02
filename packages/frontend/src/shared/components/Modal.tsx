@@ -37,7 +37,7 @@ export function Modal({ title, isOpen, onClose, children, size = 'md' }: ModalPr
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4">
       <button
         aria-label="Fechar"
         onClick={onClose}
@@ -47,10 +47,10 @@ export function Modal({ title, isOpen, onClose, children, size = 'md' }: ModalPr
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className={`relative z-10 flex max-h-[90vh] w-full flex-col ${SIZE_CLASSES[size]} rounded-lg border border-slate-700 bg-slate-900 shadow-2xl ring-1 ring-white/10`}
+        className={`relative z-10 flex max-h-[90vh] w-full flex-col ${SIZE_CLASSES[size]} rounded border border-line bg-surface shadow-2xl shadow-black/60`}
       >
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-800 p-6 pb-4">
-          <h2 id="modal-title" className="text-lg font-semibold text-slate-100">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line p-6 pb-4">
+          <h2 id="modal-title" className="font-mono text-base font-bold text-slate-100">
             {title}
           </h2>
           <button

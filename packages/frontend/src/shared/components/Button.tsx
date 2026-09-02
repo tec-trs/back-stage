@@ -9,26 +9,29 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: ReactNode;
 }
 
+// Mechanical, not glassy: a flat fill with a 1px inset highlight standing in
+// for a panel bevel, and a press that moves the control down into the page
+// instead of floating it up — a toggle switch, not a soap bubble.
 const BASE_CLASSES =
-  'inline-flex items-center justify-center gap-1.5 rounded-lg font-medium ' +
-  'transition-all duration-150 ease-out [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0 ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ' +
-  'disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]';
+  'inline-flex items-center justify-center gap-1.5 rounded font-sans font-semibold ' +
+  'transition-[transform,background-color,border-color] duration-100 ease-out [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0 ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ' +
+  'disabled:pointer-events-none disabled:opacity-40 active:translate-y-px';
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    'bg-gradient-to-b from-slate-50 to-slate-200 text-slate-900 shadow-sm shadow-black/20 ' +
-    'hover:from-white hover:to-slate-100 hover:shadow-md hover:shadow-black/30 hover:-translate-y-px',
+    'bg-signal text-[#1a1204] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.35)] ' +
+    'hover:bg-[#e8a552] active:shadow-none',
   secondary:
-    'border border-slate-700 bg-slate-900/60 text-slate-200 ' +
-    'hover:border-slate-600 hover:bg-slate-800 hover:-translate-y-px',
+    'border border-line bg-surface text-slate-200 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] ' +
+    'hover:border-slate-600 hover:bg-surface-raised active:shadow-none',
   danger:
-    'bg-gradient-to-b from-red-500 to-red-600 text-white shadow-sm shadow-red-950/40 ' +
-    'hover:from-red-400 hover:to-red-500 hover:shadow-md hover:shadow-red-950/50 hover:-translate-y-px',
+    'bg-impact-source text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)] ' +
+    'hover:bg-[#d9553c] active:shadow-none',
   ghost:
-    'text-slate-300 hover:bg-slate-800/80 hover:text-slate-100',
+    'text-slate-300 hover:bg-surface-raised hover:text-slate-100',
   'ghost-danger':
-    'text-red-400 hover:bg-red-950/40 hover:text-red-300',
+    'text-impact-source hover:bg-[#c8452e]/10 hover:text-[#e0684f]',
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
